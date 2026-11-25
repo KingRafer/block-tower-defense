@@ -32,6 +32,23 @@
   #overlay{position:absolute;inset:0;background:rgba(0,0,0,.65);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:10px}
   #overlay h1{font-size:46px;text-shadow:0 5px 0 #000}
   #overlay p{max-width:520px;text-align:center;opacity:.9;line-height:1.5}
+  #overlay{overflow:auto;padding:16px;background:rgba(10,14,24,.82)}
+  #overlay .sub{opacity:.75;margin-top:-8px}
+  .mbtn{width:260px;font-size:20px;padding:10px}
+  .mcol{display:flex;flex-direction:column;gap:10px;align-items:center}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  .card{background:#2b3245;border:3px solid #11141c;border-radius:10px;padding:8px;cursor:pointer;width:210px;text-align:center}
+  .card:hover{background:#36405a}.card.sel{border-color:#ffd54f;background:#3d4766}
+  .card canvas{width:100%;border:2px solid #11141c;border-radius:6px;margin-bottom:4px}
+  .card .nm{font-weight:800}.card small{opacity:.7}
+  .diffs{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .diffs .btn{min-width:150px;opacity:.55}.diffs .btn.sel{opacity:1;outline:3px solid #fff}
+  .box{background:#2b3245;border:3px solid #11141c;border-radius:10px;padding:12px 16px;max-width:640px;width:100%;font-size:14px;line-height:1.5}
+  .box table{width:100%;border-collapse:collapse}.box td,.box th{padding:3px 6px;border-bottom:1px solid #3d4766;text-align:left}
+  .tog{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #3d4766}
+  .tog .btn{min-width:80px;font-size:13px;padding:4px 10px}
+  .badge{background:#ffd54f;color:#000;font-weight:900;padding:3px 10px;border-radius:6px}
+  .row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
   #help{font-size:12px;opacity:.6;margin-top:6px;text-align:center}
 </style>
 </head>
@@ -46,16 +63,13 @@
     <button class="btn" id="startBtn">▶ Mulai Wave</button>
     <button class="btn gray" id="skipBtn" title="Mulai wave berikutnya otomatis">Auto Skip: OFF</button>
     <button class="btn blue" id="speedBtn">⏩ 1x</button>
+    <button class="btn gray" id="pauseBtn" title="Pause (Esc)">⏸</button>
   </div>
   <div id="stage">
     <canvas id="c" width="960" height="576"></canvas>
     <div id="panel"></div>
     <div id="msg"></div>
     <div id="overlay">
-      <h1>🧱 BLOCK TOWER DEFENSE</h1>
-      <p>Pasang tower di sepanjang jalur, upgrade, dan tahan 30 wave zombie termasuk boss. Musuh <b>Hidden</b> hanya bisa diserang tower yang punya deteksi hidden. Farm memberi uang tiap akhir wave.</p>
-      <button class="btn" id="playBtn" style="font-size:22px;padding:10px 30px">MAIN</button>
-      <div id="best"></div>
     </div>
   </div>
   <div id="bar"></div>
@@ -64,8 +78,20 @@
 <script>
 // ======================= KONFIGURASI =======================
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
-const PATH = [[-1,2],[4,2],[4,8],[9,8],[9,3],[14,3],[14,9],[18,9],[18,5],[21,5]];
-const MAX_WAVE = 30;
+const MAPS = [
+  { id:'grass', name:'Padang Rumput', diff:'⭐', path:[[-1,2],[4,2],[4,8],[9,8],[9,3],[14,3],[14,9],[18,9],[18,5],[21,5]],
+    th:{g1:'#4caf50',g2:'#46a34a',p1:'#a1887f',p2:'#9c7f72',tree:'#2e7d32',rock:'#9e9e9e',bg:'#3e8e41'} },
+  { id:'desert', name:'Gurun Pasir', diff:'⭐⭐', path:[[-1,9],[3,9],[3,2],[7,2],[7,10],[12,10],[12,1],[16,1],[16,7],[21,7]],
+    th:{g1:'#e6c27a',g2:'#dfb96d',p1:'#b5835a',p2:'#ad7b52',tree:'#558b2f',rock:'#a1887f',bg:'#c9a35c',cactus:true} },
+  { id:'snow', name:'Kutub Salju', diff:'⭐⭐⭐', path:[[-1,5],[2,5],[2,1],[6,1],[6,10],[10,10],[10,5],[13,5],[13,1],[17,1],[17,10],[21,10]],
+    th:{g1:'#eef3f7',g2:'#e1e9ef',p1:'#90a4ae',p2:'#869aa5',tree:'#1b5e20',rock:'#b0bec5',bg:'#cfd8dc'} },
+];
+const DIFFS = {
+  easy:   { name:'Mudah',  cash:800, hp:150, hpMul:0.7, waves:20, reward:1.2,  color:'#43a047' },
+  normal: { name:'Normal', cash:600, hp:100, hpMul:1.0, waves:30, reward:1.0,  color:'#fb8c00' },
+  hard:   { name:'Sulit',  cash:500, hp:75,  hpMul:1.4, waves:40, reward:0.85, color:'#e53935' },
+};
+let MAP = MAPS[0], PATH, DIFF = 'normal';
 
 const TOWERS = {
   scout: { name:'Scout', color:'#43a047', limit:8, levels:[
@@ -118,29 +144,62 @@ const ENEMIES = {
 // ======================= STATE =======================
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 let S; // game state
-let pathPx = PATH.map(([c,r]) => ({x:(c+0.5)*T, y:(r+0.5)*T}));
-const pathTiles = new Set();
-for (let i=0;i<PATH.length-1;i++){
-  let [c1,r1]=PATH[i],[c2,r2]=PATH[i+1];
-  const dc=Math.sign(c2-c1), dr=Math.sign(r2-r1);
-  while(c1!==c2||r1!==r2){ pathTiles.add(c1+','+r1); c1+=dc; r1+=dr; }
-  pathTiles.add(c2+','+r2);
+let pathPx, pathTiles, deco;
+function computeTiles(path){
+  const set=new Set();
+  for (let i=0;i<path.length-1;i++){
+    let [c1,r1]=path[i],[c2,r2]=path[i+1];
+    const dc=Math.sign(c2-c1), dr=Math.sign(r2-r1);
+    while(c1!==c2||r1!==r2){ set.add(c1+','+r1); c1+=dc; r1+=dr; }
+    set.add(c2+','+r2);
+  }
+  return set;
 }
-// panjang total jalur (untuk targeting "first")
-const segLen = []; let totalLen = 0;
-for (let i=0;i<pathPx.length-1;i++){ const d=Math.hypot(pathPx[i+1].x-pathPx[i].x,pathPx[i+1].y-pathPx[i].y); segLen.push(d); totalLen+=d; }
-
-// dekorasi pohon & batu (acak tapi tetap)
-const deco = [];
-(function(){ let seed=7; const rnd=()=>((seed=seed*16807%2147483647)/2147483647);
+function computeDeco(tiles,seed){
+  const out=[]; const rnd=()=>((seed=seed*16807%2147483647)/2147483647);
   for(let i=0;i<26;i++){ const c=Math.floor(rnd()*COLS), r=Math.floor(rnd()*ROWS);
-    if(!pathTiles.has(c+','+r) && !deco.some(d=>d.c===c&&d.r===r)) deco.push({c,r,type:rnd()<0.7?'tree':'rock'}); }
-})();
+    if(!tiles.has(c+','+r) && c<18 && !out.some(d=>d.c===c&&d.r===r)) out.push({c,r,type:rnd()<0.7?'tree':'rock'}); }
+  return out;
+}
+function loadMap(m){
+  MAP=m; PATH=m.path;
+  pathPx = PATH.map(([c,r]) => ({x:(c+0.5)*T, y:(r+0.5)*T}));
+  pathTiles = computeTiles(PATH); deco = computeDeco(pathTiles, 7+MAPS.indexOf(m)*13);
+  cv.style.background=m.th.bg;
+}
+
+// ======================= SAVE: PENGATURAN & STATISTIK =======================
+function load(k,def){ try{ return Object.assign(def, JSON.parse(localStorage.getItem(k)||'{}')); }catch(e){ return def; } }
+function store(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+const SET = load('btd_settings', { sound:true, volume:0.5, dmgNum:true, shake:true, grid:false, range:true });
+const STATS = load('btd_stats', { games:0, wins:0, kills:0, bossKills:0, towersPlaced:0, cashEarned:0, best:{} });
+
+// ======================= SUARA (WebAudio) =======================
+let AC=null; const lastSfx={};
+function sfx(type){
+  if(!SET.sound) return;
+  const now=performance.now(); if(lastSfx[type] && now-lastSfx[type]<60) return; lastSfx[type]=now;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const P={shoot:[880,0.04,'square',0.05], snipe:[220,0.12,'sawtooth',0.12], boom:[90,0.3,'sawtooth',0.2],
+      place:[520,0.1,'triangle',0.2], upgrade:[660,0.18,'triangle',0.2], sell:[330,0.12,'triangle',0.2],
+      leak:[120,0.25,'square',0.2], wave:[440,0.3,'triangle',0.2], click:[700,0.05,'triangle',0.12],
+      win:[784,0.6,'triangle',0.25], lose:[110,0.8,'sawtooth',0.25], freeze:[1200,0.06,'sine',0.08]}[type];
+    if(!P) return;
+    const o=AC.createOscillator(), g=AC.createGain(), t=AC.currentTime;
+    o.type=P[2]; o.frequency.setValueAtTime(P[0],t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(40,P[0]*(type==='win'?1.5:0.5)),t+P[1]);
+    g.gain.setValueAtTime(P[3]*SET.volume,t); g.gain.exponentialRampToValueAtTime(0.001,t+P[1]);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t+P[1]+0.02);
+  }catch(e){}
+}
 
 function newGame(){
-  S = { cash:600, hp:100, wave:0, state:'ready', speed:1, autoSkip:S?S.autoSkip:false,
-        towers:[], enemies:[], projectiles:[], effects:[], texts:[], spawnQ:[], waveTime:0,
-        placing:null, selected:null, mouse:{x:-99,y:-99,in:false}, time:0, autoTimer:0, kills:0 };
+  const D=DIFFS[DIFF];
+  loadMap(MAP);
+  S = { cash:D.cash, hp:D.hp, maxHp:D.hp, wave:0, maxWave:D.waves, state:'ready', speed:1, autoSkip:S?S.autoSkip:false,
+        towers:[], enemies:[], projectiles:[], effects:[], texts:[], spawnQ:[], waveTime:0, earned:0,
+        placing:null, selected:null, mouse:{x:-99,y:-99,in:false}, time:0, autoTimer:0, kills:0, recorded:false };
   updateUI(); renderBar(); hidePanel();
 }
 
@@ -158,8 +217,8 @@ function buildWave(n){
   return q;
 }
 function startWave(){
-  if(S.state!=='ready' || S.wave>=MAX_WAVE) return;
-  S.wave++; S.state='wave'; S.spawnQ=buildWave(S.wave); S.waveTime=0;
+  if(!S || S.state!=='ready' || S.wave>=S.maxWave) return;
+  S.wave++; S.state='wave'; S.spawnQ=buildWave(S.wave); S.waveTime=0; sfx('wave');
   flash(S.wave%10===0 ? `⚠️ BOSS WAVE ${S.wave}` : `WAVE ${S.wave}`);
   updateUI();
 }
@@ -167,14 +226,15 @@ function spawn(type){
   const d=ENEMIES[type], w=S.wave;
   let hp=d.hp*(1+w*0.13+Math.pow(w,1.6)*0.01);
   if(d.boss) hp=d.hp*Math.pow(w/10,2.1)*(1+w*0.05);
-  S.enemies.push({type, ...d, maxHp:hp, hp, x:pathPx[0].x, y:pathPx[0].y, wp:1, dist:0,
+  hp*=DIFFS[DIFF].hpMul;
+  S.enemies.push({type, ...d, reward:Math.round(d.reward*DIFFS[DIFF].reward), maxHp:hp, hp, x:pathPx[0].x, y:pathPx[0].y, wp:1, dist:0,
                   slowUntil:0, slowF:0, id:Math.random(), wob:Math.random()*6});
 }
 function endWave(){
   const bonus=100+S.wave*30; let farm=0;
   S.towers.filter(t=>t.type==='farm').forEach(t=>{ const inc=lvl(t).income; farm+=inc; addText(t.x,t.y-20,'+$'+inc,'#ffd54f'); });
-  S.cash+=bonus+farm;
-  if(S.wave>=MAX_WAVE){ S.state='win'; saveBest(); showOverlay('🏆 MENANG!', `Kamu bertahan ${MAX_WAVE} wave! Kills: ${S.kills}`); return; }
+  S.cash+=bonus+farm; S.earned+=bonus+farm;
+  if(S.wave>=S.maxWave){ S.state='win'; finishGame(true); return; }
   S.state='ready'; S.autoTimer=3;
   flash(`Wave selesai! +$${bonus+farm}`, 1200);
   updateUI(); renderBar();
@@ -189,17 +249,17 @@ function placeTower(type,c,r){
   if(S.cash<cost || !tileFree(c,r) || countType(type)>=def.limit) return false;
   S.cash-=cost;
   const t={type,c,r,x:(c+0.5)*T,y:(r+0.5)*T,level:0,cd:0,angle:0,spent:cost,target:'first',recoil:0};
-  S.towers.push(t); puff(t.x,t.y,'#fff'); updateUI(); renderBar();
+  S.towers.push(t); STATS.towersPlaced++; sfx('place'); puff(t.x,t.y,'#fff'); updateUI(); renderBar();
   return t;
 }
 function upgrade(t){
   const def=TOWERS[t.type]; if(t.level>=def.levels.length-1) return;
   const cost=def.levels[t.level+1].cost; if(S.cash<cost) return;
-  S.cash-=cost; t.spent+=cost; t.level++; puff(t.x,t.y,'#ffd54f'); addText(t.x,t.y-24,'UPGRADE!','#ffd54f');
+  S.cash-=cost; t.spent+=cost; t.level++; sfx('upgrade'); puff(t.x,t.y,'#ffd54f'); addText(t.x,t.y-24,'UPGRADE!','#ffd54f');
   updateUI(); showPanel(t); renderBar();
 }
 function sell(t){
-  const v=Math.floor(t.spent*0.6); S.cash+=v; S.towers=S.towers.filter(x=>x!==t);
+  const v=Math.floor(t.spent*0.6); S.cash+=v; sfx('sell'); S.towers=S.towers.filter(x=>x!==t);
   addText(t.x,t.y,'+$'+v,'#ffd54f'); puff(t.x,t.y,'#aaa'); hidePanel(); S.selected=null; updateUI(); renderBar();
 }
 const MODES=['first','last','strong','close'], MODE_LBL={first:'Pertama',last:'Terakhir',strong:'Terkuat',close:'Terdekat'};
@@ -216,8 +276,8 @@ function pickTarget(t,L){
 }
 function damage(e,amt,L){
   let a=amt; if(e.armor && !L.pierceArmor) a*= (1-e.armor);
-  e.hp-=a; addText(e.x+(Math.random()*16-8), e.y-20, Math.round(a*10)/10, '#fff', 0.5);
-  if(e.hp<=0 && !e.dead){ e.dead=true; S.cash+=e.reward; S.kills++; puff(e.x,e.y,e.color,e.boss?24:8); }
+  e.hp-=a; if(SET.dmgNum) addText(e.x+(Math.random()*16-8), e.y-20, Math.round(a*10)/10, '#fff', 0.5);
+  if(e.hp<=0 && !e.dead){ e.dead=true; S.cash+=e.reward; S.earned+=e.reward; S.kills++; if(e.boss) STATS.bossKills++; puff(e.x,e.y,e.color,e.boss?24:8); }
 }
 
 // ======================= UPDATE =======================
@@ -237,7 +297,7 @@ function update(dt){
       if(d<=move){ e.x=p.x; e.y=p.y; move-=d; e.dist+=d; e.wp++; }
       else { e.x+=dx/d*move; e.y+=dy/d*move; e.dist+=move; e.dir=Math.atan2(dy,dx); move=0; }
     }
-    if(e.wp>=pathPx.length){ e.dead=true; e.leaked=true; const dmg=e.boss?999:Math.ceil(e.hp); S.hp-=dmg; shake=8; addText(W-60,5.5*T,'-'+dmg,'#ef5350',1.2); }
+    if(e.wp>=pathPx.length){ e.dead=true; e.leaked=true; const dmg=e.boss?999:Math.ceil(e.hp); S.hp-=dmg; sfx('leak'); if(SET.shake) shake=8; addText(W-60,(PATH[PATH.length-1][1]+0.5)*T,'-'+dmg,'#ef5350',1.2); }
   }
   S.enemies=S.enemies.filter(e=>!e.dead);
   // tower
@@ -257,11 +317,12 @@ function update(dt){
   S.projectiles=S.projectiles.filter(p=>!p.done);
   S.effects.forEach(f=>f.life-=dt); S.effects=S.effects.filter(f=>f.life>0);
   S.texts.forEach(x=>{x.life-=dt; x.y-=30*dt;}); S.texts=S.texts.filter(x=>x.life>0);
-  if(S.hp<=0 && S.state!=='lose'){ S.hp=0; S.state='lose'; saveBest(); showOverlay('💀 GAME OVER', `Bertahan sampai wave ${S.wave}. Kills: ${S.kills}`); }
+  if(S.hp<=0 && S.state!=='lose'){ S.hp=0; S.state='lose'; finishGame(false); }
   if(S.state==='wave' && !S.spawnQ.length && !S.enemies.length) endWave();
 }
 function fire(t,L,e){
   const mx=t.x+Math.cos(t.angle)*22, my=t.y-14+Math.sin(t.angle)*22;
+  sfx(t.type==='sniper'?'snipe':t.type==='freezer'?'freeze':'shoot');
   if(t.type==='demoman'){ S.projectiles.push({x:mx,y:my,tx:e.x,ty:e.y,target:e,L,a:t.angle}); return; }
   const col = t.type==='freezer'?'#81d4fa' : t.type==='sniper'?'#fff59d' : '#ffeb3b';
   S.effects.push({kind:'tracer',x1:mx,y1:my,x2:e.x,y2:e.y-8,life:t.type==='sniper'?0.15:0.06,max:0.15,col,w:t.type==='sniper'?3:2});
@@ -270,7 +331,7 @@ function fire(t,L,e){
 }
 function explode(p){
   const R=p.L.splash*T;
-  S.effects.push({kind:'boom',x:p.tx,y:p.ty,r:R,life:0.35,max:0.35});
+  S.effects.push({kind:'boom',x:p.tx,y:p.ty,r:R,life:0.35,max:0.35}); sfx('boom');
   for(const e of S.enemies){ if(e.dead) continue; if(Math.hypot(e.x-p.tx,e.y-p.ty)<=R) damage(e,p.L.dmg,p.L); }
 }
 function puff(x,y,col,n=8){ for(let i=0;i<n;i++) S.effects.push({kind:'part',x,y,vx:(Math.random()-0.5)*160,vy:(Math.random()-0.5)*160-40,col,life:0.5,max:0.5,s:4+Math.random()*5}); }
@@ -290,8 +351,9 @@ function block(x,y,w,h,depth,color){
 function drawMap(){
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const isP=pathTiles.has(c+','+r);
-    ctx.fillStyle = isP ? ((c+r)%2?'#a1887f':'#9c7f72') : ((c+r)%2?'#4caf50':'#46a34a');
+    const th=MAP.th; ctx.fillStyle = isP ? ((c+r)%2?th.p1:th.p2) : ((c+r)%2?th.g1:th.g2);
     ctx.fillRect(c*T,r*T,T,T);
+    if(SET.grid){ ctx.strokeStyle='rgba(0,0,0,.08)'; ctx.lineWidth=1; ctx.strokeRect(c*T,r*T,T,T); }
     if(isP){ ctx.fillStyle='rgba(0,0,0,.08)'; ctx.fillRect(c*T+6,r*T+6,10,6); ctx.fillRect(c*T+28,r*T+30,12,6); }
   }
   // tepi jalur
@@ -301,13 +363,14 @@ function drawMap(){
       const x=c*T,y=r*T; if(dc===1){ctx.moveTo(x+T,y);ctx.lineTo(x+T,y+T);} if(dc===-1){ctx.moveTo(x,y);ctx.lineTo(x,y+T);}
       if(dr===1){ctx.moveTo(x,y+T);ctx.lineTo(x+T,y+T);} if(dr===-1){ctx.moveTo(x,y);ctx.lineTo(x+T,y);} ctx.stroke(); } }); });
   // spawn portal
-  ctx.fillStyle='#212121'; ctx.fillRect(0,2*T+4,10,T-8);
+  ctx.fillStyle='#212121'; ctx.fillRect(0,PATH[0][1]*T+4,10,T-8);
   // base
-  const bx=19*T+2, by=4*T+6; block(bx-6,by,T+4,T*2-10,10,'#90a4ae'); block(bx+2,by-14,T-12,22,6,'#e53935');
+  const bx=19*T+2, by=(PATH[PATH.length-1][1]-1)*T+6; block(bx-6,by,T+4,T*2-10,10,'#90a4ae'); block(bx+2,by-14,T-12,22,6,'#e53935');
   ctx.fillStyle='#fff'; ctx.font='bold 11px Arial'; ctx.textAlign='center'; ctx.fillText('BASE',bx+16,by+40);
   for(const d of deco){ const x=d.c*T, y=d.r*T;
-    if(d.type==='tree'){ block(x+19,y+26,10,18,4,'#6d4c41'); block(x+8,y+12,32,22,10,'#2e7d32'); }
-    else block(x+10,y+20,28,18,8,'#9e9e9e'); }
+    if(d.type==='tree' && MAP.th.cactus){ block(x+18,y+8,12,32,4,MAP.th.tree); block(x+8,y+16,8,12,3,MAP.th.tree); block(x+32,y+12,8,12,3,MAP.th.tree); }
+    else if(d.type==='tree'){ block(x+19,y+26,10,18,4,'#6d4c41'); block(x+8,y+12,32,22,10,MAP.th.tree); if(MAP.id==='snow'){ ctx.fillStyle='#fff'; ctx.fillRect(x+8,y+2,32,6);} }
+    else block(x+10,y+20,28,18,8,MAP.th.rock); }
 }
 function drawTower(t){
   const def=TOWERS[t.type], x=t.x, y=t.y, L=t.level;
@@ -353,7 +416,7 @@ function draw(){
   if(shake>0){ ctx.translate((Math.random()-0.5)*shake,(Math.random()-0.5)*shake); shake*=0.85; if(shake<0.5) shake=0; }
   drawMap();
   // range tower yang dipilih
-  if(S.selected && S.selected.type!=='farm') ring(S.selected.x,S.selected.y,lvl(S.selected).range*T,'rgba(255,255,255,.15)','rgba(255,255,255,.7)');
+  if(SET.range && S.selected && S.selected.type!=='farm') ring(S.selected.x,S.selected.y,lvl(S.selected).range*T,'rgba(255,255,255,.15)','rgba(255,255,255,.7)');
   // gambar berurutan menurut y (pseudo-3D)
   const objs=[...S.towers.map(t=>({y:t.y,f:()=>drawTower(t)})), ...S.enemies.map(e=>({y:e.y,f:()=>drawEnemy(e)}))];
   objs.sort((a,b)=>a.y-b.y).forEach(o=>o.f());
@@ -384,7 +447,7 @@ function ring(x,y,r,fill,stroke){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); c
 const $=id=>document.getElementById(id);
 function updateUI(){
   $('cash').innerHTML=`💰 $<b>${Math.floor(S.cash)}</b>`;
-  $('wave').innerHTML=`🌊 Wave <b>${S.wave}</b>/${MAX_WAVE}`;
+  $('wave').innerHTML=`🌊 Wave <b>${S.wave}</b>/${S.maxWave}`;
   $('hp').innerHTML=`❤️ <b>${Math.max(0,Math.ceil(S.hp))}</b>`;
   $('enem').innerHTML=`👾 <b>${S.enemies.length+S.spawnQ.length}</b>`;
   $('startBtn').disabled = S.state!=='ready';
@@ -421,20 +484,99 @@ function showPanel(t){
 }
 function hidePanel(){ $('panel').style.display='none'; }
 let msgTimer; function flash(txt,ms=1600){ const m=$('msg'); m.textContent=txt; m.style.opacity=1; clearTimeout(msgTimer); msgTimer=setTimeout(()=>m.style.opacity=0,ms); }
-function showOverlay(title,sub){
-  $('overlay').style.display='flex';
-  $('overlay').innerHTML=`<h1>${title}</h1><p>${sub}</p><button class="btn" id="againBtn" style="font-size:22px;padding:10px 30px">MAIN LAGI</button><div>${bestTxt()}</div>`;
-  $('againBtn').onclick=()=>{ $('overlay').style.display='none'; newGame(); };
+// ======================= MENU =======================
+let curScreen=null, menuBack='main', resetArm=false, endData=null;
+const bestKey=(m,d)=>m+'_'+d;
+const getBest=(m,d)=>STATS.best[bestKey(m,d)]||0;
+function menu(scr){ curScreen=scr; const o=$('overlay'); o.style.display='flex'; o.innerHTML=SCREENS[scr](); if(AFTER[scr]) AFTER[scr](); }
+function closeMenu(){ curScreen=null; $('overlay').style.display='none'; }
+function go(scr){ sfx('click'); menu(scr); }
+const SCREENS = {
+  main:()=>`<h1>🧱 BLOCK TOWER DEFENSE</h1><div class="sub">Pertahankan base dari gelombang zombie kotak!</div>
+    <div class="mcol">
+      <button class="btn mbtn" onclick="go('play')">▶ MAIN</button>
+      <button class="btn blue mbtn" onclick="go('howto')">📖 Cara Main</button>
+      <button class="btn gray mbtn" onclick="menuBack='main';go('settings')">⚙️ Pengaturan</button>
+      <button class="btn gray mbtn" onclick="go('stats')">📊 Statistik</button>
+    </div><small style="opacity:.5">v1.1 • ${MAPS.length} map • 3 tingkat kesulitan</small>`,
+  play:()=>`<h1 style="font-size:34px">Pilih Map</h1>
+    <div class="cards">${MAPS.map((m,i)=>`<div class="card ${MAP===m?'sel':''}" onclick="MAP=MAPS[${i}];loadMap(MAP);go('play')">
+      <canvas width="200" height="120" data-map="${i}"></canvas><div class="nm">${m.name}</div><small>${m.diff} • Rekor: wave ${getBest(m.id,DIFF)}</small></div>`).join('')}</div>
+    <h2>Kesulitan</h2>
+    <div class="diffs">${Object.entries(DIFFS).map(([k,d])=>`<button class="btn ${DIFF===k?'sel':''}" style="background:${d.color}" onclick="DIFF='${k}';go('play')">
+      ${d.name}<br><small style="font-weight:600">${d.waves} wave • ❤️${d.hp} • $${d.cash}</small></button>`).join('')}</div>
+    <div class="row2"><button class="btn gray" onclick="go('main')">← Kembali</button>
+      <button class="btn" style="font-size:22px;padding:8px 40px" onclick="startGame()">MULAI ▶</button></div>`,
+  howto:()=>`<h1 style="font-size:34px">📖 Cara Main</h1><div class="box">
+    <p>Pasang tower di rumput di samping jalur. Musuh berjalan menuju <b>BASE</b>; musuh yang lolos mengurangi nyawa sebanyak sisa HP-nya (boss = langsung kalah). Bertahan sampai wave terakhir untuk menang.</p>
+    <table><tr><th>Tower</th><th>Harga</th><th>Kemampuan</th></tr>
+    <tr><td>🟩 Scout</td><td>$200</td><td>Murah & serba guna. Deteksi hidden di Lv 2</td></tr>
+    <tr><td>🟫 Sniper</td><td>$350</td><td>Damage besar, jangkauan sangat jauh</td></tr>
+    <tr><td>🟥 Demoman</td><td>$450</td><td>Roket dengan ledakan area</td></tr>
+    <tr><td>🟦 Freezer</td><td>$400</td><td>Memperlambat musuh</td></tr>
+    <tr><td>⬛ Minigunner</td><td>$1200</td><td>Tembakan super cepat</td></tr>
+    <tr><td>🟨 Farm</td><td>$250</td><td>Uang tambahan tiap akhir wave</td></tr></table><br>
+    <table><tr><th>Musuh</th><th>Ciri</th></tr>
+    <tr><td>Normal / Fast</td><td>Biasa / cepat tapi rapuh</td></tr>
+    <tr><td>Tank / Armored</td><td>Armor mengurangi damage (kecuali tower "Tembus Armor")</td></tr>
+    <tr><td>Hidden</td><td>Transparan, hanya kena tower dengan deteksi hidden</td></tr>
+    <tr><td>Boss</td><td>Muncul tiap wave kelipatan 10</td></tr></table><br>
+    <b>Kontrol:</b> 1–6 pilih tower • Klik peta pasang (tahan Shift = pasang berulang) • Klik tower → upgrade/jual/target • Q upgrade • X jual • Spasi mulai wave • Esc pause/batal • Klik kanan batal
+    </div><button class="btn gray" onclick="go('main')">← Kembali</button>`,
+  settings:()=>{ const tg=(k,l)=>`<div class="tog"><span>${l}</span><button class="btn ${SET[k]?'':'red'}" onclick="SET.${k}=!SET.${k};store('btd_settings',SET);go('settings')">${SET[k]?'ON':'OFF'}</button></div>`;
+    return `<h1 style="font-size:34px">⚙️ Pengaturan</h1><div class="box">
+    ${tg('sound','🔊 Suara')}
+    <div class="tog"><span>🎚️ Volume</span><input type="range" min="0" max="1" step="0.05" value="${SET.volume}" oninput="SET.volume=+this.value;store('btd_settings',SET)" onchange="sfx('upgrade')"></div>
+    ${tg('dmgNum','💥 Angka damage')}${tg('shake','📳 Getaran layar')}${tg('range','🎯 Tampilkan jangkauan tower')}${tg('grid','🔲 Garis grid')}
+    <div class="tog"><span>🗑️ Hapus semua data (statistik & rekor)</span><button class="btn red" onclick="resetData()">${resetArm?'Yakin? Klik lagi':'Reset'}</button></div>
+    </div><button class="btn gray" onclick="resetArm=false;go(menuBack)">← Kembali</button>`; },
+  stats:()=>`<h1 style="font-size:34px">📊 Statistik</h1><div class="box">
+    <table><tr><td>Game dimainkan</td><td><b>${STATS.games}</b></td></tr><tr><td>Menang</td><td><b>${STATS.wins}</b></td></tr>
+    <tr><td>Total musuh dikalahkan</td><td><b>${STATS.kills}</b></td></tr><tr><td>Boss dikalahkan</td><td><b>${STATS.bossKills}</b></td></tr>
+    <tr><td>Tower dipasang</td><td><b>${STATS.towersPlaced}</b></td></tr><tr><td>Total uang didapat</td><td><b>$${STATS.cashEarned}</b></td></tr></table><br>
+    <b>Rekor wave tertinggi</b><table><tr><th>Map</th>${Object.values(DIFFS).map(d=>`<th>${d.name}</th>`).join('')}</tr>
+    ${MAPS.map(m=>`<tr><td>${m.name}</td>${Object.entries(DIFFS).map(([k,d])=>{const b=getBest(m.id,k);return `<td>${b>=d.waves?'🏆 ':''}${b}</td>`;}).join('')}</tr>`).join('')}</table>
+    </div><button class="btn gray" onclick="go('main')">← Kembali</button>`,
+  pause:()=>`<h1>⏸ PAUSE</h1><div class="sub">${MAP.name} • ${DIFFS[DIFF].name} • Wave ${S.wave}/${S.maxWave}</div><div class="mcol">
+    <button class="btn mbtn" onclick="sfx('click');closeMenu()">▶ Lanjutkan</button>
+    <button class="btn blue mbtn" onclick="startGame()">🔄 Ulangi</button>
+    <button class="btn gray mbtn" onclick="menuBack='pause';go('settings')">⚙️ Pengaturan</button>
+    <button class="btn red mbtn" onclick="newGame();go('main')">🏠 Menu Utama</button></div>`,
+  end:()=>{ const d=endData; return `<h1>${d.win?'🏆 MENANG!':'💀 GAME OVER'}</h1>
+    ${d.record?'<span class="badge">⭐ REKOR BARU!</span>':''}
+    <div class="box" style="max-width:360px"><table>
+    <tr><td>Map</td><td><b>${MAP.name}</b> (${DIFFS[DIFF].name})</td></tr><tr><td>Wave</td><td><b>${S.wave}/${S.maxWave}</b></td></tr>
+    <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b></td></tr><tr><td>Uang didapat</td><td><b>$${S.earned}</b></td></tr>
+    <tr><td>Tower</td><td><b>${S.towers.length}</b></td></tr><tr><td>Rekor</td><td><b>wave ${getBest(MAP.id,DIFF)}</b></td></tr></table></div>
+    <div class="row2"><button class="btn" onclick="startGame()">🔄 Main Lagi</button><button class="btn blue" onclick="go('play')">🗺️ Pilih Map</button>
+    <button class="btn gray" onclick="newGame();go('main')">🏠 Menu</button></div>`; },
+};
+const AFTER = { play:()=>document.querySelectorAll('canvas[data-map]').forEach(c=>drawPreview(c,MAPS[+c.dataset.map])) };
+function drawPreview(c,m){
+  const g=c.getContext('2d'), ts=c.width/COLS, tiles=computeTiles(m.path);
+  for(let r=0;r<ROWS;r++) for(let x=0;x<COLS;x++){ const p=tiles.has(x+','+r);
+    g.fillStyle=p?m.th.p1:((x+r)%2?m.th.g1:m.th.g2); g.fillRect(x*ts,r*ts,ts+0.5,ts+0.5); }
+  g.fillStyle='#e53935'; const e=m.path[m.path.length-1]; g.fillRect(19*ts,(e[1]-1)*ts,ts,ts*2);
 }
-function bestTxt(){ try{ const b=+localStorage.getItem('btd_best')||0; return b?`Rekor: wave ${b}`:''; }catch(e){ return ''; } }
-function saveBest(){ try{ const b=+localStorage.getItem('btd_best')||0; if(S.wave>b) localStorage.setItem('btd_best',S.wave); }catch(e){} }
+function resetData(){
+  if(!resetArm){ resetArm=true; go('settings'); return; }
+  resetArm=false; Object.assign(STATS,{games:0,wins:0,kills:0,bossKills:0,towersPlaced:0,cashEarned:0,best:{}}); store('btd_stats',STATS); go('settings');
+}
+function startGame(){ sfx('click'); newGame(); STATS.games++; store('btd_stats',STATS); closeMenu(); flash(`${MAP.name} • ${DIFFS[DIFF].name}`); }
+function finishGame(win){
+  if(S.recorded) return; S.recorded=true;
+  const k=bestKey(MAP.id,DIFF), reached=win?S.wave:Math.max(0,S.wave-1), record=reached>(STATS.best[k]||0);
+  if(record) STATS.best[k]=reached;
+  if(win) STATS.wins++; STATS.kills+=S.kills; STATS.cashEarned+=S.earned; store('btd_stats',STATS);
+  sfx(win?'win':'lose'); endData={win,record}; setTimeout(()=>menu('end'),700);
+}
 
 // ======================= INPUT =======================
 function canvasPos(ev){ const r=cv.getBoundingClientRect(); return {x:(ev.clientX-r.left)*W/r.width, y:(ev.clientY-r.top)*H/r.height}; }
 cv.addEventListener('pointermove',ev=>{ const p=canvasPos(ev); S.mouse={...p,in:true}; });
 cv.addEventListener('pointerleave',()=>S.mouse.in=false);
 cv.addEventListener('pointerdown',ev=>{
-  if(ev.button===2) return;
+  if(ev.button===2 || curScreen) return;
   const p=canvasPos(ev); S.mouse={...p,in:true}; const c=Math.floor(p.x/T), r=Math.floor(p.y/T);
   if(S.placing){ const t=placeTower(S.placing,c,r); if(t && !ev.shiftKey){ S.placing=null; renderBar(); } return; }
   const t=S.towers.find(t=>t.c===c&&t.r===r);
@@ -442,8 +584,13 @@ cv.addEventListener('pointerdown',ev=>{
 });
 cv.addEventListener('contextmenu',ev=>{ ev.preventDefault(); S.placing=null; S.selected=null; hidePanel(); renderBar(); });
 addEventListener('keydown',ev=>{
+  if(ev.key==='Escape'){
+    if(curScreen==='pause') closeMenu();
+    else if(!curScreen && (S.placing||S.selected)){ S.placing=null; S.selected=null; hidePanel(); renderBar(); }
+    else if(!curScreen && S.state!=='win' && S.state!=='lose') menu('pause');
+    return; }
+  if(curScreen) return;
   if(ev.key>='1'&&ev.key<='6') selectPlace(ORDER[+ev.key-1]);
-  if(ev.key==='Escape'){ S.placing=null; S.selected=null; hidePanel(); renderBar(); }
   if((ev.key==='q'||ev.key==='e') && S.selected) upgrade(S.selected);
   if(ev.key==='x' && S.selected) sell(S.selected);
   if(ev.key===' '){ ev.preventDefault(); startWave(); }
@@ -451,14 +598,13 @@ addEventListener('keydown',ev=>{
 $('startBtn').onclick=startWave;
 $('skipBtn').onclick=()=>{ S.autoSkip=!S.autoSkip; S.autoTimer=3; updateUI(); };
 $('speedBtn').onclick=()=>{ S.speed=S.speed===1?2:S.speed===2?3:1; updateUI(); };
-$('playBtn').onclick=()=>$('overlay').style.display='none';
-$('best').textContent=bestTxt();
+$('pauseBtn').onclick=()=>{ if(!curScreen && S.state!=='win' && S.state!=='lose') menu('pause'); };
 
 // ======================= LOOP =======================
 let last=performance.now(), uiT=0, lastCash=-1;
 function loop(now){
   let dt=Math.min(0.05,(now-last)/1000); last=now;
-  if($('overlay').style.display==='none' && S.state!=='win' && S.state!=='lose'){
+  if(!curScreen && S.state!=='win' && S.state!=='lose'){
     for(let i=0;i<S.speed;i++) update(dt);
   }
   draw();
@@ -466,7 +612,7 @@ function loop(now){
     if(Math.floor(S.cash)!==lastCash){ lastCash=Math.floor(S.cash); renderBar(); if(S.selected) showPanel(S.selected); } }
   requestAnimationFrame(loop);
 }
-newGame(); requestAnimationFrame(loop);
+loadMap(MAP); newGame(); menu('main'); requestAnimationFrame(loop);
 </script>
 </body>
 </html>
