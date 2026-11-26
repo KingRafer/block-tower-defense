@@ -219,7 +219,8 @@ function endWave() {
 }
 /** Skip: mulai wave berikutnya saat semua musuh wave ini sudah keluar */
 const canSkip = () => S && S.state === 'wave' && !S.spawnQ.length && S.enemies.length > 0 && S.wave < S.maxWave;
-const skipBonusAmt = () => 25 + Math.min(S.wave, 60) * 10;
+/** Bonus emas skip: makin besar di wave tinggi + bonus untuk musuh yang masih tersisa */
+const skipBonusAmt = () => 150 + Math.min(S.wave, 80) * 40 + Math.min(S.enemies.length, 30) * 15;
 function skipWave() {
   if (isGuest()) { MP.act({ a: 'skip' }); return; }
   if (!canSkip()) return;

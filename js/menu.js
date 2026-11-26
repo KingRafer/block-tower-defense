@@ -25,11 +25,18 @@ const Menu = {
     const o = $('overlay');
     o.style.display = 'flex';
     o.classList.toggle('home-bg', scr === 'main');
+    document.body.classList.toggle('on-home', scr === 'main');
     o.innerHTML = `<div class="screen screen-${scr} ${quiet ? 'noanim' : ''}">${this.screens[scr].call(this)}</div>`;
     if (this.after[scr]) this.after[scr].call(this);
     UI.tooltip(null);
   },
   go(scr) { sfx('click'); this.show(scr); },
+  /** Hitung mundur [data-cd] (ms epoch) — diperbarui tiap detik */
+  tickCd() {
+    const els = document.querySelectorAll('[data-cd]'); if (!els.length) return;
+    const now = Date.now();
+    els.forEach(el => { const s = Math.max(0, Math.floor((+el.dataset.cd - now) / 1000)); el.textContent = `${Math.floor(s / 3600)}j ${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}d`; });
+  },
   close() { this.open = false; this.screen = null; $('overlay').style.display = 'none'; },
 
   /* ---------- helper tampilan ---------- */
@@ -91,50 +98,77 @@ const Menu = {
   /* ---------- layar ---------- */
   screens: {
     main() {
-      const u = Online.user, lv = levelFromXp(PROFILE.xp), lo = lv > 1 ? xpForLevel(lv - 1) : 0, hi = xpForLevel(lv);
-      const pct = Math.min(100, (PROFILE.xp - lo) / (hi - lo) * 100);
-      const dock = (act, icon, label, cls, badge = '') => `<button class="dk ${cls}" data-act="${act}"><span>${icon}</span><b>${label}</b>${badge}</button>`;
-      return `<div class="cubes">${Array.from({ length: 14 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
-        <div class="home">
+      const u = Online.user, v = PROFILE.vault, lv = levelFromXp(PROFILE.xp), lo = lv > 1 ? xpForLevel(lv - 1) : 0, hi = xpForLevel(lv);
+      const pct = Math.min(100, (PROFILE.xp - lo) / (hi - lo) * 100), now = Date.now();
+      const nextDay = Date.parse(SHARED.dayStr(now + 864e5) + 'T00:00:00+07:00');
+      const hour = new Date(now + 7 * 3600e3).getUTCHours();
+      const sky = hour >= 5 && hour < 8 ? 'dawn' : hour < 16 ? 'day' : hour < 19 ? 'dusk' : 'night';
+      const tile = (act, ic, label, cls, badge = '') => `<button class="ltile ${cls}" data-act="${act}"><span class="lt-ic">${ic}</span><b>${label}</b>${badge}</button>`;
+      // unggulan
+      const feat = SHARED.featuredUnit(now), fr = RARITY[UNIT_RARITY[feat]], pityLeft = Math.max(1, GACHA.pity - ((v.pity || {}).feat || 0));
+      // showcase loadout
+      const lo4 = (PROFILE.loadout || []).map(id => unitById(id)).filter(Boolean).slice(0, 6);
+      const show = lo4.map((x, i) => {
+        const L = computeL(x.type, 0), d = TOWERS[x.type], tr = x.trait && TRAITS[x.trait], r = RARITY[UNIT_RARITY[x.type]];
+        return `<button class="sc-unit" style="--i:${i};--rc:${r.color}" data-act="unit:${x.id}">
+          <div class="sc-tip"><b>${esc(this.unitName(x))}</b> <small>Lv ${unitLevel(x.xp)}</small><br>${this.rarityTag(x.type)} <small>${d.role || ''}</small>
+            <div class="sc-st"><span>⚔️ ${fmtNum(L.dmg)}</span><span>🎯 ${(+L.range).toFixed(1)}</span><span>⏱ ${(+L.rate).toFixed(2)}s</span><span>💥 ${fmtNum(L.dmg / L.rate)}/s</span></div>
+            ${tr ? `<small class="sc-tr">${tr.icon || '✦'} ${tr.name}</small>` : ''}</div>
+          <canvas width="96" height="96" data-icon="${x.type}" data-skin="${x.skin || 'default'}" data-evo="${x.evo ? 1 : 0}"></canvas>
+          <i class="sc-shadow"></i></button>`;
+      }).join('');
+      // misi aktif (2 teratas yang belum diambil)
+      const m = SHARED.rollMissions(v, now), active = SHARED.MISSIONS.daily.filter(d => !m.dc.includes(d.id)).slice(0, 3);
+      const misW = active.map(d => { const pr = Math.min(d.target, SHARED.missionProgress(v, now, 'daily', d)); return `<div class="mw-row ${pr >= d.target ? 'ok' : ''}"><small>${d.name}</small><div class="mbar"><div style="width:${pr / d.target * 100}%"></div><span>${pr}/${d.target}</span></div></div>`; }).join('') || '<small class="dim">✅ Semua misi harian selesai!</small>';
+      // pass
+      const ps = SHARED.rollPass(v, now), pt = SHARED.passTier(ps), ppct = pt >= SHARED.PASS.tiers ? 100 : (ps.xp - pt * SHARED.PASS.xpPerTier) / SHARED.PASS.xpPerTier * 100;
+      const streak = (v.daily || {}).streak || 0, nextLogin = SHARED.DAILY_LOGIN[streak % SHARED.DAILY_LOGIN.length];
+      const ev = SHARED.EVENT, evOn = ev.rewardMul > 1 || ev.diamondMul > 1;
+      const save = SaveGame.get(), sm = save && (MAPS.find(x => x.id === save.map) || MAPS[0]);
+      return `<div class="lobby sky-${sky}"><div class="sky"></div><div class="sun"></div><div class="clouds"><i></i><i></i><i></i></div>
+          <svg class="hills" viewBox="0 0 1200 300" preserveAspectRatio="none"><path class="h1" d="M0 190 L80 150 L160 170 L260 110 L360 160 L460 120 L560 165 L700 95 L820 150 L940 115 L1060 160 L1200 120 L1200 300 L0 300Z"/><path class="h2" d="M0 240 L120 200 L240 230 L380 190 L520 235 L660 200 L800 238 L940 205 L1080 232 L1200 210 L1200 300 L0 300Z"/></svg>
+          <div class="ground"></div></div>
+        <div class="lh">
           ${this.announce()}
-          <div class="home-top">
-            <button class="pcard" data-act="go:account">
-              ${this.avatar(u, 52)}
-              <div class="pinfo"><b>${esc(u ? u.name : 'Tamu')}</b>
-                <div class="lvrow"><span class="lvl">Lv ${lv}</span><div class="xpbar"><div style="width:${pct}%"></div></div></div>
-                <small>${u ? '☁️ Tersinkron' : Online.available ? '🔑 Masuk dengan Google' : '💾 Mode offline'}</small></div>
-            </button>
-            <div class="chips">
-              ${this.currency()}
-              ${PWA.installed() ? '' : `<button class="icon-btn dl" data-act="go:download" title="Download aplikasi">⬇️</button>`}
-              <button class="icon-btn" data-act="settings:main" title="Pengaturan">⚙️</button>
-            </div>
-          </div>
-          <div class="home-mid">
-            <div class="hero">
-              <div class="logo3d"><span>🧱</span><h1>BLOCK<br><em>TOWER DEFENSE</em></h1></div>
-              ${this.saveButton()}
-            </div>
-            <div class="playcol">
-              <button class="play-btn solo" data-act="go:play"><span>▶</span><div><b>MAIN SOLO</b><small>${MAPS.length} map • Klasik & Endless</small></div></button>
-              <button class="play-btn coop" data-act="go:mabar"><span>🤝</span><div><b>MABAR</b><small>Co-op 2–4 pemain bersama teman</small></div></button>
-              <button class="play-btn daily" data-act="go:daily"><span>📅</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai hari ini' : 'Hadiah 🪙 ' + DAILY_REWARD}</small></div></button>
-            </div>
-          </div>
-          <nav class="dock">
-            ${dock('go:gacha', '🎰', 'Summon', 'd-gold')}
-            ${dock('go:units', '🗼', 'Unit', 'd-purple')}
-            ${dock('go:skills', '⚡', 'Skill', 'd-orange')}
-            ${dock('go:missions', '🎯', 'Misi', 'd-green', this.badge(missionsReady()))}
-            ${dock('go:pass', '🎫', 'Pass', 'd-pink', this.badge(passReady()))}
-            ${dock('go:shop', '🛒', 'Toko', 'd-teal')}
-            ${dock('go:friends', '👥', 'Teman', 'd-blue', `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`)}
-            ${dock('go:more', '☰', 'Lainnya', 'd-gray')}
+          <header class="lh-top">
+            <button class="lh-prof" data-act="go:account">${this.avatar(u, 46)}
+              <div><b>${esc(u ? u.name : 'Tamu')}</b><div class="lvrow"><span class="lvl">Lv ${lv}</span><div class="xpbar"><div style="width:${pct}%"></div></div></div></div></button>
+            <div class="lh-cur">${this.currency()}</div>
+            <div class="lh-sys">${PWA.installed() ? '' : `<button class="sysb dl" data-act="go:download" title="Download aplikasi">⬇️</button>`}
+              <button class="sysb" data-act="go:howto" title="Cara main">❔</button><button class="sysb" data-act="settings:main" title="Pengaturan">⚙️</button></div>
+          </header>
+          <nav class="lh-left">
+            ${tile('go:gacha', '🎰', 'Summon', 'c-gold')}${tile('go:units', '🗼', 'Unit', 'c-purple')}
+            ${tile('go:skills', '⚡', 'Skill', 'c-orange')}${tile('go:shop', '🛒', 'Toko', 'c-teal')}
+            ${tile('go:missions', '🎯', 'Misi', 'c-green', this.badge(missionsReady()))}${tile('go:pass', '🎫', 'Pass', 'c-pink', this.badge(passReady()))}
+            ${tile('go:friends', '👥', 'Teman', 'c-blue', `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`)}${tile('go:more', '☰', 'Lainnya', 'c-gray')}
           </nav>
-          <div class="foot">v${VERSION} • ${Online.available ? '🟢 Online' : '⚪ Offline'}</div>
+          <section class="lh-center">
+            <div class="feat-ban" style="--rc:${fr.color}">
+              <div class="fb-art"><canvas width="110" height="110" data-icon="${feat}" data-skin="default" data-evo="0"></canvas></div>
+              <div class="fb-info"><small class="fb-tag">★ UNIT UNGGULAN</small><b>${TOWERS[feat].name}</b>
+                <div>${this.rarityTag(feat)} <span class="fb-cd">⏳ <span data-cd="${nextDay}"></span></span></div>
+                <div class="fb-btns"><button class="fbb" data-act="hpull:1">Summon ×1<small>💎 ${GACHA.cost1}</small></button><button class="fbb x10" data-act="hpull:10">Summon ×10<small>💎 ${GACHA.cost10}</small></button></div>
+                <small class="fb-pity">Legendaris+ dijamin dalam ${pityLeft} tarikan</small></div>
+            </div>
+            <div class="showcase">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
+          </section>
+          <aside class="lh-right">
+            ${evOn ? `<button class="rcard r-event" data-act="go:play"><span class="rc-ic">🎉</span><div><b>EVENT AKTIF</b><small>${ev.rewardMul > 1 ? `🪙 ×${ev.rewardMul} ` : ''}${ev.diamondMul > 1 ? `💎 ×${ev.diamondMul}` : ''} hadiah bermain</small></div></button>` : ''}
+            <button class="rcard r-pass" data-act="go:pass"><span class="rc-ic">🎫</span><div><b>SEASON PASS</b><small>Tier ${pt}/${SHARED.PASS.tiers}${ps.premium ? ' • ⭐' : ''}</small><div class="rc-bar"><div style="width:${ppct}%"></div></div></div>${this.badge(passReady())}</button>
+            <button class="rcard r-daily" data-act="go:daily"><span class="rc-ic">📅</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai • reset <span data-cd="' + nextDay + '"></span>' : 'Hadiah 🪙 ' + DAILY_REWARD + ' + 💎'}</small></div></button>
+            <div class="rcard r-login"><span class="rc-ic">🎁</span><div><b>LOGIN HARIAN</b><small>Hari ke-${streak || 1} • besok 💎 ${nextLogin}</small><small class="dim">Berikutnya <span data-cd="${nextDay}"></span></small></div></div>
+          </aside>
+          <button class="lh-mis" data-act="go:missions"><b>🎯 MISI HARIAN</b>${misW}</button>
+          <div class="lh-play">
+            ${save ? `<button class="bigplay cont" data-act="continue"><span class="bp-ic">⏯</span><div><b>LANJUTKAN</b><small>${sm.name} • Wave ${save.wave + 1}</small></div></button>
+              <div class="bp-side"><button class="chip" data-act="go:play">＋ Baru</button><button class="chip" data-act="discard">✕ Hapus</button></div>`
+            : `<button class="bigplay" data-act="go:play"><span class="bp-ic">▶</span><div><b>MAIN</b><small>${MAP.name} • ${DIFFS[DIFF].name}</small></div></button>`}
+          </div>
+          <button class="lh-coop" data-act="go:mabar"><span>🤝</span><div><b>MABAR</b><small>Co-op 2–4 pemain</small></div></button>
+          <div class="lh-foot">v${VERSION} • ${Online.available ? '🟢 Online' : '⚪ Offline'}</div>
         </div>`;
     },
-
     more() {
       const u = Online.user, row = (act, ic, t, d) => `<button class="mrow" data-act="${act}"><span>${ic}</span><div><b>${t}</b><small>${d}</small></div><i>›</i></button>`;
       return `${this.header('Lainnya')}<div class="mlist">
@@ -608,7 +642,7 @@ const Menu = {
           .catch(e => { t.loading = false; UI.toast('❌ ' + e.message); });
       }
     },
-    main() { Online.refreshBadge && Online.refreshBadge(); },
+    main() { Online.refreshBadge && Online.refreshBadge(); this.drawIcons(); this.tickCd(); },
     account() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); },
     friends() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); if (Online.loggedIn && !this.loadingF && (!this.friendsData || Date.now() - this.friendsAt > 10000)) this.loadFriends(); },
     mabar() { this.after.friends.call(this); if (Lobby.room) this.after.lobby.call(this); },
@@ -683,6 +717,13 @@ const Menu = {
       case 'quit': if (isMP()) MP.cleanup(); else abandonGame(); newGame(); this.go('main'); break;
       case 'noop': break;
       case 'dev': DevPanel.act(a); break;
+      case 'hpull': {
+        const btn = document.querySelector(`[data-act="hpull:${arg}"]`); if (btn) btn.classList.add('busy');
+        this.banner = 'feat';
+        Eco.act('summon', { banner: 'feat', count: +arg }).then(r => { this.show('gacha'); this.showPull(r.units); checkAchievements(null); })
+          .catch(e => { if (btn) btn.classList.remove('busy'); sfx('error'); UI.toast('❌ ' + e.message); });
+        break;
+      }
       case 'mgo': this.ret = 'more'; this.go(arg); break;
       case 'mclaim': { const [, kind, id] = a.split(':'); this.eco('missionClaim', { kind, id }, r => '🎯 ' + this.rw(r)).then(() => this.show('missions', true)); break; }
       case 'pclaim': { const [, track, t] = a.split(':'); this.eco('passClaim', { track, tier: +t }, r => '🎫 ' + this.rw(r.claimed[0].got)).then(() => this.show('pass', true)); break; }
@@ -864,8 +905,10 @@ const Menu = {
   },
   /** Jalankan aksi ekonomi lalu tampilkan ulang layar */
   async eco(action, payload, okMsg) {
+    const btn = this.lastBtn; if (btn) btn.classList.add('busy');
     try { const r = await Eco.act(action, payload); if (okMsg) UI.toast(typeof okMsg === 'function' ? okMsg(r) : okMsg, 'gold'); this.show(this.screen, true); return r; }
     catch (e) { sfx('error'); UI.toast('❌ ' + e.message); return null; }
+    finally { if (btn) btn.classList.remove('busy'); }
   },
   async topup(packId) {
     try {

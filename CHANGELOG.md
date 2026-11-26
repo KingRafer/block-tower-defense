@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.4.0] — 2026-11-26
+### Diubah
+- **Menu utama baru "Markas"**: langit hidup sesuai jam WIB (pagi/siang/senja/malam), awan bergerak, tim unit tampil di panggung (hover = statistik),
+  banner Unit Unggulan dengan Summon ×1/×10 langsung + hitung mundur, kartu Event / Season Pass / Tantangan Harian / Login Harian, widget misi, tombol MAIN & MABAR besar.
+- **Bonus emas Skip jauh lebih besar**: 150 + 40×wave + 15×musuh tersisa (sebelumnya 25 + 10×wave).
+### Performa
+- Server API dipindah ke **Singapura (sin1)**, satu region dengan database → respons jauh lebih cepat dari Indonesia.
+- Canvas game tidak digambar ulang saat menu menutupi layar; efek blur latar dihapus (berat di HP).
+- Umpan balik tombol instan + indikator loading; animasi layar dipercepat; sinkron mabar lebih sering (60 ms).
+
 ## [4.3.0] — 2026-11-26
 ### Ditambahkan
 - **Aplikasi (PWA)**: tombol ⬇️ Download di menu utama — pasang di Android, iPhone/iPad, dan PC; layar penuh, ikon sendiri, bisa main solo saat offline.

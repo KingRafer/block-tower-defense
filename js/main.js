@@ -80,7 +80,7 @@ $('rotateClose').onclick = () => { document.body.classList.add('no-rotate-hint')
 $('pauseBtn').onclick = () => { if (!Menu.open && S.state !== 'win' && S.state !== 'lose') Menu.show('pause'); };
 $('overlay').addEventListener('click', ev => {
   const b = ev.target.closest('[data-act]');
-  if (b && !b.disabled) Menu.act(b.dataset.act);
+  if (b && !b.disabled && !b.classList.contains('busy')) { Menu.lastBtn = b; Menu.act(b.dataset.act); }
 });
 
 // Audio harus diaktifkan oleh interaksi pengguna pertama
@@ -101,12 +101,14 @@ function loop(now) {
     else if (!Menu.open || isMP()) for (let i = 0; i < S.speed; i++) update(dt);
   }
   MP.tick(dt);
-  draw(dt);
+  // saat menu menutupi layar (bukan mabar), canvas tidak perlu digambar ulang → hemat CPU/GPU
+  if (!Menu.open || isMP()) draw(dt);
   const ing = !Menu.open; if (document.body.classList.contains('ingame') !== ing) document.body.classList.toggle('ingame', ing);
   uiT += dt;
   if (uiT > 0.15) { uiT = 0; UI.tick(); }
   requestAnimationFrame(loop);
 }
+setInterval(() => { if (Menu.screen === 'main') Menu.tickCd(); }, 1000);
 
 /* ---------------- INIT ---------------- */
 loadMap(MAP);

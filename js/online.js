@@ -244,7 +244,7 @@ const Net = {
   open(code, me, onMessage) {
     this.close();
     this.code = code; this.me = me; this.onMessage = onMessage;
-    this.flushT = setInterval(() => this.flush(), 150);
+    this.flushT = setInterval(() => this.flush(), 60);
     this.pollT = setInterval(() => this.maybePoll(), 120);
   },
   close() {
