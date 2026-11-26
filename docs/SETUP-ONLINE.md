@@ -41,7 +41,7 @@ Setelah mengubah env, lakukan **Redeploy**.
 3. Menu **APIs & Services → Credentials → Create credentials → OAuth client ID**.
 4. *Application type*: **Web application**.
 5. **Authorized JavaScript origins**: tambahkan domain game, contoh:
-   - `https://block-tower-defense.vercel.app`
+   - `https://block-tower-defense-pi.vercel.app`
    - (opsional untuk uji lokal) `http://localhost:3000`
 6. *Authorized redirect URIs* boleh dikosongkan (login memakai popup Google Identity Services).
 7. Klik **Create**, salin **Client ID** (berakhiran `.apps.googleusercontent.com`). **Client Secret tidak diperlukan.**
