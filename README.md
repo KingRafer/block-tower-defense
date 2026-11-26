@@ -6,7 +6,7 @@ Frontend HTML5 Canvas + JavaScript murni (tanpa build step). Fitur online memaka
 ![Gameplay](docs/screenshot-game.png)
 
 ## ▶️ Main Sekarang
-- **Online (dengan mabar & login):** https://block-tower-defense-pi.vercel.app
+- **Online (dengan mabar & login):** https://blocktowerdefense.vercel.app
 - **Offline (GitHub Pages):** https://kingrafer.github.io/block-tower-defense/
 - **Lokal:** clone repo ini lalu buka `index.html` di browser.
 
