@@ -66,7 +66,11 @@ addEventListener('keydown', ev => {
 /* ---------------- TOMBOL HUD ---------------- */
 $('startBtn').onclick = () => startWave();
 $('skipWaveBtn').onclick = () => skipWave();
-$('skipBtn').onclick = () => { S.autoSkip = !S.autoSkip; S.autoTimer = 3; sfx('click'); UI.updateHud(); };
+$('skipBtn').onclick = () => {
+  if (isGuest()) return;
+  S.autoSkip = !S.autoSkip; S.autoTimer = S.wave === 0 ? 0.6 : AUTO_START_DELAY; S.autoSkipT = null; sfx('click');
+  UI.toast(S.autoSkip ? '🔁 Auto ON: wave dimulai & di-skip otomatis' : 'Auto OFF'); UI.updateHud();
+};
 $('speedBtn').onclick = () => {
   if (isGuest()) return; S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 3 : 1; sfx('click'); UI.updateHud(); };
 $('fsBtn').onclick = async () => {

@@ -206,7 +206,7 @@ function endWave() {
   const total = payWave();
   checkAchievements(summary());
   if (S.wave >= S.maxWave) { S.state = 'win'; finishGame(true); return; }
-  S.state = 'ready'; S.autoTimer = 3;
+  S.state = 'ready'; S.autoTimer = AUTO_START_DELAY;
   UI.banner(`Wave selesai! +$${total}`, '#ffd54f', 1200);
   fxEmit(['n', `Wave selesai! +$${100 + Math.min(S.wave, 60) * 30}`, '#ffd54f', 1200]);
   saveGameState();
@@ -217,6 +217,7 @@ function endWave() {
   if (next.boss) tip('boss');
   UI.refreshAll();
 }
+const AUTO_START_DELAY = 2, AUTO_SKIP_DELAY = 1.5;
 /** Skip: mulai wave berikutnya saat semua musuh wave ini sudah keluar */
 const canSkip = () => S && S.state === 'wave' && !S.spawnQ.length && S.enemies.length > 0 && S.wave < S.maxWave;
 /** Bonus emas skip: makin besar di wave tinggi + bonus untuk musuh yang masih tersisa */
@@ -703,7 +704,12 @@ function bossAbilities(e, dt) {
 function update(dt) {
   S.time += dt;
   updateStrikes(dt);
-  if (S.state === 'ready' && S.autoSkip && S.wave > 0) { S.autoTimer -= dt; if (S.autoTimer <= 0) startWave(); }
+  // Auto: mulai wave berikutnya otomatis + skip otomatis begitu semua musuh wave sudah keluar
+  if (S.autoSkip && !isGuest()) {
+    if (S.state === 'ready' && S.wave < S.maxWave) { S.autoTimer -= dt; if (S.autoTimer <= 0) startWave(); }
+    else if (canSkip()) { S.autoSkipT = (S.autoSkipT == null ? AUTO_SKIP_DELAY : S.autoSkipT) - dt; if (S.autoSkipT <= 0) { S.autoSkipT = null; skipWave(); } }
+    else S.autoSkipT = null;
+  }
   if (S.state === 'wave') {
     S.waveTime += dt;
     while (S.spawnQ.length && S.spawnQ[0].t <= S.waveTime) spawn(S.spawnQ.shift().type);

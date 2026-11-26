@@ -276,7 +276,8 @@ function draw(dt) {
   for (const x of S.texts) { ctx.globalAlpha = Math.min(1, x.life / x.max * 2); outlinedText(x.txt, x.x, x.y, 15, x.col); }
   ctx.globalAlpha = 1;
   drawBossBar();
-  if (S.state === 'ready' && S.autoSkip && S.wave > 0) outlinedText(`Wave berikutnya dalam ${Math.ceil(S.autoTimer)}...`, W / 2, H - 16, 18, '#fff');
+  if (S.autoSkip && S.state === 'ready' && S.wave < S.maxWave) outlinedText(`Wave berikutnya dalam ${Math.max(1, Math.ceil(S.autoTimer))}...`, W / 2, H - 16, 18, '#fff');
+  else if (S.autoSkip && S.autoSkipT != null && canSkip()) outlinedText(`Auto skip dalam ${Math.max(1, Math.ceil(S.autoSkipT))}... (+$${skipBonusAmt()})`, W / 2, H - 16, 18, '#ffd54f');
 
   fpsAcc += dt; fpsFrames++;
   if (fpsAcc >= 0.5) { fps = Math.round(fpsFrames / fpsAcc); fpsAcc = 0; fpsFrames = 0; }

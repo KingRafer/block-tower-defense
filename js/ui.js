@@ -30,16 +30,16 @@ const UI = {
     const sb = $('startBtn');
     sb.disabled = S.state !== 'ready';
     const lbl = (ic, t) => `<span class="bi">${ic}</span><span class="bl">${t}</span>`;
-    const sbt = S.state === 'wave' ? lbl('⚔️', 'Wave berjalan') : lbl('▶', 'Mulai Wave');
-    if (sb.dataset.v !== sbt) { sb.innerHTML = sbt; sb.dataset.v = sbt; }
+    // ubah teks saja (bukan innerHTML) agar klik tidak hilang saat label berganti
+    const setLbl = (btn, ic, t) => { let bi = btn.querySelector('.bi'), bl = btn.querySelector('.bl'); if (!bi || !bl) { btn.innerHTML = lbl(ic, t); return; } if (bi.textContent !== ic) bi.textContent = ic; if (bl.textContent !== t) bl.textContent = t; };
+    if (S.state === 'wave') setLbl(sb, '⚔️', 'Wave berjalan'); else setLbl(sb, '▶', 'Mulai Wave');
     const sk = $('skipWaveBtn'), can = canSkip();
     sk.style.display = can ? '' : 'none';
-    if (can) { const t = lbl('⏭', `Skip +$${skipBonusAmt()}`); if (sk.dataset.v !== t) { sk.innerHTML = t; sk.dataset.v = t; } tip('skip'); }
-    const at = lbl('🔁', 'Auto: ' + (S.autoSkip ? 'ON' : 'OFF'));
-    if ($('skipBtn').dataset.v !== at) { $('skipBtn').innerHTML = at; $('skipBtn').dataset.v = at; }
+    if (can) { setLbl(sk, '⏭', `Skip +$${skipBonusAmt()}`); tip('skip'); }
+    setLbl($('skipBtn'), '🔁', 'Auto: ' + (S.autoSkip ? 'ON' : 'OFF'));
     $('skipBtn').classList.toggle('on', S.autoSkip);
     $('speedBtn').textContent = '⏩ ' + S.speed + 'x';
-    $('skipBtn').style.display = isMP() ? 'none' : '';
+    $('skipBtn').style.display = isGuest() ? 'none' : '';
     $('speedBtn').disabled = isGuest();
   },
 

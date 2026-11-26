@@ -34,6 +34,17 @@ const Menu = {
     o.classList.toggle('scene-bg', !ingame && scr !== 'main');
     document.body.classList.toggle('on-home', scr === 'main');
     o.innerHTML = `<div class="screen screen-${scr} ${quiet ? 'noanim' : ''}">${this.screens[scr].call(this)}</div>`;
+    // App shell: header & tab tetap di atas, isi bergulir di dalam layar (rapi di HP)
+    const sc = o.firstElementChild;
+    if (scr !== 'main' && scr !== 'pause' && scr !== 'end') {
+      const kids = [...sc.children], body = document.createElement('div'); body.className = 'scr-body';
+      let i = 0; while (i < kids.length && kids[i].matches('.mhead, .tabs')) i++;
+      kids.slice(i).filter(k => !k.matches('.room-bar')).forEach(k => body.appendChild(k));
+      const foot = sc.querySelector(':scope > .room-bar');
+      sc.insertBefore(body, foot || null); sc.classList.add('shell');
+      if (quiet && this._scrollKeep && this._scrollKeep[0] === scr) body.scrollTop = this._scrollKeep[1];
+      body.addEventListener('scroll', () => { this._scrollKeep = [scr, body.scrollTop]; }, { passive: true });
+    }
     if (this.after[scr]) this.after[scr].call(this);
     UI.tooltip(null);
   },
@@ -819,7 +830,8 @@ const Menu = {
         break;
       }
 
-      case 'unit': this.unitSel = arg; this.rollArm = null; this.scrapArm = null; this.show('units', true); break;
+      case 'unit': this.unitSel = arg; this.rollArm = null; this.scrapArm = null; this.show('units', true);
+        if (innerWidth <= 760) { const d = document.querySelector('.udetail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } break;
       case 'ufilter': this.unitFilter = arg; this.show('units', true); break;
       case 'equip': {
         const u = unitById(arg); if (!u) break;

@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.7.0] — 2026-11-26
+### Diperbaiki
+- **Auto skip**: mode Auto sekarang memulai wave otomatis (termasuk wave pertama) **dan** men-skip otomatis 1,5 detik setelah semua musuh wave keluar (bonus skip tetap didapat). Hitung mundur tampil di layar. Host mabar juga bisa memakai Auto.
+- **Tombol Skip kadang tidak bisa diklik**: label tombol (bonus emas) tidak lagi dibuat ulang setiap 0,15 detik, sehingga klik tidak hilang.
+### Diubah
+- **Semua layar menu di HP muat dalam 1 layar** (potret & lanskap): header & tab menempel di atas, isi bergulir di dalam; grid unit 5 kolom, skill/toko/map/pencapaian lebih ringkas; di lanskap konten memakai 2 kolom.
+- Slot skill memakai gaya seragam (navy + emas).
+
 ## [4.6.0] — 2026-11-26
 ### Ditambahkan
 - **Unit RAHASIA** (kelangkaan baru, sangat langka): Malaikat Maut (aura sabit kehampaan) & Kaisar Kosmik (bintang jatuh berantai) — peluang Summon 0,03%, Lucky 0,15%, atau dari Toko Pass.

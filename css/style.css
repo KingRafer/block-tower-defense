@@ -1207,3 +1207,68 @@ tr.click, td.click { cursor: pointer; } tr.click:hover { background: #ffffff10; 
 .gpath { display: none; }
 .ix-card.miss canvas { filter: brightness(.8) saturate(.75); }
 @media (max-width: 760px) { .tabs { flex-wrap: wrap; } .tokchip { margin-left: 0; } }
+
+/* =========================================================
+ * v4.7 — App shell HP: setiap layar muat 1 layar
+ * header & tab menempel, isi bergulir di dalam
+ * ========================================================= */
+@media (max-width: 760px), (max-height: 560px) and (orientation: landscape) {
+  #overlay.scene-bg { padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); overflow: hidden; align-items: stretch; }
+  .screen.shell { height: calc(100dvh - 12px - env(safe-area-inset-bottom)); max-width: 100% !important; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; animation-duration: .1s; }
+  .screen.shell > .mhead, .screen.shell > .tabs, .screen.shell > .room-bar { flex: none; position: static; }
+  .scr-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-bottom: 6px; scrollbar-width: thin; }
+  .scr-body > * { flex: none; max-width: 100%; }
+  /* header ringkas satu baris */
+  .shell > .mhead { flex-wrap: nowrap; padding: 4px 6px; gap: 6px; }
+  .shell > .mhead h2 { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .shell > .mhead .btn.gray { padding: 4px 9px; font-size: 12px; border-bottom-width: 3px; }
+  .shell > .mhead .pbar { flex: none; margin-left: auto; gap: 3px; } .shell > .mhead .pbar .lvl { display: none; }
+  .shell > .mhead .pbar .cur:nth-child(n+5) { display: none; }
+  .shell > .mhead .cur { padding: 2px 6px; font-size: 11px; } .shell > .mhead .cur .plus { display: none; }
+  .shell > .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 4px; padding-bottom: 2px; } .shell > .tabs::-webkit-scrollbar { display: none; }
+  .shell > .tabs .tab { flex: none; padding: 4px 10px; font-size: 12px; }
+  .scr-body .box { padding: 8px 10px; }
+  /* unit */
+  .unitwrap { gap: 8px; } .lo-slots { gap: 4px; } .lo-slots .ucard canvas { width: 38px; height: 38px; } .lo-slots .ucard b { font-size: 9px; } .lo-slots .ucard.empty { min-height: 56px; }
+  .ugrid { grid-template-columns: repeat(5, 1fr) !important; gap: 4px; max-height: none !important; overflow: visible !important; }
+  .ugrid .ucard { padding: 2px 2px 4px; border-radius: 9px; } .ugrid .ucard canvas { width: 40px; height: 40px; } .ugrid .ucard b { font-size: 9px; } .ugrid .ucard small { font-size: 8px; }
+  .tabs.sm .tab { padding: 3px 8px; font-size: 11px; }
+  /* skill */
+  .sk-eq { grid-template-columns: repeat(4, 1fr) !important; gap: 5px !important; } .sk-slot { min-height: 0 !important; padding: 6px 3px !important; font-size: 10px; } .sk-slot .sic, .sk-slot span:first-child { font-size: 20px; }
+  .shopgrid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+  .shopgrid .sitem { padding: 6px !important; gap: 6px !important; flex-direction: column; text-align: center; align-items: center !important; }
+  .shopgrid .sitem .sinfo small:not(:first-of-type) { display: none; } .shopgrid .sitem .sinfo { font-size: 11px; } .shopgrid .sitem canvas { width: 44px; height: 44px; }
+  /* kartu map, pencapaian, statistik */
+  .cards { grid-template-columns: repeat(2, 1fr) !important; gap: 6px; } .card { padding: 5px; } .card small { min-height: 0; font-size: 10px; } .card .nm { font-size: 13px; }
+  .achs { grid-template-columns: 1fr 1fr; gap: 5px; } .statgrid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  /* summon */
+  .gacha { gap: 8px !important; } .gacha-art { font-size: 44px !important; margin: 0 !important; } .gacha .gleft p { font-size: 11px; } .gacha h3 { font-size: 15px; }
+  .gacha .btn.big { min-width: 0; width: 100%; font-size: 15px; padding: 7px 10px; } .gem-bal { font-size: 18px !important; }
+  .featured canvas { width: 64px; height: 64px; }
+  .cols2 { grid-template-columns: 1fr !important; }
+  .mis { padding: 6px 0; gap: 8px; } .mis .mi b { font-size: 12px; } .mis .mi small { font-size: 10px; }
+  .mcol { gap: 6px; } .mcol .btn.big { min-width: 0; }
+}
+/* HP lanskap: manfaatkan lebar — konten 2 kolom */
+@media (max-height: 560px) and (orientation: landscape) {
+  .gacha { display: grid !important; grid-template-columns: 1.3fr 1fr; align-items: start; }
+  .unitwrap { display: grid !important; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+  .ugrid { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)) !important; }
+  .cards { grid-template-columns: repeat(4, 1fr) !important; } .achs { grid-template-columns: repeat(3, 1fr); } .statgrid { grid-template-columns: repeat(5, 1fr); }
+  .cols2 { grid-template-columns: 1fr 1fr !important; } .shopgrid { grid-template-columns: repeat(3, 1fr) !important; }
+  .sk-eq { grid-template-columns: repeat(4, 1fr) !important; }
+  .room { grid-template-columns: minmax(0, 1fr) 240px !important; }
+}
+/* slot skill: satu gaya (tidak warna-warni) */
+.sk-slot:not(.empty) { background: linear-gradient(180deg, rgba(30,39,78,.95), rgba(17,23,48,.95)) !important; border: 2px solid rgba(255,217,119,.35) !important; color: var(--ui-text); }
+.sic { background: radial-gradient(circle at 50% 35%, rgba(255,217,119,.28), rgba(255,217,119,.06)) !important; box-shadow: inset 0 0 0 1px rgba(255,217,119,.35); }
+@media (max-width: 760px), (max-height: 560px) and (orientation: landscape) {
+  .shell > .mhead .pbar .xp { display: none; }
+  .lo-slots { display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 4px !important; }
+  .lo-slots .ucard { padding: 2px; min-height: 0 !important; } .lo-row { gap: 6px; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .lo-slots .ucard canvas { width: 34px; height: 34px; } .lo-slots .ucard.empty { min-height: 48px !important; }
+  .lo-row > b, .lo-row > h4 { font-size: 13px; }
+}
