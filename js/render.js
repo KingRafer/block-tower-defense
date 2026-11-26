@@ -92,7 +92,7 @@ function drawDeco(d) {
 
 /* ---------------- TOWER ---------------- */
 function drawTower(t, ghost) {
-  const def = { ...TOWERS[t.type], color: towerColor(t.type) }, x = t.x, y = t.y;
+  const def = { ...TOWERS[t.type], color: ghost ? towerColor(t.type) : (t.evo ? EVOS[t.type].color : TOWERS[t.type].color) }, x = t.x, y = t.y;
   const stunned = !ghost && S.time < t.stunUntil;
   const evo = ghost ? unitOf(t.type).evo : t.evo;
   if (evo) {   // aura evolusi
@@ -100,6 +100,7 @@ function drawTower(t, ghost) {
     ctx.fillStyle = 'rgba(255,213,79,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 10, pr + 6, pr * 0.55, 0, 0, Math.PI * 2); ctx.fill();
   }
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 16, 20, 7, 0, 0, Math.PI * 2); ctx.fill();
+  if (!ghost && isMP() && t.owner) { ctx.strokeStyle = playerColor(t.owner); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 14, 22, 9, 0, 0, Math.PI * 2); ctx.stroke(); }
   block(x - 19, y + 4, 38, 12, 6, t.level >= 3 ? '#ffb300' : '#78909c');
   if (t.type === 'farm') {
     block(x - 16, y - 14, 32, 22, 10, '#c62828');

@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '2.2.0';
+const VERSION = '3.0.0';
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
 const SELL_RATE = 0.6;
 const LOADOUT_SIZE = 6;

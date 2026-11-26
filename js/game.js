@@ -48,10 +48,11 @@ function modsAgg(ids) {
   return M;
 }
 function newGame(opts = {}) {
-  const daily = opts.daily || null;
+  const daily = opts.daily || null, mp = opts.mp || null;
   if (daily) { MAP = MAPS[daily.map]; DIFF = daily.diff; }
   const D = DIFFS[DIFF], mods = daily ? daily.mods : [], M = modsAgg(mods);
   const mode = daily ? 'classic' : MODE;
+  const me = mp ? mp.me : 'local';
   loadMap(MAP);
   const hp = Math.round(D.hp * M.hpBaseMul);
   S = {
@@ -63,13 +64,40 @@ function newGame(opts = {}) {
     waveTime: 0, waveTotal: 0, earned: 0, kills: 0, bossKills: 0, leaked: false,
     placing: null, selected: null, targeting: null, mouse: { x: -99, y: -99, in: false },
     time: 0, autoTimer: 0, recorded: false, nextId: 1, shake: 0, abilityCd: {}, freezeT: 0, uxp: {},
+    me, mp, players: {}, uxpBy: {}, fxOut: [],
   };
+  if (mp) S.autoSkip = false;
   UI.refreshAll();
 }
 
+/* ---------------- PEMAIN (solo & mabar) ---------------- */
+const isGuest = () => !!(S && S.mp && S.mp.role === 'guest');
+const isHost = () => !!(S && S.mp && S.mp.role === 'host');
+const isMP = () => !!(S && S.mp);
+const PLAYER_COLORS = ['#42a5f5', '#ef5350', '#66bb6a', '#ffca28'];
+function pcash(pid) { return pid === S.me ? S.cash : (S.players[pid] ? S.players[pid].cash : 0); }
+function addCash(pid, a) {
+  if (pid === S.me) { S.cash += a; S.earned += a; }
+  else if (S.players[pid]) { S.players[pid].cash += a; S.players[pid].earned += a; }
+}
+function addCashAll(a) { addCash(S.me, a); for (const id in S.players) if (id !== S.me) addCash(id, a); }
+function spend(pid, a) { if (pid === S.me) S.cash -= a; else if (S.players[pid]) S.players[pid].cash -= a; }
+function unitFor(type, pid) {
+  const p = pid && pid !== S.me && S.players[pid];
+  return p ? (p.units && p.units[type]) || { xp: 0, trait: null, evo: false } : unitOf(type);
+}
+function addUxp(pid, type, x) {
+  if (pid === S.me) S.uxp[type] = (S.uxp[type] || 0) + x;
+  else { const m = S.uxpBy[pid] || (S.uxpBy[pid] = {}); m[type] = (m[type] || 0) + x; }
+}
+/** Efek visual yang perlu dikirim host ke tamu */
+function fxEmit(ev) { if (isHost()) S.fxOut.push(ev); }
+const playerName = pid => pid === S.me ? 'Kamu' : (S.players[pid] && S.players[pid].name) || 'Pemain';
+const playerColor = pid => (S.players[pid] && S.players[pid].color) || PLAYER_COLORS[0];
+
 /* ---------------- SIMPAN & LANJUTKAN ---------------- */
 function saveGameState() {
-  if (!S || S.state !== 'ready' || S.wave === 0) return;
+  if (!S || isMP() || S.state !== 'ready' || S.wave === 0) return;
   SaveGame.set({
     v: 2, map: MAP.id, diff: S.diff, mode: S.mode, daily: S.daily, cash: S.cash, hp: S.hp, wave: S.wave,
     kills: S.kills, earned: S.earned, bossKills: S.bossKills, time: S.time, leaked: S.leaked,
@@ -141,10 +169,12 @@ function wavePreview(n) {
   return counts;
 }
 function startWave() {
+  if (isGuest()) { MP.act({ a: 'start' }); return; }
   if (!S || S.state !== 'ready' || S.wave >= S.maxWave) return;
   S.wave++; S.state = 'wave'; S.spawnQ = buildWave(S.wave); S.waveTime = 0; S.waveTotal = S.spawnQ.length;
   sfx('wave');
-  UI.banner(S.wave % 10 === 0 ? `⚠️ BOSS WAVE ${S.wave}` : `WAVE ${S.wave}`, S.wave % 10 === 0 ? '#e040fb' : '#fff');
+  const bt = S.wave % 10 === 0 ? `⚠️ BOSS WAVE ${S.wave}` : `WAVE ${S.wave}`, bc = S.wave % 10 === 0 ? '#e040fb' : '#fff';
+  UI.banner(bt, bc); fxEmit(['n', bt, bc, 1600, 'wave']);
   UI.refreshAll();
 }
 /** Bayar bonus akhir wave + pendapatan farm */
@@ -152,11 +182,13 @@ function payWave(skipBonus = 0) {
   const bonus = 100 + Math.min(S.wave, 60) * 30; let farm = 0;
   S.towers.filter(t => t.type === 'farm').forEach(t => {
     let inc = lvl(t).income;
-    if (lvl(t).perk === 'interest') inc += Math.min(400, Math.floor(S.cash * 0.02));
-    farm += inc; addText(t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2);
+    if (lvl(t).perk === 'interest') inc += Math.min(400, Math.floor(pcash(t.owner) * 0.02));
+    addCash(t.owner, inc);
+    if (t.owner === S.me) farm += inc;
+    addText(t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2); fxEmit(['x', t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2]);
   });
+  addCashAll(bonus + skipBonus);
   const total = bonus + farm + skipBonus;
-  S.cash += total; S.earned += total;
   if (farm || skipBonus) sfx('coin');
   return total;
 }
@@ -166,6 +198,7 @@ function endWave() {
   if (S.wave >= S.maxWave) { S.state = 'win'; finishGame(true); return; }
   S.state = 'ready'; S.autoTimer = 3;
   UI.banner(`Wave selesai! +$${total}`, '#ffd54f', 1200);
+  fxEmit(['n', `Wave selesai! +$${100 + Math.min(S.wave, 60) * 30}`, '#ffd54f', 1200]);
   saveGameState();
   if (S.wave === 1) tip('wave1');
   if (S.wave === 2 && levelFromXp(PROFILE.xp) >= ABILITIES[0].level) tip('ability');
@@ -178,6 +211,7 @@ function endWave() {
 const canSkip = () => S && S.state === 'wave' && !S.spawnQ.length && S.enemies.length > 0 && S.wave < S.maxWave;
 const skipBonusAmt = () => 25 + Math.min(S.wave, 60) * 10;
 function skipWave() {
+  if (isGuest()) { MP.act({ a: 'skip' }); return; }
   if (!canSkip()) return;
   const b = skipBonusAmt(), total = payWave(b);
   PROFILE.stats.skips++;
@@ -197,10 +231,23 @@ function useAbility(id) {
     S.targeting = S.targeting ? null : 'airstrike'; S.placing = null; S.selected = null;
     sfx('click'); UI.hidePanel(); UI.renderBar(); UI.renderAbilities(); return;
   }
+  PROFILE.stats.abilities++;
+  if (isGuest()) { MP.act({ a: 'ability', id }); S.abilityCd[id] = a.cd; UI.renderAbilities(); checkAchievements(summary()); return; }
+  execAbility(id, S.me);
+}
+/** Jalankan skill (di host / solo) untuk pemain pid */
+function execAbility(id, pid, x, y) {
+  const a = ABILITIES.find(q => q.id === id); if (!a) return;
+  const cds = pid === S.me ? S.abilityCd : (S.players[pid] && (S.players[pid].abilityCd || (S.players[pid].abilityCd = {})));
+  if (!cds || cds[id] > 0) return;
+  if (id === 'airstrike') {
+    for (let i = 0; i < 3; i++) S.strikes.push({ x: x + (i - 1) * 34, y: y + (i % 2 ? -18 : 18), t: 0.6 + i * 0.25, max: 0.6 + i * 0.25 });
+    sfx('rocket');
+  }
   if (id === 'freeze') {
     S.freezeT = 4;
     S.enemies.forEach(e => { e.slowUntil = S.time + 4; e.slowF = e.boss ? 0.4 : 0.8; });
-    sfx('freeze'); UI.banner('🧊 BADAI ES', '#81d4fa', 1000);
+    sfx('freeze'); UI.banner('🧊 BADAI ES', '#81d4fa', 1000); fxEmit(['n', '🧊 BADAI ES', '#81d4fa', 1000, 'freeze']);
   }
   if (id === 'repair') {
     const h = Math.round(S.maxHp * 0.3), before = S.hp;
@@ -208,26 +255,27 @@ function useAbility(id) {
     addText(W - 60, (exitRow() - 1) * T, '+' + Math.round(S.hp - before) + ' ❤️', '#69f0ae', 1.5);
     puff(19.5 * T, exitRow() * T, '#69f0ae', 16); sfx('upgrade');
   }
-  commitAbility(a);
+  cds[id] = a.cd;
+  if (pid !== S.me) addText(W / 2, 40, `${playerName(pid)}: ${a.icon} ${a.name}`, '#fff', 1.5);
+  if (pid === S.me) { checkAchievements(summary()); UI.renderAbilities(); }
 }
 function airstrikeAt(x, y) {
   S.targeting = null;
-  for (let i = 0; i < 3; i++) S.strikes.push({ x: x + (i - 1) * 34, y: y + (i % 2 ? -18 : 18), t: 0.6 + i * 0.25, max: 0.6 + i * 0.25 });
-  sfx('rocket'); commitAbility(ABILITIES[0]);
+  PROFILE.stats.abilities++;
+  if (isGuest()) { MP.act({ a: 'ability', id: 'airstrike', x: Math.round(x), y: Math.round(y) }); S.abilityCd.airstrike = ABILITIES[0].cd; UI.renderAbilities(); return; }
+  execAbility('airstrike', S.me, x, y);
 }
-function commitAbility(a) {
-  S.abilityCd[a.id] = a.cd; PROFILE.stats.abilities++;
-  checkAchievements(summary()); UI.renderAbilities();
-}
+function tickCooldowns(cds, dt) { for (const k in cds) if (cds[k] > 0) cds[k] = Math.max(0, cds[k] - dt); }
 function updateStrikes(dt) {
-  for (const k in S.abilityCd) if (S.abilityCd[k] > 0) S.abilityCd[k] = Math.max(0, S.abilityCd[k] - dt);
+  tickCooldowns(S.abilityCd, dt);
+  for (const id in S.players) if (id !== S.me && S.players[id].abilityCd) tickCooldowns(S.players[id].abilityCd, dt);
   S.freezeT = Math.max(0, S.freezeT - dt);
   for (const st of S.strikes) {
     st.t -= dt;
     if (st.t > 0) continue;
     st.done = true;
     const R = 1.4 * T, dmg = 40 + Math.min(S.wave, 80) * 18;
-    S.effects.push({ kind: 'boom', x: st.x, y: st.y, r: R, life: 0.45, max: 0.45 });
+    S.effects.push({ kind: 'boom', x: st.x, y: st.y, r: R, life: 0.45, max: 0.45 }); fxEmit(['b', st.x | 0, st.y | 0, R | 0, 0.45]);
     if (SET.shake) S.shake = 6; sfx('boom');
     for (const e of S.enemies) if (!e.dead && Math.hypot(e.x - st.x, e.y - st.y) <= R) damage(e, dmg, { pierceArmor: true }, null);
   }
@@ -260,17 +308,17 @@ function damage(e, amt, L, src, quiet) {
   if (e.armor && !L.pierceArmor) a *= (1 - e.armor);
   a = Math.min(a, e.hp);
   e.hp -= a; e.hitT = 0.1;
-  if (src) { src.dmg += a; S.uxp[src.type] = (S.uxp[src.type] || 0) + a / 60; }
+  if (src) { src.dmg += a; addUxp(src.owner, src.type, a / 60); }
   if (SET.dmgNum && a >= 0.5 && !quiet) addText(e.x + (Math.random() * 16 - 8), e.y - 22, fmtNum(a), '#fff', 0.5);
   if (e.hp <= 0.001) kill(e, src);
 }
 function kill(e, src) {
   e.dead = true;
   const rw = Math.round(e.reward * (src ? lvl(src).rewardMul : 1));
-  S.cash += rw; S.earned += rw; S.kills++;
-  if (src) { src.kills++; S.uxp[src.type] = (S.uxp[src.type] || 0) + 1; }
+  addCashAll(rw); S.kills++;
+  if (src) { src.kills++; addUxp(src.owner, src.type, 1); }
   puff(e.x, e.y, e.color, e.boss ? 30 : 8);
-  if (e.boss) { S.bossKills++; PROFILE.stats.bossKills++; S.shake = SET.shake ? 10 : 0; sfx('boom'); UI.toast('👑 Boss dikalahkan! +$' + e.reward); checkAchievements(summary()); }
+  if (e.boss) { S.bossKills++; PROFILE.stats.bossKills++; S.shake = SET.shake ? 10 : 0; sfx('boom'); UI.toast('👑 Boss dikalahkan! +$' + e.reward); fxEmit(['k']); checkAchievements(summary()); }
   if (e.split) for (let i = 0; i < 2; i++) spawn(e.split, e);
 }
 
@@ -295,16 +343,16 @@ function computeL(type, level, unit = unitOf(type)) {
   L.perk = ev ? ev.perk : null;
   return L;
 }
-const costOf = (type, level) => Math.round(TOWERS[type].levels[level].cost * ((unitOf(type).trait && TRAITS[unitOf(type).trait].costMul) || 1));
+function costOf(type, level, pid) { const u = S && pid ? unitFor(type, pid) : unitOf(type); return Math.round(TOWERS[type].levels[level].cost * ((u.trait && TRAITS[u.trait] && TRAITS[u.trait].costMul) || 1)); }
 const towerName = type => unitOf(type).evo ? EVOS[type].name : TOWERS[type].name;
 const towerColor = type => unitOf(type).evo ? EVOS[type].color : TOWERS[type].color;
 
 /* ---------------- TOWER ---------------- */
 const lvl = t => t.L || TOWERS[t.type].levels[t.level];
-const countType = type => S.towers.filter(t => t.type === type).length;
+const countType = (type, pid = S.me) => S.towers.filter(t => t.type === type && t.owner === pid).length;
 const isMax = t => t.level >= TOWERS[t.type].levels.length - 1;
 
-function placeReason(type, c, r) {
+function placeReason(type, c, r, pid = S.me) {
   const def = TOWERS[type];
   if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return 'Di luar peta';
   if (pathTiles.has(c + ',' + r)) return 'Tidak bisa di jalur';
@@ -312,44 +360,59 @@ function placeReason(type, c, r) {
   if (S.M.ban.includes(type)) return 'Dilarang oleh modifier';
   if (S.towers.some(t => t.c === c && t.r === r)) return 'Sudah ada tower';
   if (deco.some(d => d.c === c && d.r === r)) return 'Terhalang';
-  if (countType(type) >= def.limit) return `Batas ${def.name} (${def.limit})`;
-  if (S.cash < costOf(type, 0)) return 'Uang tidak cukup';
+  if (countType(type, pid) >= def.limit) return `Batas ${def.name} (${def.limit})`;
+  if (pcash(pid) < costOf(type, 0, pid)) return 'Uang tidak cukup';
   return null;
 }
-function makeTower(type, c, r) {
-  const u = unitOf(type);
+function makeTower(type, c, r, pid = S.me) {
+  const u = unitFor(type, pid);
   return { id: S.nextId++, type, c, r, x: (c + 0.5) * T, y: (r + 0.5) * T, level: 0, cd: 0, angle: -Math.PI / 2,
-           spent: costOf(type, 0), target: 'first', recoil: 0, dmg: 0, kills: 0, stunUntil: 0, buff: 0, gh: false,
-           L: computeL(type, 0), evo: !!u.evo, trait: u.trait, shots: 0, ramp: 0 };
+           spent: costOf(type, 0, pid), target: 'first', recoil: 0, dmg: 0, kills: 0, stunUntil: 0, buff: 0, gh: false,
+           L: computeL(type, 0, u), evo: !!u.evo, trait: u.trait, shots: 0, ramp: 0, owner: pid };
 }
-function placeTower(type, c, r) {
-  const why = placeReason(type, c, r);
-  if (why) { sfx('error'); return null; }
-  S.cash -= costOf(type, 0);
-  const t = makeTower(type, c, r);
+function placeTower(type, c, r, pid = S.me) {
+  if (pid === S.me && isGuest()) {
+    if (placeReason(type, c, r)) { sfx('error'); return null; }
+    MP.act({ a: 'place', type, c, r }); PROFILE.stats.towersPlaced++; tip('placed'); sfx('place'); return true;
+  }
+  const why = placeReason(type, c, r, pid);
+  if (why) { if (pid === S.me) sfx('error'); return null; }
+  spend(pid, costOf(type, 0, pid));
+  const t = makeTower(type, c, r, pid);
   S.towers.push(t);
-  tip('placed');
-  PROFILE.stats.towersPlaced++;
-  sfx('place'); puff(t.x, t.y, '#fff');
+  if (pid === S.me) { tip('placed'); PROFILE.stats.towersPlaced++; }
+  sfx('place'); puff(t.x, t.y, '#fff'); fxEmit(['p', t.x | 0, t.y | 0, '#fff', 8, 'place']);
   UI.refreshAll();
   return t;
 }
-function upgradeTower(t) {
-  if (isMax(t)) return;
-  const cost = costOf(t.type, t.level + 1);
-  if (S.cash < cost) { sfx('error'); return; }
-  S.cash -= cost; t.spent += cost; t.level++; t.L = computeL(t.type, t.level);
-  sfx('upgrade'); puff(t.x, t.y, '#ffd54f', 12);
-  addText(t.x, t.y - 30, lvl(t).name + '!', '#ffd54f', 1);
-  if (isMax(t)) { PROFILE.stats.maxed++; checkAchievements(summary()); }
+function upgradeTower(t, pid = S.me) {
+  if (!t || isMax(t) || t.owner !== pid) return;
+  if (pid === S.me && isGuest()) {
+    if (S.cash < costOf(t.type, t.level + 1, t.owner)) { sfx('error'); return; }
+    MP.act({ a: 'upgrade', id: t.id }); if (t.level + 1 >= TOWERS[t.type].levels.length - 1) PROFILE.stats.maxed++; sfx('upgrade'); return;
+  }
+  const cost = costOf(t.type, t.level + 1, t.owner);
+  if (pcash(pid) < cost) { if (pid === S.me) sfx('error'); return; }
+  spend(pid, cost); t.spent += cost; t.level++; t.L = computeL(t.type, t.level, unitFor(t.type, t.owner));
+  sfx('upgrade'); puff(t.x, t.y, '#ffd54f', 12); fxEmit(['p', t.x | 0, t.y | 0, '#ffd54f', 12, 'upgrade']);
+  addText(t.x, t.y - 30, lvl(t).name + '!', '#ffd54f', 1); fxEmit(['x', t.x, t.y - 30, lvl(t).name + '!', '#ffd54f', 1]);
+  if (isMax(t) && pid === S.me) { PROFILE.stats.maxed++; checkAchievements(summary()); }
   UI.refreshAll();
 }
-function sellTower(t) {
+function sellTower(t, pid = S.me) {
+  if (!t || t.owner !== pid) return;
+  if (pid === S.me && isGuest()) { MP.act({ a: 'sell', id: t.id }); if (S.selected === t) S.selected = null; sfx('sell'); UI.hidePanel(); return; }
   const v = Math.floor(t.spent * SELL_RATE);
-  S.cash += v; S.towers = S.towers.filter(x => x !== t);
+  addCash(pid, v); S.earned -= pid === S.me ? v : 0; if (S.players[pid] && pid !== S.me) S.players[pid].earned -= v;
+  S.towers = S.towers.filter(x => x !== t);
   if (S.selected === t) S.selected = null;
-  sfx('sell'); addText(t.x, t.y, '+$' + v, '#ffd54f'); puff(t.x, t.y, '#aaa');
+  sfx('sell'); addText(t.x, t.y, '+$' + v, '#ffd54f'); puff(t.x, t.y, '#aaa'); fxEmit(['p', t.x | 0, t.y | 0, '#aaa', 8, 'sell']);
   UI.refreshAll();
+}
+function setTarget(t, mode) {
+  if (!t || t.owner !== S.me) return;
+  t.target = mode;
+  if (isGuest()) MP.act({ a: 'target', id: t.id, mode });
 }
 const TARGET_MODES = ['first', 'last', 'strong', 'close'];
 const TARGET_LABEL = { first: 'Pertama', last: 'Terakhir', strong: 'Terkuat', close: 'Terdekat' };
@@ -390,6 +453,7 @@ function fire(t, L, e) {
   sfx(t.type === 'sniper' ? 'snipe' : t.type === 'freezer' ? 'freeze' : 'shoot');
   const col = t.type === 'freezer' ? '#81d4fa' : t.type === 'sniper' ? '#fff59d' : '#ffeb3b';
   S.effects.push({ kind: 'tracer', x1: mx, y1: my, x2: e.x, y2: e.y - 8, life: t.type === 'sniper' ? 0.15 : 0.06, max: 0.15, col, w: t.type === 'sniper' ? 3 : 2 });
+  fxEmit(['t', mx | 0, my | 0, e.x | 0, (e.y - 8) | 0, col, t.type === 'sniper' ? 3 : 2, t.type === 'sniper' ? 0.15 : 0.06, t.type]);
   S.effects.push({ kind: 'flash', x: mx, y: my, life: 0.05, max: 0.05 });
   if (L.slow) {
     const f = e.boss ? L.slow / 2 : L.slow;
@@ -405,7 +469,7 @@ function fire(t, L, e) {
 }
 function explode(p) {
   const R = p.L.splash * T;
-  S.effects.push({ kind: 'boom', x: p.tx, y: p.ty, r: R, life: 0.35, max: 0.35 });
+  S.effects.push({ kind: 'boom', x: p.tx, y: p.ty, r: R, life: 0.35, max: 0.35 }); fxEmit(['b', p.tx | 0, p.ty | 0, R | 0, 0.35]);
   sfx('boom');
   for (const e of S.enemies) {
     if (e.dead || (e.hidden && !canSeeHidden(p.src) && e !== p.target)) continue;
@@ -423,7 +487,7 @@ function bossAbilities(e, dt) {
     e.stunT = 8;
     const R = 2.6 * T; let hit = 0;
     for (const t of S.towers) if (Math.hypot(t.x - e.x, t.y - e.y) <= R) { t.stunUntil = S.time + 2.5; hit++; }
-    S.effects.push({ kind: 'shock', x: e.x, y: e.y, r: R, life: 0.6, max: 0.6 });
+    S.effects.push({ kind: 'shock', x: e.x, y: e.y, r: R, life: 0.6, max: 0.6 }); fxEmit(['s', e.x | 0, e.y | 0, R | 0, '#e040fb', 0.6]);
     if (hit) { sfx('stun'); addText(e.x, e.y - 50, 'STUN!', '#e040fb', 1); }
   }
   if (e.summonT <= 0) {
@@ -492,7 +556,14 @@ function update(dt) {
   }
   S.projectiles = S.projectiles.filter(p => !p.done);
 
-  // Efek
+  updateEffects(dt);
+
+  if (S.hp <= 0 && S.state !== 'lose') { S.hp = 0; S.state = 'lose'; finishGame(false); }
+  if (S.state === 'wave' && !S.spawnQ.length && !S.enemies.length) endWave();
+}
+
+/* ---------------- EFEK & UTIL ---------------- */
+function updateEffects(dt) {
   for (const f of S.effects) {
     f.life -= dt;
     if (f.kind === 'part') { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 400 * dt; }
@@ -500,12 +571,7 @@ function update(dt) {
   S.effects = S.effects.filter(f => f.life > 0);
   S.texts.forEach(x => { x.life -= dt; x.y -= 30 * dt; });
   S.texts = S.texts.filter(x => x.life > 0);
-
-  if (S.hp <= 0 && S.state !== 'lose') { S.hp = 0; S.state = 'lose'; finishGame(false); }
-  if (S.state === 'wave' && !S.spawnQ.length && !S.enemies.length) endWave();
 }
-
-/* ---------------- EFEK & UTIL ---------------- */
 function puff(x, y, col, n = 8) {
   if (SET.quality === 'low') n = Math.ceil(n / 3);
   for (let i = 0; i < n; i++)
@@ -520,7 +586,7 @@ function fmtNum(n) {
 
 /* ---------------- PROGRESI ---------------- */
 function summary() {
-  return { wave: S.wave, won: S.state === 'win', hp: S.hp, maxHp: S.maxHp, diff: S.diff, earned: S.earned, mode: S.mode, daily: !!S.daily };
+  return { wave: S.wave, won: S.state === 'win', hp: S.hp, maxHp: S.maxHp, diff: S.diff, earned: S.earned, mode: S.mode, daily: !!S.daily, mp: isMP() };
 }
 function checkAchievements(g) {
   const got = [];
@@ -543,7 +609,8 @@ function finishGame(won) {
   const D = DIFFS[S.diff];
   const cleared = won ? S.wave : Math.max(0, S.wave - 1);
   let record = false;
-  if (!S.daily) {
+  if (isHost()) MP.broadcastEnd(won);
+  if (!S.daily && !isMP()) {
     const key = bestKey(MAP.id, S.diff, S.mode);
     record = cleared > (PROFILE.best[key] || 0);
     if (record) PROFILE.best[key] = cleared;
@@ -577,7 +644,8 @@ function finishGame(won) {
 
   // Papan skor lokal (15 terbaik)
   const score = calcScore(cleared, won);
-  const run = { score, map: MAP.id, diff: S.diff, mode: S.mode, daily: !!S.daily, wave: S.wave, won, kills: S.kills, date: todayStr(), id: Date.now() };
+  const run = { score, map: MAP.id, diff: S.diff, mode: S.mode, daily: !!S.daily, coop: isMP(), wave: S.wave, won, kills: S.kills, date: todayStr(), id: Date.now() };
+  if (typeof Online !== 'undefined') Online.submitRun({ score, wave: S.wave, map: MAP.id, diff: S.diff, won, mode: isMP() ? 'coop' : S.daily ? 'daily' : S.mode });
   PROFILE.runs.push(run);
   PROFILE.runs.sort((a, b) => b.score - a.score);
   PROFILE.runs = PROFILE.runs.slice(0, 15);

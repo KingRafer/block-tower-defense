@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.0.0] — 2026-11-26
+### Ditambahkan
+- **Backend Vercel** (`api/index.js`, satu fungsi serverless) + **MongoDB Atlas** (database `block_tower_defense`: users, friendships, rooms, relay, invites, runs).
+- **Login/daftar dengan Google** (Google Identity Services, token diverifikasi server, sesi HMAC 30 hari).
+- **Cloud save**: progres otomatis tersimpan ke akun dan disinkronkan antar perangkat.
+- **Teman**: kode teman, permintaan pertemanan, status online, notifikasi.
+- **Mabar co-op 2–4 pemain**: lobby dengan kode room, pengaturan map/kesulitan/mode oleh host, chat lobby & dalam game, undangan teman, uang & tower per pemain, hadiah kill dibagi rata, trait/evolusi/mastery tiap pemain tetap berlaku.
+- Jaringan **WebRTC P2P** dengan fallback **relay server** otomatis.
+- **Papan skor global** (Klasik, Endless, Harian, Mabar).
+- `dev-server.js`, uji API (`test/api.test.js`) dengan MongoDB palsu.
+
+### Diubah
+- **Menu utama didesain ulang**: kartu pemain, tombol main besar (Solo/Mabar/Harian), ubin menu, latar kubus animasi, font Fredoka/Nunito.
+- Tata letak HUD, hotbar, panel, dan layar menu lebih rapi dan konsisten.
+
 ## [2.2.0] — 2026-11-26
 ### Ditambahkan
 - **Trait**: 14 trait dengan 5 kelangkaan (Biasa–Mitos), roll dengan 💎 Kristal Trait, animasi roll, tabel peluang, konfirmasi sebelum menimpa trait Epik ke atas.

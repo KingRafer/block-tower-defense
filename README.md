@@ -1,7 +1,7 @@
 # 🧱 Block Tower Defense
 
 Game **tower defense bergaya Roblox** (terinspirasi *Tower Defense Simulator*) yang berjalan langsung di browser.
-Dibuat dengan HTML5 Canvas dan JavaScript murni, **tanpa library, tanpa build step, tanpa aset eksternal**.
+Frontend HTML5 Canvas + JavaScript murni (tanpa build step). Fitur online memakai **Vercel** (serverless API) + **MongoDB Atlas** + **Login Google**.
 
 ![Gameplay](docs/screenshot-game.png)
 
@@ -19,6 +19,10 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 ## ✨ Fitur
 | Kategori | Isi |
 |---|---|
+| 🤝 Mabar | Co-op 2–4 pemain: lobby dengan kode room, chat, undang teman, koneksi P2P WebRTC + relay server |
+| 👥 Teman | Tambah teman dengan kode, terima/tolak permintaan, status online, gabung ke room teman |
+| 🔐 Akun Google | Login/daftar dengan Google, progres tersimpan di cloud (MongoDB) dan bisa dipakai di perangkat lain |
+| 🌍 Skor global | Papan skor global: Klasik, Endless, Harian, Mabar |
 | 🎲 Trait | 14 trait acak (Biasa → Langka → Epik → Legendaris → Mitos) yang diroll dengan 💎 Kristal |
 | 🧬 Evolusi | Setiap tower bisa berevolusi menjadi bentuk baru dengan kemampuan unik |
 | 📊 Mastery | Level tower 1–20 yang naik saat dipakai (+2% damage per level) |
@@ -122,6 +126,11 @@ Setiap hari map, kesulitan, dan 2 modifier dipilih secara acak (sama untuk semua
 ```
 block-tower-defense/
 ├── index.html          # Halaman utama & layout HUD
+├── api/                # Backend Vercel (satu fungsi: /api?r=...)
+│   ├── index.js        # Rute: auth, profil, teman, room, relay, papan skor
+│   └── _lib/           # Koneksi MongoDB & autentikasi
+├── test/               # Uji API dengan MongoDB palsu
+├── dev-server.js       # Server lokal (statis + /api)
 ├── css/style.css       # Semua styling (tema, menu, responsif)
 ├── js/
 │   ├── config.js       # Data: map, tower, musuh, kesulitan, mode, skill, modifier, pencapaian
@@ -131,6 +140,7 @@ block-tower-defense/
 │   ├── render.js       # Menggambar peta, unit, dan efek ke canvas
 │   ├── ui.js           # HUD, hotbar, panel tower, tooltip, toast
 │   ├── menu.js         # Semua layar menu
+│   ├── online.js       # Akun Google, cloud save, teman, lobby, jaringan & sinkronisasi mabar
 │   └── main.js         # Input, game loop, inisialisasi
 ├── docs/               # Screenshot
 └── .github/workflows/  # Deploy otomatis ke GitHub Pages
@@ -141,9 +151,13 @@ block-tower-defense/
 - **Musuh baru:** tambahkan di `ENEMIES` dan `ENEMY_INTRO`, lalu masukkan ke `buildWave` (`js/game.js`).
 - **Map baru:** tambahkan di `MAPS`. Jalur ditulis sebagai titik-titik grid (20×12); titik pertama di kolom `-1` dan titik terakhir di kolom `21`.
 
+## 🌐 Fitur Online
+Panduan lengkap: **[docs/SETUP-ONLINE.md](docs/SETUP-ONLINE.md)** (env Vercel, Google Client ID, struktur database, uji lokal).
+
 ## 🚀 Deploy
-Repo ini sudah berisi workflow GitHub Actions (`.github/workflows/pages.yml`).
-Aktifkan sekali di **Settings → Pages → Build and deployment → Source: GitHub Actions**. Setelah itu setiap push ke `main` otomatis ter-deploy.
+**Vercel (disarankan, fitur online aktif):** import repo ini di Vercel, isi environment variable (`MONGODB_URI`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID`), lalu deploy. Detail di [docs/SETUP-ONLINE.md](docs/SETUP-ONLINE.md).
+
+**GitHub Pages (offline saja):** workflow `.github/workflows/pages.yml` tetap tersedia; fitur online otomatis nonaktif di sana.
 
 ## 📄 Lisensi
 [MIT](LICENSE) © KingRafer

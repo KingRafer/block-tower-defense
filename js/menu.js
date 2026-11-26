@@ -7,11 +7,12 @@
 const Menu = {
   open: false, screen: null, back: 'main', endData: null, resetArm: false, shopSel: 'scout',
 
-  show(scr) {
+  show(scr, quiet) {
     this.open = true; this.screen = scr;
     const o = $('overlay');
     o.style.display = 'flex';
-    o.innerHTML = `<div class="screen screen-${scr}">${this.screens[scr].call(this)}</div>`;
+    o.classList.toggle('home-bg', scr === 'main');
+    o.innerHTML = `<div class="screen screen-${scr} ${quiet ? 'noanim' : ''}">${this.screens[scr].call(this)}</div>`;
     if (this.after[scr]) this.after[scr].call(this);
     UI.tooltip(null);
   },
@@ -27,30 +28,175 @@ const Menu = {
       <div class="coins">🪙 ${PROFILE.coins.toLocaleString('id-ID')}</div>
       <div class="mat" title="Kristal Trait">💎 ${PROFILE.crystals}</div><div class="mat" title="Batu Evolusi">🔮 ${PROFILE.stones}</div></div>`;
   },
+  avatar(u, size = 44) {
+    const name = (u && u.name) || 'Tamu';
+    if (u && u.avatar) return `<img class="av" style="width:${size}px;height:${size}px" src="${esc(u.avatar)}" referrerpolicy="no-referrer" alt="">`;
+    const hue = [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+    return `<div class="av" style="width:${size}px;height:${size}px;background:hsl(${hue},60%,45%);font-size:${size * 0.45}px">${esc(name[0].toUpperCase())}</div>`;
+  },
+  needLogin(title, why) {
+    if (Online.loggedIn) return '';
+    return `${this.header(title)}<div class="box center-box"><div class="big-ic">🔐</div><h3>Masuk dulu untuk ${why}</h3>
+      <p class="dim">Gunakan akun Google. Progres kamu juga akan tersimpan di cloud.</p>${this.loginBlock()}</div>`;
+  },
+  loginBlock() {
+    if (!Online.available) return `<p class="warn">⚠️ Server online tidak tersedia. Mainkan game dari alamat Vercel agar fitur online aktif.</p>`;
+    let h = Online.cfg.googleClientId ? `<div class="gbtn"></div>` : `<p class="warn">⚠️ Login Google belum dikonfigurasi (GOOGLE_CLIENT_ID).</p>`;
+    if (Online.cfg.devAuth) h += `<div class="devlogin"><input id="devName" placeholder="Nama uji coba" maxlength="20"><button class="btn sm gray" data-act="login-dev">Login uji coba</button></div>`;
+    return h;
+  },
   header(title) { return `<div class="mhead"><button class="btn gray" data-act="back">← Kembali</button><h2>${title}</h2>${this.profileBar()}</div>`; },
   fmtTime(s) { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}j ${m}m` : m ? `${m}m ${s % 60}d` : `${s}d`; },
 
   /* ---------- layar ---------- */
   screens: {
     main() {
-      const achN = PROFILE.achievements.length;
-      return `${this.profileBar()}
-        <div class="logo"><span>🧱</span><h1>BLOCK<br>TOWER DEFENSE</h1><div class="sub">Pertahankan base dari gelombang zombie kotak!</div></div>
-        <div class="mcol">
-          ${this.saveButton()}
-          <button class="btn big" data-act="go:play">▶ MAIN</button>
-          <button class="btn red big" data-act="go:daily">📅 Tantangan Harian ${dailyState().won ? '✅' : ''}</button>
-          <button class="btn purple big" data-act="go:towers">🗼 Tower & Loadout</button>
-          <div class="mgrid">
-            <button class="btn gold" data-act="go:achievements">🏅 Pencapaian <small>${achN}/${ACHIEVEMENTS.length}</small></button>
-            <button class="btn gray" data-act="go:stats">📊 Statistik</button>
-            <button class="btn purple" data-act="go:scores">🏆 Papan Skor</button>
-            <button class="btn gray" data-act="go:skills">⚡ Skill</button>
-            <button class="btn blue" data-act="go:howto">📖 Cara Main</button>
-            <button class="btn gray" data-act="settings:main">⚙️ Pengaturan</button>
+      const u = Online.user, lv = levelFromXp(PROFILE.xp), lo = lv > 1 ? xpForLevel(lv - 1) : 0, hi = xpForLevel(lv);
+      const pct = Math.min(100, (PROFILE.xp - lo) / (hi - lo) * 100);
+      const tile = (act, icon, label, sub, cls = '', badge = '') =>
+        `<button class="tile ${cls}" data-act="${act}"><span class="ti">${icon}</span><b>${label}</b><small>${sub}</small>${badge}</button>`;
+      const reqBadge = `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`;
+      return `<div class="cubes">${Array.from({ length: 14 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
+        <div class="home">
+          <div class="home-top">
+            <button class="pcard" data-act="go:account">
+              ${this.avatar(u, 52)}
+              <div class="pinfo"><b>${esc(u ? u.name : 'Tamu')}</b>
+                <div class="lvrow"><span class="lvl">Lv ${lv}</span><div class="xpbar"><div style="width:${pct}%"></div></div></div>
+                <small>${u ? '☁️ Tersinkron' : Online.available ? '🔑 Masuk dengan Google' : '💾 Mode offline'}</small></div>
+            </button>
+            <div class="chips">
+              <span class="chip-c" title="Koin">🪙 ${PROFILE.coins.toLocaleString('id-ID')}</span>
+              <span class="chip-c" title="Kristal Trait">💎 ${PROFILE.crystals}</span>
+              <span class="chip-c" title="Batu Evolusi">🔮 ${PROFILE.stones}</span>
+              <button class="icon-btn" data-act="settings:main" title="Pengaturan">⚙️</button>
+            </div>
+          </div>
+          <div class="home-mid">
+            <div class="hero">
+              <div class="logo3d"><span>🧱</span><h1>BLOCK<br><em>TOWER DEFENSE</em></h1></div>
+              <p class="sub">Bangun tower, kumpulkan trait, evolusikan unit, dan bertahan bersama teman!</p>
+              ${this.saveButton()}
+            </div>
+            <div class="playcol">
+              <button class="play-btn solo" data-act="go:play"><span>▶</span><div><b>MAIN SOLO</b><small>${MAPS.length} map • Klasik & Endless</small></div></button>
+              <button class="play-btn coop" data-act="go:mabar"><span>🤝</span><div><b>MABAR</b><small>Co-op 2–4 pemain bersama teman</small></div></button>
+              <button class="play-btn daily" data-act="go:daily"><span>📅</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai hari ini' : 'Hadiah 🪙 ' + DAILY_REWARD}</small></div></button>
+            </div>
+          </div>
+          <div class="tiles">
+            ${tile('go:towers', '🗼', 'Tower', 'Loadout • Trait • Evolusi', 't-purple')}
+            ${tile('go:friends', '👥', 'Teman', u ? 'Undang & gabung' : 'Perlu login', 't-blue', reqBadge)}
+            ${tile('go:scores', '🏆', 'Papan Skor', 'Lokal & global', 't-gold')}
+            ${tile('go:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`, 't-orange')}
+            ${tile('go:skills', '⚡', 'Skill', 'Z • C • V', 't-teal')}
+            ${tile('go:stats', '📊', 'Statistik', PROFILE.stats.games + ' game', 't-gray')}
+            ${tile('go:shop', '🛒', 'Toko', 'Material', 't-pink')}
+            ${tile('go:howto', '📖', 'Cara Main', 'Panduan', 't-green')}
+          </div>
+          <div class="foot">v${VERSION} • ${Online.available ? '🟢 Server online' : '⚪ Offline'} • ${TOWER_ORDER.length} tower • ${Object.keys(ENEMIES).length - 1} musuh</div>
+        </div>`;
+    },
+
+    account() {
+      const u = Online.user;
+      if (!u) return `${this.header('Akun')}<div class="box center-box"><div class="big-ic">🧑‍🚀</div><h3>Masuk / Daftar dengan Google</h3>
+        <p class="dim">Akun dibuat otomatis saat pertama kali masuk. Dengan akun, progres (koin, tower, trait, evolusi, pencapaian) tersimpan di cloud dan bisa dimainkan di perangkat lain. Kamu juga bisa menambah teman dan mabar.</p>
+        ${this.loginBlock()}
+        <small class="dim">Progres yang sudah ada di perangkat ini akan ikut disimpan ke akunmu.</small></div>`;
+      const ago = Online.lastSync ? Math.max(0, Math.round((Date.now() - Online.lastSync) / 1000)) : null;
+      return `${this.header('Akun')}
+        <div class="acc">
+          <div class="box acc-card">${this.avatar(u, 84)}
+            <div class="field"><label>Nama pemain</label><div class="inrow"><input id="accName" value="${esc(u.name)}" maxlength="20"><button class="btn sm" data-act="rename">Simpan</button></div></div>
+            <div class="field"><label>Kode teman</label><div class="inrow"><code class="fcode">${u.friendCode}</code><button class="btn sm blue" data-act="copy:${u.friendCode}">Salin</button></div>
+              <small class="dim">Bagikan kode ini agar temanmu bisa menambahkanmu.</small></div>
+          </div>
+          <div class="box">
+            <h4>☁️ Cloud Save</h4>
+            <p>Status: ${Online.syncing ? '⏳ Menyinkronkan…' : '✅ Aktif'} ${ago !== null ? `<span class="dim">• terakhir ${ago < 60 ? ago + ' detik' : Math.round(ago / 60) + ' menit'} lalu</span>` : ''}</p>
+            <p class="dim">Progres disimpan otomatis setiap ada perubahan.</p>
+            <div class="row2"><button class="btn blue" data-act="sync">🔄 Sinkronkan sekarang</button><button class="btn red" data-act="logout">🚪 Keluar</button></div>
+          </div>
+        </div>`;
+    },
+
+    friends() {
+      const nl = this.needLogin('Teman', 'menambah teman'); if (nl) return nl;
+      const f = this.friendsData;
+      const row = (x, btns) => `<div class="frow">${this.avatar(x, 40)}<div class="fi"><b>${esc(x.name)}</b><small>Lv ${x.level} • ${x.online ? (x.roomCode ? `🎮 di room ${x.roomCode}` : '🟢 Online') : '⚫ Offline'}</small></div><div class="fb">${btns}</div></div>`;
+      return `${this.header('Teman')}
+        <div class="fgrid">
+          <div class="box">
+            <h4>➕ Tambah teman</h4>
+            <div class="inrow"><input id="friendCode" placeholder="Kode teman (6 huruf)" maxlength="8" style="text-transform:uppercase"><button class="btn" data-act="friend-add">Tambah</button></div>
+            <p class="dim">Kode kamu: <code class="fcode sm">${Online.user.friendCode}</code> <button class="btn sm blue" data-act="copy:${Online.user.friendCode}">Salin</button></p>
+            ${f && f.incoming.length ? `<h4>📥 Permintaan masuk</h4>${f.incoming.map(x => row(x, `<button class="btn sm" data-act="friend-acc:${x.id}">Terima</button><button class="btn sm gray" data-act="friend-dec:${x.id}">Tolak</button>`)).join('')}` : ''}
+            ${f && f.outgoing.length ? `<h4>📤 Menunggu konfirmasi</h4>${f.outgoing.map(x => row(x, '<small class="dim">menunggu</small>')).join('')}` : ''}
+          </div>
+          <div class="box">
+            <h4>👥 Daftar teman ${f ? `(${f.friends.length})` : ''} <button class="btn sm gray" data-act="friends-refresh" style="float:right">🔄</button></h4>
+            ${!f ? '<p class="dim">Memuat…</p>' : !f.friends.length ? '<p class="dim">Belum ada teman. Tambahkan dengan kode teman!</p>' :
+              f.friends.map(x => row(x, `${Lobby.room ? `<button class="btn sm purple" data-act="invite:${x.id}">Undang</button>` : ''}${x.roomCode && x.online ? `<button class="btn sm" data-act="join-room:${x.roomCode}">Gabung</button>` : ''}<button class="btn sm red" data-act="friend-rm:${x.id}" title="Hapus teman">✕</button>`)).join('')}
+          </div>
+        </div>`;
+    },
+
+    mabar() {
+      const nl = this.needLogin('Mabar', 'bermain bersama teman'); if (nl) return nl;
+      if (Lobby.room) return this.screens.lobby.call(this);
+      const f = this.friendsData, inRooms = f ? f.friends.filter(x => x.online && x.roomCode) : [];
+      return `${this.header('Mabar Co-op')}
+        <div class="fgrid">
+          <div class="box center-box">
+            <div class="big-ic">🏠</div><h3>Buat Room</h3>
+            <p class="dim">Kamu jadi host. Pilih map & kesulitan di lobby, lalu ajak hingga 3 teman.</p>
+            <button class="btn big" data-act="room-create">➕ Buat Room</button>
+          </div>
+          <div class="box center-box">
+            <div class="big-ic">🔑</div><h3>Gabung dengan Kode</h3>
+            <div class="inrow"><input id="roomCode" placeholder="KODE" maxlength="6" style="text-transform:uppercase;font-size:22px;text-align:center;letter-spacing:4px"><button class="btn" data-act="room-join">Gabung</button></div>
+            ${inRooms.length ? `<h4>Teman yang sedang di room</h4>${inRooms.map(x => `<div class="frow">${this.avatar(x, 36)}<div class="fi"><b>${esc(x.name)}</b><small>Room ${x.roomCode}</small></div><button class="btn sm" data-act="join-room:${x.roomCode}">Gabung</button></div>`).join('')}` : ''}
           </div>
         </div>
-        <div class="foot">v${VERSION} • ${MAPS.length} map • ${TOWER_ORDER.length} tower • ${Object.keys(ENEMIES).length - 1} musuh</div>`;
+        <div class="box tipbox">💡 Mabar: semua pemain berbagi nyawa base. Setiap pemain punya uang & tower sendiri, hadiah kill dibagi rata. Trait, evolusi, dan mastery masing-masing pemain tetap berlaku.</div>`;
+    },
+
+    lobby() {
+      const r = Lobby.room; if (!r) return this.screens.mabar.call(this);
+      const host = Lobby.isHost(), me = Online.user.id;
+      const slots = Array.from({ length: 4 }, (_, i) => {
+        const p = r.players[i];
+        return p ? `<div class="slotp" style="--pc:${PLAYER_COLORS[i]}">${this.avatar(p, 56)}<b>${esc(p.name)}${p.id === me ? ' (kamu)' : ''}</b><small>Lv ${p.level}${p.id === r.host ? ' • 👑 Host' : ''}</small></div>`
+                 : `<div class="slotp empty"><div class="av">＋</div><b>Kosong</b><small>Menunggu pemain</small></div>`;
+      }).join('');
+      const m = MAPS[r.map] || MAPS[0];
+      const sel = (act, opts, cur) => opts.map(([k, l]) => `<button class="btn sm ${cur === k ? 'sel' : 'gray'}" data-act="${act}:${k}" ${host ? '' : 'disabled'}>${l}</button>`).join('');
+      const f = this.friendsData, online = f ? f.friends.filter(x => x.online && !r.players.some(p => p.id === x.id)) : [];
+      return `${this.header('Lobby')}
+        <div class="lobby">
+          <div class="lcol">
+            <div class="box roomcode"><small>KODE ROOM</small><code>${r.code}</code><button class="btn sm blue" data-act="copy:${r.code}">Salin</button></div>
+            <div class="slots" id="lobbyPlayers">${slots}</div>
+            <div class="box" id="lobbySettings">
+              <div class="lset"><canvas width="160" height="96" data-map="${r.map}"></canvas>
+                <div><b>${m.name}</b> <span class="stars">${'★'.repeat(m.stars)}</span><br><small class="dim">${m.desc}</small></div></div>
+              <div class="lopts"><span>Map</span>${sel('lobby-map', MAPS.map((x, i) => [String(i), x.name]), String(r.map))}</div>
+              <div class="lopts"><span>Kesulitan</span>${sel('lobby-diff', Object.entries(DIFFS).map(([k, d]) => [k, d.name]), r.diff)}</div>
+              <div class="lopts"><span>Mode</span>${sel('lobby-mode', Object.entries(MODES).map(([k, d]) => [k, d.name]), r.mode)}</div>
+              ${host ? '' : '<small class="dim">Hanya host yang bisa mengubah pengaturan.</small>'}
+            </div>
+          </div>
+          <div class="rcol">
+            <div class="box chatbox"><h4>💬 Chat</h4><div class="clog" id="lobbyChat">${(r.chat || []).slice(-30).map(c => `<div><b>${esc(c.n)}:</b> ${esc(c.t)}</div>`).join('') || '<div class="dim">Belum ada pesan</div>'}</div>
+              <div class="inrow"><input id="lobbyIn" placeholder="Ketik pesan…" maxlength="140"><button class="btn sm" data-act="lobby-chat">Kirim</button></div></div>
+            <div class="box"><h4>📨 Undang teman online</h4>${!f ? '<p class="dim">Memuat…</p>' : online.length ? online.map(x => `<div class="frow">${this.avatar(x, 32)}<div class="fi"><b>${esc(x.name)}</b></div><button class="btn sm purple" data-act="invite:${x.id}">Undang</button></div>`).join('') : '<p class="dim">Tidak ada teman online. Bagikan kode room!</p>'}</div>
+          </div>
+        </div>
+        <div class="row2">
+          <button class="btn red" data-act="room-leave">🚪 Keluar Room</button>
+          ${host ? `<button class="btn big" data-act="room-start">MULAI ▶ <small>${r.players.length} pemain</small></button>` : '<div class="waiting">⏳ Menunggu host memulai…</div>'}
+        </div>`;
     },
 
     play() {
@@ -226,14 +372,28 @@ const Menu = {
     },
 
     scores() {
-      const runs = PROFILE.runs, medal = i => ['🥇', '🥈', '🥉'][i] || '#' + (i + 1);
-      return `${this.header('Papan Skor')}
+      const tab = this.scoreTab || 'local';
+      const tabs = [['local', '💾 Lokal'], ['classic', '🌍 Klasik'], ['endless', '♾️ Endless'], ['daily', '📅 Harian'], ['coop', '🤝 Mabar']];
+      const tabBar = `<div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="tab:${k}">${l}</button>`).join('')}</div>`;
+      const medal = i => ['🥇', '🥈', '🥉'][i] || '#' + (i + 1);
+      if (tab !== 'local') {
+        const data = this.lbData && this.lbData[tab];
+        const body = !Online.available ? '<p class="dim center">Papan skor global butuh server online.</p>'
+          : !data ? '<p class="dim center">Memuat…</p>'
+          : !data.length ? '<p class="dim center">Belum ada skor. Jadilah yang pertama!</p>'
+          : `<table><tr><th>#</th><th>Pemain</th><th>Skor</th><th>Wave</th><th>Map</th><th>Hasil</th></tr>${data.map((r, i) => `<tr><td>${medal(i)}</td>
+              <td class="pl">${this.avatar(r, 26)} ${esc(r.name)}</td><td><b>${r.score.toLocaleString('id-ID')}</b></td><td>${r.wave}</td>
+              <td>${(MAPS.find(m => m.id === r.map) || {}).name || '-'}</td><td>${r.won ? '🏆' : '💀'}</td></tr>`).join('')}</table>`;
+        return `${this.header('Papan Skor')}${tabBar}<div class="box">${body}</div>${Online.loggedIn ? '' : '<small class="dim">Masuk dengan Google agar skormu tercatat di papan skor global.</small>'}`;
+      }
+      const runs = PROFILE.runs;
+      return `${this.header('Papan Skor')}${tabBar}
         <div class="box">${runs.length ? `<table><tr><th>#</th><th>Skor</th><th>Map</th><th>Mode</th><th>Wave</th><th>Hasil</th><th>Tanggal</th></tr>
           ${runs.map((r, i) => `<tr><td>${medal(i)}</td><td><b>${r.score.toLocaleString('id-ID')}</b></td>
             <td>${(MAPS.find(m => m.id === r.map) || {}).name || r.map}</td>
-            <td>${r.daily ? '📅 Harian' : MODES[r.mode].name} • ${DIFFS[r.diff].name}</td><td>${r.wave}</td>
+            <td>${r.coop ? '🤝 Mabar' : r.daily ? '📅 Harian' : MODES[r.mode].name} • ${DIFFS[r.diff].name}</td><td>${r.wave}</td>
             <td>${r.won ? '🏆' : '💀'}</td><td class="dim">${r.date}</td></tr>`).join('')}</table>`
-          : '<p class="dim" style="text-align:center">Belum ada permainan. Ayo main!</p>'}</div>
+          : '<p class="dim center">Belum ada permainan. Ayo main!</p>'}</div>
         <small class="dim">Skor = wave × 500 + kill × 5 + nyawa × 10 + boss × 1000 + bonus menang, dikali kesulitan & map.</small>`;
     },
 
@@ -248,6 +408,12 @@ const Menu = {
     },
 
     pause() {
+      if (isMP()) return `<h1>🤝 MENU MABAR</h1><div class="sub">Room ${S.mp.room} • ${MAP.name} • Wave ${S.wave} — permainan tetap berjalan</div>
+        <div class="mcol">
+          <button class="btn big" data-act="resume">▶ Kembali ke Permainan</button>
+          <button class="btn gray big" data-act="settings:pause">⚙️ Pengaturan</button>
+          <button class="btn red big" data-act="mp-quit">🚪 Keluar dari Mabar</button>
+        </div><small class="dim">${isHost() ? 'Kamu host: jika keluar, permainan berakhir untuk semua pemain.' : 'Tower kamu tetap di map setelah keluar.'}</small>`;
       return `<h1>⏸ PAUSE</h1><div class="sub">${MAP.name} • ${DIFFS[S.diff].name} • ${S.daily ? 'Harian' : MODES[S.mode].name} • Wave ${S.wave}${S.maxWave === Infinity ? '' : '/' + S.maxWave}</div>
         <div class="mcol">
           <button class="btn big" data-act="resume">▶ Lanjutkan</button>
@@ -265,7 +431,7 @@ const Menu = {
         ${d.unlockedSkill ? `<span class="badge purple">⚡ Skill baru: ${d.unlockedSkill.icon} ${d.unlockedSkill.name}</span>` : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}
         <div class="box endbox"><table>
           <tr><td>Map</td><td><b>${MAP.name}</b> (${DIFFS[S.diff].name})</td></tr>
-          <tr><td>Mode</td><td><b>${S.daily ? '📅 Tantangan Harian' : MODES[S.mode].name}</b></td></tr>
+          <tr><td>Mode</td><td><b>${isMP() ? '🤝 Mabar • ' + MODES[S.mode].name : S.daily ? '📅 Tantangan Harian' : MODES[S.mode].name}</b></td></tr>
           <tr><td>Wave</td><td><b>${S.wave}${S.maxWave === Infinity ? '' : '/' + S.maxWave}</b></td></tr>
           <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
           <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
@@ -273,14 +439,31 @@ const Menu = {
           <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.crystals ? ` &nbsp; <b>💎 +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}</td></tr></table>
           ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${towerName(m.type)}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
-        <div class="row2"><button class="btn big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
-          <button class="btn blue" data-act="go:play">🗺️ Pilih Map</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`;
+        ${isMP() ? `<div class="row2"><button class="btn big" data-act="go:mabar">🤝 Mabar Lagi</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`
+        : `<div class="row2"><button class="btn big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
+          <button class="btn blue" data-act="go:play">🗺️ Pilih Map</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`}`;
     },
   },
 
   after: {
     play() { document.querySelectorAll('canvas[data-map]').forEach(c => drawPreview(c, MAPS[+c.dataset.map])); },
     daily() { this.after.play(); },
+    main() { Online.refreshBadge && Online.refreshBadge(); },
+    account() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); },
+    friends() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); if (Online.loggedIn && !this.loadingF && (!this.friendsData || Date.now() - this.friendsAt > 10000)) this.loadFriends(); },
+    mabar() { this.after.friends.call(this); if (Lobby.room) this.after.lobby.call(this); },
+    lobby() {
+      document.querySelectorAll('canvas[data-map]').forEach(c => drawPreview(c, MAPS[+c.dataset.map]));
+      const log = $('lobbyChat'); if (log) log.scrollTop = log.scrollHeight;
+      const inp = $('lobbyIn'); if (inp) inp.onkeydown = e => { if (e.key === 'Enter') { Lobby.chat(inp.value); inp.value = ''; } };
+      if (Online.loggedIn && !this.loadingF && (!this.friendsData || Date.now() - this.friendsAt > 15000)) this.loadFriends();
+    },
+    scores() {
+      const tab = this.scoreTab || 'local';
+      if (tab !== 'local' && Online.available && !(this.lbData && this.lbData[tab])) {
+        Online.api('lb.get', null, 'GET', { mode: tab }).then(r => { this.lbData = { ...(this.lbData || {}), [tab]: r.top }; if (this.screen === 'scores') this.show('scores', true); }).catch(() => {});
+      }
+    },
     settings() {
       document.querySelectorAll('[data-vol]').forEach(r => {
         r.oninput = () => { SET[r.dataset.vol] = +r.value; saveSettings(); Sound.applyVolume(); };
@@ -294,7 +477,38 @@ const Menu = {
     const [cmd, arg] = a.split(':');
     switch (cmd) {
       case 'go': this.go(arg); break;
-      case 'back': this.resetArm = false; this.go(this.screen === 'settings' ? this.back : 'main'); break;
+      case 'tab': this.scoreTab = arg; if (arg !== 'local' && this.lbData) delete this.lbData[arg]; this.show('scores', true); break;
+      case 'login-dev': Online.devLogin(($('devName') || {}).value || 'Tester'); break;
+      case 'logout': Online.logout(); break;
+      case 'rename': Online.rename($('accName').value).then(() => { UI.toast('✅ Nama disimpan'); this.show('account', true); }).catch(e => UI.toast('❌ ' + e.message)); break;
+      case 'sync': UI.toast('🔄 Menyinkronkan…'); Online.pushProfile().then(() => { UI.toast('✅ Tersimpan di cloud'); this.show('account', true); }); break;
+      case 'copy': { const t = a.split(':')[1]; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => UI.toast('📋 Disalin: ' + t)).catch(() => UI.toast('Kode: ' + t)); break; }
+      case 'friends-refresh': this.loadFriends(); break;
+      case 'friend-add': {
+        const code = ($('friendCode') || {}).value;
+        Online.api('friends.add', { code }).then(r => { UI.toast(r.accepted ? `🤝 Sekarang berteman dengan ${r.user.name}` : `📤 Permintaan dikirim ke ${r.user.name}`); this.loadFriends(); }).catch(e => UI.toast('❌ ' + e.message));
+        break;
+      }
+      case 'friend-acc': case 'friend-dec':
+        Online.api('friends.respond', { id: arg, accept: cmd === 'friend-acc' }).then(() => { Online.requests = Math.max(0, Online.requests - 1); this.loadFriends(); }).catch(e => UI.toast('❌ ' + e.message)); break;
+      case 'friend-rm':
+        if (this.rmArm !== arg) { this.rmArm = arg; UI.toast('Klik ✕ sekali lagi untuk menghapus teman'); break; }
+        this.rmArm = null; Online.api('friends.remove', { id: arg }).then(() => this.loadFriends()); break;
+      case 'invite': { const x = this.friendsData && this.friendsData.friends.find(q => q.id === arg); Lobby.invite(arg, x ? x.name : 'teman'); break; }
+      case 'join-room': Lobby.join(arg); break;
+      case 'room-create': Lobby.create(); break;
+      case 'room-join': Lobby.join(($('roomCode') || {}).value); break;
+      case 'room-leave': Lobby.leave().then(() => this.show('mabar')); break;
+      case 'room-start': Lobby.start(); break;
+      case 'lobby-map': Lobby.update({ map: +arg }); break;
+      case 'lobby-diff': Lobby.update({ diff: arg }); break;
+      case 'lobby-mode': Lobby.update({ mode: arg }); break;
+      case 'lobby-chat': { const inp = $('lobbyIn'); if (inp) { Lobby.chat(inp.value); inp.value = ''; } break; }
+      case 'mp-quit': MP.leave().then(() => { newGame(); this.show('main'); }); break;
+      case 'back':
+        this.resetArm = false;
+        if (this.screen === 'lobby' || (this.screen === 'mabar' && Lobby.room)) { Lobby.leave(); UI.toast('Kamu keluar dari room'); }
+        this.go(this.screen === 'settings' ? this.back : 'main'); break;
       case 'settings': this.back = arg; this.go('settings'); break;
       case 'map': MAP = MAPS[+arg]; loadMap(MAP); this.go('play'); break;
       case 'diff': DIFF = arg; this.go('play'); break;
@@ -304,7 +518,7 @@ const Menu = {
       case 'discard': SaveGame.clear(); this.go('main'); break;
       case 'start': startGame(); break;
       case 'resume': sfx('click'); this.close(); break;
-      case 'quit': newGame(); this.go('main'); break;
+      case 'quit': if (isMP()) MP.cleanup(); newGame(); this.go('main'); break;
       case 'shop': this.shopSel = arg; this.rollArm = null; this.go('towers'); break;
       case 'roll': {
         const u = unitOf(arg);
@@ -340,6 +554,23 @@ const Menu = {
         if (!this.resetArm) { this.resetArm = true; this.go('settings'); break; }
         this.resetArm = false; resetAllData(); UI.toast('Semua data dihapus'); newGame(); this.go('settings'); break;
     }
+  },
+  async loadFriends() {
+    if (!Online.loggedIn) return;
+    this.loadingF = true;
+    try {
+      this.friendsData = await Online.api('friends.list', null, 'GET'); this.friendsAt = Date.now();
+      Online.requests = this.friendsData.incoming.length; Online.refreshUi && document.querySelectorAll('[data-badge="friends"]').forEach(b => b.textContent = Online.requests || '');
+      if (['friends', 'mabar', 'lobby'].includes(this.screen)) this.show(this.screen, true);
+    } catch (e) { UI.toast('❌ ' + e.message); }
+    this.loadingF = false;
+  },
+  /** Perbarui lobby tanpa mengganggu input chat */
+  updateLobby() {
+    if (this.screen !== 'lobby' && this.screen !== 'mabar') return;
+    const inp = $('lobbyIn'), val = inp ? inp.value : '', focused = document.activeElement === inp;
+    this.show(this.screen, true);
+    const n = $('lobbyIn'); if (n) { n.value = val; if (focused) { n.focus(); n.setSelectionRange(val.length, val.length); } }
   },
   saveButton() {
     const g = SaveGame.get(); if (!g) return '';

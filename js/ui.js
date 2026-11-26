@@ -36,6 +36,8 @@ const UI = {
     $('skipBtn').textContent = 'Auto: ' + (S.autoSkip ? 'ON' : 'OFF');
     $('skipBtn').classList.toggle('on', S.autoSkip);
     $('speedBtn').textContent = '⏩ ' + S.speed + 'x';
+    $('skipBtn').style.display = isMP() ? 'none' : '';
+    $('speedBtn').disabled = isGuest();
   },
 
   /** Hotbar berdasarkan loadout pemain */
@@ -100,13 +102,16 @@ const UI = {
 
   /** Panel tower terpilih */
   showPanel(t) {
-    const def = TOWERS[t.type], L = lvl(t), hasNext = t.level < def.levels.length - 1;
-    const next = hasNext ? Object.assign(computeL(t.type, t.level + 1), { cost: costOf(t.type, t.level + 1) }) : undefined;
+    const def = TOWERS[t.type], L = lvl(t), hasNext = t.level < def.levels.length - 1, mine = t.owner === S.me;
+    const unit = unitFor(t.type, t.owner);
+    const next = hasNext ? Object.assign(computeL(t.type, t.level + 1, unit), { cost: costOf(t.type, t.level + 1, t.owner) }) : undefined;
+    const tName = t.evo ? EVOS[t.type].name : def.name, tColor = t.evo ? EVOS[t.type].color : def.color;
     const tr = t.trait && TRAITS[t.trait];
     const st = (lab, a, b) => `<div class="row"><span>${lab}</span><span>${a}${b !== undefined && b !== a ? ` → <b class="up">${b}</b>` : ''}</span></div>`;
     const yn = v => v ? '✅' : '❌';
-    let h = `<div class="ph"><div class="pico" style="background:${towerColor(t.type)}">${t.evo ? '★' : ''}</div><div><h3>${towerName(t.type)}</h3>
-      <small>Lv ${t.level} • ${esc(L.name)} • M${unitLevel(unitOf(t.type).xp)}</small></div><button class="x" id="pClose">✕</button></div>`;
+    let h = `<div class="ph"><div class="pico" style="background:${tColor}">${t.evo ? '★' : ''}</div><div><h3>${tName}</h3>
+      <small>Lv ${t.level} • ${esc(L.name)} • M${unitLevel(unit.xp || 0)}</small></div><button class="x" id="pClose">✕</button></div>`;
+    if (isMP()) h += `<div class="owner" style="--pc:${playerColor(t.owner)}">👤 ${esc(playerName(t.owner))}</div>`;
     if (tr || t.evo) h += `<div class="ptags">${tr ? `<span class="tag" style="background:${RARITY[tr.rarity].color}" title="${tr.desc}">${tr.icon} ${tr.name}</span>` : ''}${t.evo ? `<span class="tag gold" title="${EVOS[t.type].desc}">★ Evolusi</span>` : ''}</div>`;
     h += `<div class="lvbar">${def.levels.map((_, i) => `<i class="${i <= t.level ? 'on' : ''}"></i>`).join('')}</div>`;
     if (t.type === 'farm') h += st('Pendapatan/wave', '$' + L.income, next && '$' + next.income);
@@ -122,24 +127,28 @@ const UI = {
       h += st('Tembus armor', yn(L.pierceArmor), next && yn(next.pierceArmor));
       h += `<div class="row dim"><span>Total damage</span><span id="pDmg">${fmtNum(t.dmg)}</span></div>`;
       h += `<div class="row dim"><span>Kills</span><span id="pKills">${t.kills}</span></div>`;
-      h += `<button class="btn blue" id="tgtBtn">🎯 Target: ${TARGET_LABEL[t.target]}</button>`;
+      if (mine) h += `<button class="btn blue" id="tgtBtn">🎯 Target: ${TARGET_LABEL[t.target]}</button>`;
+      else h += `<div class="row dim"><span>Target</span><span>${TARGET_LABEL[t.target]}</span></div>`;
     }
-    h += next ? `<button class="btn" id="upBtn">⬆ ${esc(next.name)} — $${next.cost.toLocaleString('id-ID')} <kbd>Q</kbd></button>`
-              : `<button class="btn" disabled>★ LEVEL MAKS</button>`;
-    h += `<button class="btn red" id="sellBtn">Jual $${Math.floor(t.spent * SELL_RATE).toLocaleString('id-ID')} <kbd>X</kbd></button>`;
-    const p = $('panel'); p.innerHTML = h; p.style.display = 'block';
+    if (mine) {
+      h += next ? `<button class="btn" id="upBtn">⬆ ${esc(next.name)} — $${next.cost.toLocaleString('id-ID')} <kbd>Q</kbd></button>`
+                : `<button class="btn" disabled>★ LEVEL MAKS</button>`;
+      h += `<button class="btn red" id="sellBtn">Jual $${Math.floor(t.spent * SELL_RATE).toLocaleString('id-ID')} <kbd>X</kbd></button>`;
+    } else h += `<div class="dim" style="text-align:center;margin-top:6px">Tower milik pemain lain</div>`;
+    const p = $('panel'); p.innerHTML = h; p.style.display = 'block'; p.dataset.lv = t.level + ':' + t.id;
     const left = t.x > W / 2;            // panel di sisi berlawanan dari tower
     p.classList.toggle('left', left);
     p.classList.toggle('bottom', !left && exitRow() < ROWS / 2); // hindari menutupi base
     if ($('upBtn')) $('upBtn').onclick = () => upgradeTower(t);
-    $('sellBtn').onclick = () => sellTower(t);
+    if ($('sellBtn')) $('sellBtn').onclick = () => sellTower(t);
     $('pClose').onclick = () => { S.selected = null; this.hidePanel(); };
-    if ($('tgtBtn')) $('tgtBtn').onclick = () => { t.target = TARGET_MODES[(TARGET_MODES.indexOf(t.target) + 1) % TARGET_MODES.length]; sfx('click'); this.showPanel(t); };
+    if ($('tgtBtn')) $('tgtBtn').onclick = () => { setTarget(t, TARGET_MODES[(TARGET_MODES.indexOf(t.target) + 1) % TARGET_MODES.length]); sfx('click'); this.showPanel(t); };
     this.updatePanel();
   },
   updatePanel() {
     const t = S.selected; if (!t) return;
-    if ($('upBtn') && !isMax(t)) $('upBtn').disabled = S.cash < costOf(t.type, t.level + 1);
+    if ($('panel').dataset.lv !== t.level + ':' + t.id) return this.showPanel(t);
+    if ($('upBtn') && !isMax(t)) $('upBtn').disabled = S.cash < costOf(t.type, t.level + 1, t.owner);
     if ($('pDmg')) $('pDmg').textContent = fmtNum(t.dmg);
     if ($('pKills')) $('pKills').textContent = t.kills;
   },
@@ -182,10 +191,40 @@ const UI = {
     });
   },
 
+  /** Daftar pemain saat mabar */
+  renderPlayers() {
+    const el = $('mpPlayers');
+    if (!isMP()) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    el.innerHTML = Object.entries(S.players).map(([id, p]) => {
+      const net = id === S.me ? '' : isHost() ? (Net.isDirect(id) ? '⚡' : '☁️') : (p.direct ? '⚡' : '☁️');
+      return `<div class="mpp ${p.online === false ? 'off' : ''}" style="--pc:${p.color}"><i></i><b>${esc(id === S.me ? p.name + ' (kamu)' : p.name)}</b>
+        <span>$${Math.floor(pcash(id)).toLocaleString('id-ID')}</span><small title="⚡ langsung (P2P) • ☁️ lewat server">${net}${id === S.mp.hostId ? ' 👑' : ''}</small></div>`;
+    }).join('');
+  },
+  renderChat() {
+    const el = $('chatLog'); if (!el) return;
+    $('chat').style.display = isMP() ? 'flex' : 'none';
+    el.innerHTML = MP.chatLog.slice(-8).map(c => `<div class="${c.n ? '' : 'sys'} ${Date.now() - c.at > 12000 ? 'old' : ''}">${c.n ? `<b>${esc(c.n)}:</b> ` : ''}${esc(c.m)}</div>`).join('');
+    el.scrollTop = el.scrollHeight;
+  },
+  invitePopup(inv) {
+    const el = document.createElement('div');
+    el.className = 'invite';
+    el.innerHTML = `<div>📨 <b>${esc(inv.from)}</b> mengajak kamu mabar!<small>Room ${esc(inv.room)}</small></div>
+      <div class="row2"><button class="btn sm">Gabung</button><button class="btn gray sm">Nanti</button></div>`;
+    const [join, no] = el.querySelectorAll('button');
+    join.onclick = () => { el.remove(); if (isMP()) return UI.toast('Selesaikan permainan dulu'); Lobby.join(inv.room); };
+    no.onclick = () => el.remove();
+    $('toasts').appendChild(el); sfx('achieve');
+    setTimeout(() => el.remove(), 30000);
+  },
+
   /** Update ringan tiap ~150 ms */
   tick() {
     if (!S) return;
-    this.updateHud(); this.updateBar(); this.updatePanel();
+    this.updateHud(); this.updateBar(); this.updatePanel(); this.renderPlayers();
+    if (isMP() && Math.random() < 0.1) this.renderChat();
     const pv = $('preview');
     if ((S.state === 'ready') !== (pv.dataset.ready === '1')) this.renderPreview();
     this.updateAbilities();

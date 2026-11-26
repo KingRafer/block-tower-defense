@@ -40,9 +40,15 @@ const SaveGame = {
 const SET = Storage.load('btd_settings', defaultSettings());
 const PROFILE = Storage.load('btd_profile', defaultProfile());
 const saveSettings = () => Storage.save('btd_settings', SET);
-const saveProfile = () => Storage.save('btd_profile', PROFILE);
+const saveProfile = () => {
+  PROFILE.updatedAt = Date.now();
+  Storage.save('btd_profile', PROFILE);
+  if (typeof Online !== 'undefined') Online.queueSave();
+};
 
 function resetAllData() {
-  Object.assign(PROFILE, defaultProfile());
+  const owner = PROFILE.ownerId;
+  for (const k of Object.keys(PROFILE)) delete PROFILE[k];
+  Object.assign(PROFILE, defaultProfile(), { ownerId: owner });
   saveProfile(); SaveGame.clear();
 }

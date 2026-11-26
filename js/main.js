@@ -32,7 +32,11 @@ cv.addEventListener('contextmenu', ev => { ev.preventDefault(); cancelAction(); 
 
 /* ---------------- KEYBOARD ---------------- */
 addEventListener('keydown', ev => {
-  if (ev.target.tagName === 'INPUT') return;
+  if (ev.target.tagName === 'INPUT') {
+    if (ev.target.id === 'chatIn' && ev.key === 'Enter') { MP.chat(ev.target.value); ev.target.value = ''; ev.target.blur(); }
+    if (ev.target.id === 'chatIn' && ev.key === 'Escape') ev.target.blur();
+    return;
+  }
   const k = ev.key.toLowerCase();
   if (k === 'escape') {
     if (Menu.open) { if (Menu.screen === 'pause') Menu.act('resume'); else if (Menu.screen === 'settings' && Menu.back === 'pause') Menu.go('pause'); return; }
@@ -47,14 +51,16 @@ addEventListener('keydown', ev => {
   else if (k === 't' && S.selected && $('tgtBtn')) $('tgtBtn').click();
   else if (k === ' ') { ev.preventDefault(); if (canSkip()) skipWave(); else startWave(); }
   else if (ABILITIES.some(a => a.key === k)) useAbility(ABILITIES.find(a => a.key === k).id);
-  else if (k === 'f') $('speedBtn').click();
+  else if (k === 'f' && !isGuest()) $('speedBtn').click();
+  else if (k === 'enter' && isMP()) { ev.preventDefault(); $('chatIn').focus(); }
 });
 
 /* ---------------- TOMBOL HUD ---------------- */
 $('startBtn').onclick = () => startWave();
 $('skipWaveBtn').onclick = () => skipWave();
 $('skipBtn').onclick = () => { S.autoSkip = !S.autoSkip; S.autoTimer = 3; sfx('click'); UI.updateHud(); };
-$('speedBtn').onclick = () => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 3 : 1; sfx('click'); UI.updateHud(); };
+$('speedBtn').onclick = () => {
+  if (isGuest()) return; S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 3 : 1; sfx('click'); UI.updateHud(); };
 $('pauseBtn').onclick = () => { if (!Menu.open && S.state !== 'win' && S.state !== 'lose') Menu.show('pause'); };
 $('overlay').addEventListener('click', ev => {
   const b = ev.target.closest('[data-act]');
@@ -67,16 +73,18 @@ addEventListener('keydown', () => Sound.unlock(), { once: true });
 
 // Pause otomatis saat tab tidak aktif
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && SET.autoPause && S && !Menu.open && S.state !== 'win' && S.state !== 'lose' && S.wave > 0) Menu.show('pause');
+  if (document.hidden && SET.autoPause && S && !isMP() && !Menu.open && S.state !== 'win' && S.state !== 'lose' && S.wave > 0) Menu.show('pause');
 });
 
 /* ---------------- GAME LOOP ---------------- */
 let last = performance.now(), uiT = 0;
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (!Menu.open && S.state !== 'win' && S.state !== 'lose') {
-    for (let i = 0; i < S.speed; i++) update(dt);
+  if (S.state !== 'win' && S.state !== 'lose') {
+    if (isGuest()) MP.guestTick(dt);
+    else if (!Menu.open || isMP()) for (let i = 0; i < S.speed; i++) update(dt);
   }
+  MP.tick(dt);
   draw(dt);
   uiT += dt;
   if (uiT > 0.15) { uiT = 0; UI.tick(); }
@@ -87,4 +95,5 @@ function loop(now) {
 loadMap(MAP);
 newGame();
 Menu.show('main');
+Online.init();
 requestAnimationFrame(loop);
