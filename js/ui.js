@@ -1,0 +1,158 @@
+/* =========================================================
+ * UI HTML: HUD, hotbar, panel tower, tooltip, toast, banner
+ * ========================================================= */
+'use strict';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const UI = {
+  /** Bangun ulang semua elemen HUD (dipanggil saat ada perubahan besar) */
+  refreshAll() {
+    if (!S) return;
+    this.updateHud();
+    this.renderBar();
+    this.renderPreview();
+    if (S.selected) this.showPanel(S.selected); else this.hidePanel();
+  },
+
+  updateHud() {
+    $('hudCash').textContent = '$' + Math.floor(S.cash).toLocaleString('id-ID');
+    $('hudWave').textContent = `${S.wave}/${S.maxWave}`;
+    $('hudWaveBar').style.width = (S.wave / S.maxWave * 100) + '%';
+    const hpPct = Math.max(0, S.hp / S.maxHp * 100);
+    $('hudHp').textContent = Math.max(0, Math.ceil(S.hp));
+    $('hudHpBar').style.width = hpPct + '%';
+    $('hudHpBar').style.background = hpPct > 50 ? '#66bb6a' : hpPct > 25 ? '#ffca28' : '#ef5350';
+    $('hudEnemies').textContent = S.enemies.length + S.spawnQ.length;
+    const sb = $('startBtn');
+    sb.disabled = S.state !== 'ready';
+    sb.textContent = S.state === 'wave' ? '⚔️ Wave berjalan' : '▶ Mulai Wave';
+    $('skipBtn').textContent = 'Auto: ' + (S.autoSkip ? 'ON' : 'OFF');
+    $('skipBtn').classList.toggle('on', S.autoSkip);
+    $('speedBtn').textContent = '⏩ ' + S.speed + 'x';
+  },
+
+  /** Hotbar berdasarkan loadout pemain */
+  renderBar() {
+    const lo = PROFILE.loadout;
+    $('bar').innerHTML = lo.map((k, i) => {
+      const d = TOWERS[k], c = d.levels[0].cost;
+      return `<div class="slot ${S.placing === k ? 'sel' : ''}" data-k="${k}" data-i="${i}">
+        <span class="key">${i + 1}</span>
+        <div class="ico" style="background:${d.color}"></div>
+        <div class="nm">${d.name}</div><div class="pr">$${c}</div>
+        <div class="cnt" data-cnt="${k}">${countType(k)}/${d.limit}</div></div>`;
+    }).join('');
+    $('bar').querySelectorAll('.slot').forEach(el => {
+      el.onclick = () => this.selectPlace(el.dataset.k);
+      el.onmouseenter = () => this.tooltip(el, el.dataset.k);
+      el.onmouseleave = () => this.tooltip(null);
+    });
+    this.updateBar();
+  },
+  updateBar() {
+    $('bar').querySelectorAll('.slot').forEach(el => {
+      const k = el.dataset.k, d = TOWERS[k];
+      el.classList.toggle('poor', S.cash < d.levels[0].cost || countType(k) >= d.limit);
+    });
+  },
+  selectPlace(k) {
+    if (!k || !S || Menu.open) return;
+    sfx('click');
+    S.placing = S.placing === k ? null : k; S.selected = null;
+    this.hidePanel(); this.renderBar();
+  },
+
+  tooltip(el, k) {
+    const tt = $('tooltip');
+    if (!el) { tt.style.display = 'none'; return; }
+    const d = TOWERS[k], L = d.levels[0];
+    let stats = '';
+    if (L.dmg) stats += `Damage ${L.dmg} • Range ${L.range} • ${L.rate}s`;
+    if (L.income) stats += `Pendapatan $${L.income}/wave`;
+    if (L.buff) stats += `Buff +${L.buff * 100}% kecepatan • Range ${L.range}`;
+    tt.innerHTML = `<b>${d.name}</b> <span class="tag">${d.role}</span><br>${d.desc}<br><small>${stats}</small>`;
+    const r = el.getBoundingClientRect(), wr = $('wrap').getBoundingClientRect();
+    tt.style.display = 'block';
+    tt.style.left = Math.max(0, Math.min(wr.width - 260, r.left - wr.left + r.width / 2 - 130)) + 'px';
+    tt.style.top = (r.top - wr.top - tt.offsetHeight - 8) + 'px';
+  },
+
+  /** Pratinjau komposisi wave berikutnya */
+  renderPreview() {
+    const el = $('preview');
+    if (S.state !== 'ready' || S.wave >= S.maxWave) { el.innerHTML = ''; return; }
+    const n = S.wave + 1, counts = wavePreview(n);
+    el.innerHTML = `<span class="plabel">Wave ${n}${n % 10 === 0 ? ' 👑' : ''}:</span>` +
+      Object.entries(counts).map(([k, c]) => `<span class="chip" title="${ENEMIES[k].name}"><i style="background:${ENEMIES[k].color}"></i>${ENEMIES[k].name} ×${c}</span>`).join('');
+  },
+
+  /** Panel tower terpilih */
+  showPanel(t) {
+    const def = TOWERS[t.type], L = lvl(t), next = def.levels[t.level + 1];
+    const st = (lab, a, b) => `<div class="row"><span>${lab}</span><span>${a}${b !== undefined && b !== a ? ` → <b class="up">${b}</b>` : ''}</span></div>`;
+    const yn = v => v ? '✅' : '❌';
+    let h = `<div class="ph"><div class="pico" style="background:${def.color}"></div><div><h3>${def.name}</h3>
+      <small>Lv ${t.level} • ${esc(L.name)}</small></div><button class="x" id="pClose">✕</button></div>`;
+    h += `<div class="lvbar">${def.levels.map((_, i) => `<i class="${i <= t.level ? 'on' : ''}"></i>`).join('')}</div>`;
+    if (t.type === 'farm') h += st('Pendapatan/wave', '$' + L.income, next && '$' + next.income);
+    else if (t.type === 'commander') {
+      h += st('Buff kecepatan', '+' + L.buff * 100 + '%', next && '+' + next.buff * 100 + '%') + st('Range', L.range, next && next.range);
+      h += st('Beri deteksi hidden', yn(L.grantHidden), next && yn(next.grantHidden));
+    } else {
+      h += st('Damage', L.dmg, next && next.dmg) + st('Range', L.range, next && next.range) + st('Cooldown', L.rate + 's', next && next.rate + 's');
+      if (L.splash) h += st('Splash', L.splash, next && next.splash);
+      if (L.slow) h += st('Slow', Math.round(L.slow * 100) + '%', next && Math.round(next.slow * 100) + '%');
+      if (L.bossMul) h += st('Bonus boss', '×' + L.bossMul, next && '×' + next.bossMul);
+      h += st('Deteksi hidden', yn(L.hidden) + (t.gh && !L.hidden ? ' (buff)' : ''), next && yn(next.hidden));
+      h += st('Tembus armor', yn(L.pierceArmor), next && yn(next.pierceArmor));
+      h += `<div class="row dim"><span>Total damage</span><span id="pDmg">${fmtNum(t.dmg)}</span></div>`;
+      h += `<div class="row dim"><span>Kills</span><span id="pKills">${t.kills}</span></div>`;
+      h += `<button class="btn blue" id="tgtBtn">🎯 Target: ${TARGET_LABEL[t.target]}</button>`;
+    }
+    h += next ? `<button class="btn" id="upBtn">⬆ ${esc(next.name)} — $${next.cost.toLocaleString('id-ID')} <kbd>Q</kbd></button>`
+              : `<button class="btn" disabled>★ LEVEL MAKS</button>`;
+    h += `<button class="btn red" id="sellBtn">Jual $${Math.floor(t.spent * SELL_RATE).toLocaleString('id-ID')} <kbd>X</kbd></button>`;
+    const p = $('panel'); p.innerHTML = h; p.style.display = 'block';
+    const left = t.x > W / 2;            // panel di sisi berlawanan dari tower
+    p.classList.toggle('left', left);
+    p.classList.toggle('bottom', !left && exitRow() < ROWS / 2); // hindari menutupi base
+    if ($('upBtn')) $('upBtn').onclick = () => upgradeTower(t);
+    $('sellBtn').onclick = () => sellTower(t);
+    $('pClose').onclick = () => { S.selected = null; this.hidePanel(); };
+    if ($('tgtBtn')) $('tgtBtn').onclick = () => { t.target = TARGET_MODES[(TARGET_MODES.indexOf(t.target) + 1) % TARGET_MODES.length]; sfx('click'); this.showPanel(t); };
+    this.updatePanel();
+  },
+  updatePanel() {
+    const t = S.selected; if (!t) return;
+    const next = TOWERS[t.type].levels[t.level + 1];
+    if ($('upBtn') && next) $('upBtn').disabled = S.cash < next.cost;
+    if ($('pDmg')) $('pDmg').textContent = fmtNum(t.dmg);
+    if ($('pKills')) $('pKills').textContent = t.kills;
+  },
+  hidePanel() { $('panel').style.display = 'none'; },
+
+  /** Banner besar di tengah layar */
+  banner(txt, col = '#fff', ms = 1600) {
+    const m = $('banner'); m.textContent = txt; m.style.color = col;
+    m.classList.remove('show'); void m.offsetWidth; m.classList.add('show');
+    clearTimeout(this._bt); this._bt = setTimeout(() => m.classList.remove('show'), ms);
+  },
+  /** Notifikasi kecil di pojok */
+  toast(txt, type = '') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type; el.textContent = txt;
+    $('toasts').appendChild(el);
+    setTimeout(() => el.classList.add('out'), 2800);
+    setTimeout(() => el.remove(), 3300);
+  },
+
+  /** Update ringan tiap ~150 ms */
+  tick() {
+    if (!S) return;
+    this.updateHud(); this.updateBar(); this.updatePanel();
+    const pv = $('preview');
+    if ((S.state === 'ready') !== (pv.innerHTML !== '')) this.renderPreview();
+  },
+};
