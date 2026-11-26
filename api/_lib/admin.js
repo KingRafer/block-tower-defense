@@ -36,6 +36,8 @@ function cleanGlobal(g) {
     maintenance: !!g.maintenance, maintenanceMsg: String(g.maintenanceMsg || '').slice(0, 200),
     topupEnabled: g.topupEnabled !== false,
     gacha: g.gacha || {}, lucky: g.lucky || {}, dailyLogin: g.dailyLogin, skillPrices: g.skillPrices || {}, event: g.event || {}, pass: g.pass || {},
+    // perintah refresh untuk semua pemain (lihat admin.forceRefresh)
+    refresh: { v: Math.max(0, Math.floor(+((g.refresh || {}).v) || 0)), mode: (g.refresh || {}).mode === 'clear' ? 'clear' : 'refresh', msg: String((g.refresh || {}).msg || '').slice(0, 140), at: +((g.refresh || {}).at) || 0 },
   };
   SHARED.applyGlobal(out);          // validasi: nilai salah otomatis kembali ke default
   out.gacha = { cost1: SHARED.GACHA.cost1, cost10: SHARED.GACHA.cost10, pity: SHARED.GACHA.pity, rates: { ...SHARED.GACHA.rates } };
@@ -164,12 +166,25 @@ const routes = {
   },
   'admin.getGlobal': async (req, d) => ({ global: cleanGlobal(await getGlobal(d, true)), defaults: SHARED.DEFAULTS, units: SHARED.UNIT_TYPES }),
   'admin.setGlobal': async (req, d, admin) => {
-    const g = cleanGlobal((req.body || {}).global);
+    const inG = { ...((req.body || {}).global || {}) };
+    if (!inG.refresh) inG.refresh = (await getGlobal(d, true)).refresh;   // jangan hapus perintah refresh terakhir
+    const g = cleanGlobal(inG);
     await d.collection('settings').deleteOne({ _id: 'global' });
     await d.collection('settings').insertOne({ _id: 'global', value: g, updatedAt: Date.now(), by: admin.email });
     globalCache = g; globalAt = Date.now(); SHARED.applyGlobal(g);
     await log(d, admin, 'setGlobal', null, { keys: Object.keys(g) });
     return { global: g };
+  },
+  /** Paksa semua pemain memuat ulang game (mode 'clear' = bersihkan cache aplikasi juga) */
+  'admin.forceRefresh': async (req, d, admin) => {
+    const b = req.body || {};
+    const g = cleanGlobal({ ...(await getGlobal(d, true)), refresh: { v: Date.now(), mode: b.mode === 'clear' ? 'clear' : 'refresh', msg: b.msg, at: Date.now() } });
+    await d.collection('settings').deleteOne({ _id: 'global' });
+    await d.collection('settings').insertOne({ _id: 'global', value: g, updatedAt: Date.now(), by: admin.email });
+    globalCache = g; globalAt = Date.now();
+    await log(d, admin, 'forceRefresh', null, { mode: g.refresh.mode, msg: g.refresh.msg });
+    const online = await d.collection('users').countDocuments({ lastSeen: { $gt: Date.now() - 70000 } });
+    return { refresh: g.refresh, online };
   },
   'admin.payments': async (req, d) => {
     const rows = await d.collection('payments').find({}).sort({ createdAt: -1 }).limit(80).toArray();

@@ -37,7 +37,7 @@ const DevPanel = {
 
   render() {
     if (!this.isAdmin()) return `${Menu.header('🛠️ Developer')}<div class="box center-box"><div class="big-ic">🔒</div><h3>Khusus developer</h3></div>`;
-    const tabs = [['stats', '📈 Ringkasan'], ['players', '👤 Pemain'], ['global', '🌐 Game Global'], ['codes', '🎁 Kode'], ['pay', '💳 Transaksi'], ['trades', '🔁 Trading'], ['lb', '🏆 Skor'], ['log', '📜 Log'], ['tools', '🧪 Alat Uji']];
+    const tabs = [['stats', '📈 Ringkasan'], ['tools', '🔄 Refresh & Alat'], ['players', '👤 Pemain'], ['global', '🌐 Game Global'], ['codes', '🎁 Kode'], ['pay', '💳 Transaksi'], ['trades', '🔁 Trading'], ['lb', '🏆 Skor'], ['log', '📜 Log']];
     const body = { stats: this.tStats, players: this.tPlayers, global: this.tGlobal, codes: this.tCodes, pay: this.tPay, trades: this.tTrades, lb: this.tLb, log: this.tLog, tools: this.tTools }[this.tab].call(this);
     return `${Menu.header('🛠️ Panel Developer')}<div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${this.tab === k ? 'on' : ''}" data-act="dev:tab:${k}">${l}</button>`).join('')}</div><div class="devwrap">${body}</div>`;
   },
@@ -167,7 +167,16 @@ const DevPanel = {
       <button class="btn sm gray" data-act="dev:reload:log">🔄 Muat ulang</button>`;
   },
   tTools() {
-    return `<div class="box"><h4>🧪 Alat uji di dalam permainan</h4><p class="dim">Mulai permainan solo, lalu buka menu ⏸ Pause — tombol alat uji muncul di sana (hanya akun developer).</p>
+    const g = this.data.global && this.data.global.global; if (!g) this.load('global');
+    const rf = g && g.refresh && g.refresh.v ? g.refresh : null;
+    return `<div class="box refreshbox"><h4>🔄 Refresh & Bersihkan Cache Semua Pemain</h4>
+      <p class="dim">Semua pemain yang sedang membuka game akan memuat ulang otomatis dalam ±1 menit (hitung mundur 5 detik, permainan solo disimpan dulu; pemain yang sedang mabar menunggu sampai selesai). Pemain yang sedang offline ikut diperbarui saat membuka game berikutnya.</p>
+      <input id="dvRfMsg" maxlength="140" placeholder="Pesan untuk pemain (opsional), mis. Update v4.9 tersedia!" style="width:100%">
+      <div class="devrow"><button class="btn sm" data-act="dev:refresh:refresh">🔄 Refresh semua pemain</button>
+        <button class="btn sm red" data-act="dev:refresh:clear">🧹 Bersihkan cache & refresh</button></div>
+      <small class="dim">${rf ? `Terakhir: ${rf.mode === 'clear' ? 'bersihkan cache' : 'refresh'} • ${this.date(rf.at)}${rf.msg ? ' • “' + esc(rf.msg) + '”' : ''}` : 'Belum pernah dijalankan.'}</small>
+      <details><summary>Apa bedanya?</summary><small><b>Refresh</b>: memuat ulang halaman dengan file terbaru. <b>Bersihkan cache</b>: juga menghapus cache aplikasi (service worker / mode offline), cocok bila ada pemain yang masih melihat versi lama atau tampilan rusak. Progres, akun & simpanan permainan <b>tidak</b> dihapus.</small></details></div>
+    <div class="box"><h4>🧪 Alat uji di dalam permainan</h4><p class="dim">Mulai permainan solo, lalu buka menu ⏸ Pause — tombol alat uji muncul di sana (hanya akun developer).</p>
       <div class="devrow"><button class="btn sm" data-act="dev:self">👤 Kelola akun saya</button><button class="btn sm gray" data-act="dev:resync">🔄 Sinkron ulang inventori</button></div></div>`;
   },
   pauseTools() {
@@ -206,6 +215,12 @@ const DevPanel = {
         break;
       }
       case 'codeDel': if (confirm('Hapus kode ' + p[2] + '?')) this.call('admin.codeDelete', { code: p[2] }, 'Kode dihapus').then(() => { delete this.data.codes; Menu.show('dev', true); }); break;
+      case 'refresh': {
+        const mode = p[2], label = mode === 'clear' ? 'MEMBERSIHKAN CACHE & me-refresh' : 'me-refresh';
+        if (!confirm(`Yakin ${label} game untuk SEMUA pemain?`)) break;
+        this.call('admin.forceRefresh', { mode, msg: this.v('dvRfMsg') }).then(r => { if (r) { UI.toast(`✅ Perintah terkirim — ${r.online} pemain online akan dimuat ulang`, 'gold', 5000); delete this.data.global; Menu.show('dev', true); } });
+        break;
+      }
       case 'saveGlobal': this.saveGlobal(); break;
       case 'resetGlobal': if (confirm('Kembalikan semua pengaturan game ke default?')) this.applyGlobal({}); break;
       case 'resync': Online.refreshVault().then(() => UI.toast('✅ Inventori disinkron')); break;

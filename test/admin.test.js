@@ -83,6 +83,14 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   assert.strictEqual(r.body.vault.units.length, SHARED.STARTER_UNITS.length);
   const lg = (await call('admin.log', { method: 'GET', token: AD.token })).body.log;
   assert(lg.length >= 8 && lg[0].admin === 'rafermazaya@gmail.com');
+  // refresh semua pemain
+  assert.strictEqual((await call('admin.forceRefresh', { token: P.token, body: { mode: 'clear' } })).status, 403, 'non-admin ditolak');
+  r = await call('admin.forceRefresh', { token: AD.token, body: { mode: 'clear', msg: 'Update!' } });
+  assert.strictEqual(r.body.refresh.mode, 'clear'); const rv = r.body.refresh.v;
+  let cf = (await call('config', { method: 'GET' })).body.global.refresh;
+  assert.strictEqual(cf.v, rv); assert.strictEqual(cf.msg, 'Update!');
+  await call('admin.setGlobal', { token: AD.token, body: { global: { maintenance: false } } });
+  assert.strictEqual((await call('config', { method: 'GET' })).body.global.refresh.v, rv, 'simpan pengaturan global tidak menghapus perintah refresh');
   await call('admin.setGlobal', { token: AD.token, body: { global: {} } });
   console.log('✅ Semua uji panel developer lulus');
 })().catch(e => { console.error('❌', e); process.exit(1); });

@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.1] — 2026-11-27
+### Ditambahkan
+- **Panel Developer → 🔄 Refresh & Alat**: tombol **Refresh semua pemain** dan **Bersihkan cache & refresh** (hapus cache aplikasi/service worker) dengan pesan opsional.
+  Game setiap pemain mengecek perintah ini tiap ±45 detik (dan saat tab dibuka kembali), menampilkan hitung mundur 5 detik lalu memuat ulang.
+  Permainan solo yang sedang di tengah wave ditunggu sampai wave selesai (maks 90 detik) agar progres tersimpan; pemain mabar menunggu sampai permainan selesai.
+  Progres, akun & simpanan tidak dihapus. Pengumuman/event/harga dari panel developer juga ikut diperbarui langsung tanpa reload.
+
 ## [4.8.0] — 2026-11-26
 ### Ditambahkan
 - **Jual unit**: jual satuan (💰 Jual, nilai sesuai kelangkaan) & **Jual Massal** per kelangkaan (opsi sisakan 1 terbaik per jenis; unit terkunci, terpasang & hasil evolusi tidak ikut).

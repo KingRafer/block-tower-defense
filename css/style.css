@@ -1361,3 +1361,5 @@ canvas.pico { width: 44px !important; height: 44px !important; border-radius: 10
   .hud-btns .btn { padding: 4px 8px; font-size: 12px; min-height: 30px; } .hud-btns .btn .bl { font-size: 11px; }
   #bar .slot .nm { font-size: 9px; } #panel { max-height: 46dvh !important; }
 }
+.refreshbox { border: 1px solid rgba(255,217,119,.35); } .refreshbox input { background: #10162e; color: #fff; border: 1px solid #2a3256; border-radius: 8px; padding: 6px 10px; margin: 6px 0; font: inherit; }
+.refreshbox details summary { cursor: pointer; color: var(--gold-1); font-size: 12px; margin-top: 6px; }
