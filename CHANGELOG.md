@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0] — 2026-11-26
+### Ditambahkan
+- **Trait**: 14 trait dengan 5 kelangkaan (Biasa–Mitos), roll dengan 💎 Kristal Trait, animasi roll, tabel peluang, konfirmasi sebelum menimpa trait Epik ke atas.
+- **Evolusi**: 8 bentuk evolusi dengan pengali statistik & perk unik (×3 tiap tembakan ke-4, critical, burn, freeze, bunga, ramp-up, buff+, misil ganda).
+- **Mastery** tower Lv 1–20 (+2% damage/level) dari damage & kill saat bermain.
+- Material **💎 Kristal Trait** & **🔮 Batu Evolusi**, didapat dari hadiah game dan **Toko Material**.
+- Tampilan: aura & mahkota tower evolusi, permata warna trait, ikon terbakar/beku pada musuh, info trait/evo di hotbar, tooltip & panel.
+- Layar hasil menampilkan material dan kenaikan mastery tiap tower.
+- 4 pencapaian baru (total 22).
+
 ## [2.1.0] — 2026-11-26
 ### Ditambahkan
 - Mode **Endless** (wave tanpa batas, rekor terpisah, musuh makin berat setelah wave 40).

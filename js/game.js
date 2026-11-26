@@ -62,7 +62,7 @@ function newGame(opts = {}) {
     towers: [], enemies: [], projectiles: [], effects: [], texts: [], spawnQ: [], strikes: [],
     waveTime: 0, waveTotal: 0, earned: 0, kills: 0, bossKills: 0, leaked: false,
     placing: null, selected: null, targeting: null, mouse: { x: -99, y: -99, in: false },
-    time: 0, autoTimer: 0, recorded: false, nextId: 1, shake: 0, abilityCd: {}, freezeT: 0,
+    time: 0, autoTimer: 0, recorded: false, nextId: 1, shake: 0, abilityCd: {}, freezeT: 0, uxp: {},
   };
   UI.refreshAll();
 }
@@ -83,7 +83,7 @@ function loadSavedGame() {
   newGame({ daily: g.daily });
   Object.assign(S, { cash: g.cash, hp: g.hp, wave: g.wave, kills: g.kills, earned: g.earned, bossKills: g.bossKills,
                      time: g.time, leaked: g.leaked, abilityCd: g.abilityCd || {}, autoSkip: !!g.autoSkip });
-  S.towers = g.towers.map(o => Object.assign(makeTower(o.type, o.c, o.r), o));
+  S.towers = g.towers.map(o => { const t = Object.assign(makeTower(o.type, o.c, o.r), o); t.L = computeL(t.type, t.level); return t; });
   UI.refreshAll();
   return true;
 }
@@ -151,7 +151,9 @@ function startWave() {
 function payWave(skipBonus = 0) {
   const bonus = 100 + Math.min(S.wave, 60) * 30; let farm = 0;
   S.towers.filter(t => t.type === 'farm').forEach(t => {
-    const inc = lvl(t).income; farm += inc; addText(t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2);
+    let inc = lvl(t).income;
+    if (lvl(t).perk === 'interest') inc += Math.min(400, Math.floor(S.cash * 0.02));
+    farm += inc; addText(t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2);
   });
   const total = bonus + farm + skipBonus;
   S.cash += total; S.earned += total;
@@ -251,27 +253,54 @@ function spawn(type, from) {
   S.enemies.push(e);
   return e;
 }
-function damage(e, amt, L, src) {
+function damage(e, amt, L, src, quiet) {
   if (e.dead) return;
   let a = amt;
   if (e.boss && L.bossMul) a *= L.bossMul;
   if (e.armor && !L.pierceArmor) a *= (1 - e.armor);
   a = Math.min(a, e.hp);
   e.hp -= a; e.hitT = 0.1;
-  if (src) src.dmg += a;
-  if (SET.dmgNum && a >= 0.5) addText(e.x + (Math.random() * 16 - 8), e.y - 22, fmtNum(a), '#fff', 0.5);
+  if (src) { src.dmg += a; S.uxp[src.type] = (S.uxp[src.type] || 0) + a / 60; }
+  if (SET.dmgNum && a >= 0.5 && !quiet) addText(e.x + (Math.random() * 16 - 8), e.y - 22, fmtNum(a), '#fff', 0.5);
   if (e.hp <= 0.001) kill(e, src);
 }
 function kill(e, src) {
-  e.dead = true; S.cash += e.reward; S.earned += e.reward; S.kills++;
-  if (src) src.kills++;
+  e.dead = true;
+  const rw = Math.round(e.reward * (src ? lvl(src).rewardMul : 1));
+  S.cash += rw; S.earned += rw; S.kills++;
+  if (src) { src.kills++; S.uxp[src.type] = (S.uxp[src.type] || 0) + 1; }
   puff(e.x, e.y, e.color, e.boss ? 30 : 8);
   if (e.boss) { S.bossKills++; PROFILE.stats.bossKills++; S.shake = SET.shake ? 10 : 0; sfx('boom'); UI.toast('👑 Boss dikalahkan! +$' + e.reward); checkAchievements(summary()); }
   if (e.split) for (let i = 0; i < 2; i++) spawn(e.split, e);
 }
 
+/* ---------------- STATISTIK UNIT (mastery + trait + evolusi) ---------------- */
+const unitOf = type => PROFILE.units[type] || (PROFILE.units[type] = { xp: 0, trait: null, evo: false });
+const r2 = v => Math.round(v * 100) / 100;
+/** Statistik efektif satu level tower setelah mastery, trait, dan evolusi */
+function computeL(type, level, unit = unitOf(type)) {
+  const L = { ...TOWERS[type].levels[level] };
+  const tr = unit.trait ? TRAITS[unit.trait] : null, ev = unit.evo ? EVOS[type] : null, em = ev ? ev.mul : {};
+  const dmgMul = (1 + (unitLevel(unit.xp) - 1) * MASTERY_BONUS) * (tr && tr.dmgMul || 1);
+  if (L.dmg) L.dmg = r2(L.dmg * dmgMul * (em.dmg || 1));
+  if (L.income) L.income = Math.round(L.income * dmgMul * (em.income || 1));
+  if (L.buff) L.buff = r2(L.buff * (tr && tr.dmgMul || 1) + (em.buffAdd || 0));
+  if (L.range) L.range = r2(L.range * (tr && tr.rangeMul || 1) * (em.range || 1));
+  if (L.rate) L.rate = r2(L.rate * (tr && tr.rateMul || 1));
+  if (L.splash) L.splash = r2(L.splash * (em.splash || 1));
+  if (tr && tr.hidden && L.dmg) L.hidden = true;
+  if (tr && tr.pierce) L.pierceArmor = true;
+  if (tr && tr.bossMul) L.bossMul = r2((L.bossMul || 1) * tr.bossMul);
+  L.rewardMul = tr && tr.rewardMul || 1;
+  L.perk = ev ? ev.perk : null;
+  return L;
+}
+const costOf = (type, level) => Math.round(TOWERS[type].levels[level].cost * ((unitOf(type).trait && TRAITS[unitOf(type).trait].costMul) || 1));
+const towerName = type => unitOf(type).evo ? EVOS[type].name : TOWERS[type].name;
+const towerColor = type => unitOf(type).evo ? EVOS[type].color : TOWERS[type].color;
+
 /* ---------------- TOWER ---------------- */
-const lvl = t => TOWERS[t.type].levels[t.level];
+const lvl = t => t.L || TOWERS[t.type].levels[t.level];
 const countType = type => S.towers.filter(t => t.type === type).length;
 const isMax = t => t.level >= TOWERS[t.type].levels.length - 1;
 
@@ -284,18 +313,19 @@ function placeReason(type, c, r) {
   if (S.towers.some(t => t.c === c && t.r === r)) return 'Sudah ada tower';
   if (deco.some(d => d.c === c && d.r === r)) return 'Terhalang';
   if (countType(type) >= def.limit) return `Batas ${def.name} (${def.limit})`;
-  if (S.cash < def.levels[0].cost) return 'Uang tidak cukup';
+  if (S.cash < costOf(type, 0)) return 'Uang tidak cukup';
   return null;
 }
 function makeTower(type, c, r) {
+  const u = unitOf(type);
   return { id: S.nextId++, type, c, r, x: (c + 0.5) * T, y: (r + 0.5) * T, level: 0, cd: 0, angle: -Math.PI / 2,
-           spent: TOWERS[type].levels[0].cost, target: 'first', recoil: 0, dmg: 0, kills: 0, stunUntil: 0, buff: 0, gh: false };
+           spent: costOf(type, 0), target: 'first', recoil: 0, dmg: 0, kills: 0, stunUntil: 0, buff: 0, gh: false,
+           L: computeL(type, 0), evo: !!u.evo, trait: u.trait, shots: 0, ramp: 0 };
 }
 function placeTower(type, c, r) {
   const why = placeReason(type, c, r);
   if (why) { sfx('error'); return null; }
-  const cost = TOWERS[type].levels[0].cost;
-  S.cash -= cost;
+  S.cash -= costOf(type, 0);
   const t = makeTower(type, c, r);
   S.towers.push(t);
   tip('placed');
@@ -306,9 +336,9 @@ function placeTower(type, c, r) {
 }
 function upgradeTower(t) {
   if (isMax(t)) return;
-  const cost = TOWERS[t.type].levels[t.level + 1].cost;
+  const cost = costOf(t.type, t.level + 1);
   if (S.cash < cost) { sfx('error'); return; }
-  S.cash -= cost; t.spent += cost; t.level++;
+  S.cash -= cost; t.spent += cost; t.level++; t.L = computeL(t.type, t.level);
   sfx('upgrade'); puff(t.x, t.y, '#ffd54f', 12);
   addText(t.x, t.y - 30, lvl(t).name + '!', '#ffd54f', 1);
   if (isMax(t)) { PROFILE.stats.maxed++; checkAchievements(summary()); }
@@ -352,7 +382,9 @@ function fire(t, L, e) {
   const mx = t.x + Math.cos(t.angle) * 22, my = t.y - 10 + Math.sin(t.angle) * 22;
   if (t.type === 'demoman' || t.type === 'rocketeer') {
     sfx('rocket');
-    S.projectiles.push({ x: mx, y: my, tx: e.x, ty: e.y, target: e, L, src: t, a: t.angle, big: t.type === 'rocketeer', trail: 0 });
+    const n = L.perk === 'double' ? 2 : 1;
+    for (let i = 0; i < n; i++)
+      S.projectiles.push({ x: mx + i * 8, y: my - i * 10, tx: e.x, ty: e.y, target: e, L, src: t, a: t.angle, big: t.type === 'rocketeer', trail: 0 });
     return;
   }
   sfx(t.type === 'sniper' ? 'snipe' : t.type === 'freezer' ? 'freeze' : 'shoot');
@@ -363,7 +395,13 @@ function fire(t, L, e) {
     const f = e.boss ? L.slow / 2 : L.slow;
     e.slowF = Math.max(S.time < e.slowUntil ? e.slowF : 0, f); e.slowUntil = S.time + 2;
   }
-  damage(e, L.dmg, L, t);
+  // Perk evolusi
+  let dmg = L.dmg;
+  if (L.perk === 'triple' && ++t.shots % 4 === 0) { dmg *= 3; addText(e.x, e.y - 34, '×3', '#ffeb3b', 0.6); }
+  if (L.perk === 'crit' && Math.random() < 0.25) { dmg *= 3; addText(e.x, e.y - 34, 'CRIT!', '#ff5252', 0.7); }
+  if (L.perk === 'ramp') { t.ramp = Math.min(0.8, t.ramp + 0.04); dmg *= 1 + t.ramp; }
+  if (L.perk === 'freeze' && !e.boss && Math.random() < 0.2) { e.frozenUntil = S.time + 1; addText(e.x, e.y - 34, '❄', '#81d4fa', 0.6); }
+  damage(e, dmg, L, t);
 }
 function explode(p) {
   const R = p.L.splash * T;
@@ -371,7 +409,10 @@ function explode(p) {
   sfx('boom');
   for (const e of S.enemies) {
     if (e.dead || (e.hidden && !canSeeHidden(p.src) && e !== p.target)) continue;
-    if (Math.hypot(e.x - p.tx, e.y - p.ty) <= R) damage(e, p.L.dmg, p.L, p.src);
+    if (Math.hypot(e.x - p.tx, e.y - p.ty) <= R) {
+      damage(e, p.L.dmg, p.L, p.src);
+      if (p.L.perk === 'burn' && !e.dead) e.burn = { dps: p.L.dmg * 0.3, until: S.time + 3, src: p.src };
+    }
   }
 }
 
@@ -408,6 +449,8 @@ function update(dt) {
     if (e.regen && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.regen * dt);
     if (e.boss) bossAbilities(e, dt);
     e.hitT = Math.max(0, e.hitT - dt);
+    if (e.burn && S.time < e.burn.until) { damage(e, e.burn.dps * dt, e.burn.src.L, e.burn.src, true); if (e.dead) continue; }
+    if (e.frozenUntil && S.time < e.frozenUntil) continue;
     let move = e.spd * T * (S.time < e.slowUntil ? (1 - e.slowF) : 1) * dt;
     while (move > 0 && e.wp < pathPx.length) {
       const p = pathPx[e.wp], dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy);
@@ -431,6 +474,7 @@ function update(dt) {
     if (S.time < t.stunUntil) continue;
     const L = lvl(t); t.cd -= dt;
     const tg = pickTarget(t, L);
+    if (!tg && t.ramp) t.ramp = Math.max(0, t.ramp - dt * 0.5);
     if (tg) {
       t.angle = Math.atan2(tg.y - t.y, tg.x - t.x);
       if (t.cd <= 0) { t.cd = L.rate * (1 - t.buff); t.recoil = 1; fire(t, L, tg); }
@@ -513,6 +557,20 @@ function finishGame(won) {
     if (won && !ds.won) { ds.won = true; dailyReward = DAILY_REWARD; coins += dailyReward; PROFILE.stats.dailyWins++; }
   }
   const xp = Math.round(cleared * 20 * D.coinMul + S.kills * 0.5 + (won ? 300 : 0));
+
+  // Material
+  const crystals = S.bossKills + Math.floor(cleared / 10) + (won ? 2 : 0) + (S.daily && won ? 3 : 0);
+  const stones = (won && S.diff === 'hard' ? 1 : 0) + (S.daily && won ? 1 : 0) + (S.mode === 'endless' && cleared >= 30 ? 1 : 0) + (S.bossKills >= 3 ? 1 : 0);
+  PROFILE.crystals += crystals; PROFILE.stones += stones;
+
+  // Mastery tower
+  const mastery = [];
+  for (const [type, gain] of Object.entries(S.uxp)) {
+    const u = unitOf(type), before = unitLevel(u.xp);
+    u.xp += Math.round(gain);
+    mastery.push({ type, gain: Math.round(gain), lv: unitLevel(u.xp), up: unitLevel(u.xp) > before });
+  }
+  mastery.sort((a, b) => b.gain - a.gain);
   const lvBefore = levelFromXp(PROFILE.xp);
   PROFILE.coins += coins; PROFILE.xp += xp;
   const lvAfter = levelFromXp(PROFILE.xp);
@@ -534,6 +592,34 @@ function finishGame(won) {
 
   sfx(won ? 'win' : 'lose');
   const unlockedSkill = ABILITIES.find(a => a.level > lvBefore && a.level <= lvAfter);
-  Menu.endData = { won, record, coins, xp, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank, dailyReward, unlockedSkill };
+  Menu.endData = { won, record, coins, xp, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank, dailyReward, unlockedSkill, crystals, stones, mastery };
   setTimeout(() => Menu.show('end'), 900);
+}
+
+/* ---------------- TRAIT & EVOLUSI ---------------- */
+function rollTraitId() {
+  const total = Object.values(TRAITS).reduce((a, t) => a + t.w, 0);
+  let r = Math.random() * total;
+  for (const [id, t] of Object.entries(TRAITS)) { r -= t.w; if (r <= 0) return id; }
+  return 'kuat1';
+}
+function rollTrait(type) {
+  if (PROFILE.crystals < 1 || !PROFILE.unlocked.includes(type)) return null;
+  PROFILE.crystals--; PROFILE.stats.rolls++;
+  const id = rollTraitId();
+  unitOf(type).trait = id;
+  saveProfile(); checkAchievements(null);
+  return id;
+}
+function evoStatus(type) {
+  const u = unitOf(type), lv = unitLevel(u.xp);
+  return { owned: PROFILE.unlocked.includes(type), done: u.evo, lvOk: lv >= EVO_REQ.level,
+           stonesOk: PROFILE.stones >= EVO_REQ.stones, coinsOk: PROFILE.coins >= EVO_REQ.coins };
+}
+function evolve(type) {
+  const st = evoStatus(type);
+  if (!st.owned || st.done || !st.lvOk || !st.stonesOk || !st.coinsOk) return false;
+  PROFILE.stones -= EVO_REQ.stones; PROFILE.coins -= EVO_REQ.coins; unitOf(type).evo = true;
+  saveProfile(); checkAchievements(null);
+  return true;
 }

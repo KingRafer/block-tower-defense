@@ -24,7 +24,8 @@ const Menu = {
     const pct = Math.min(100, (PROFILE.xp - lo) / (hi - lo) * 100);
     return `<div class="pbar"><div class="lvl">Lv ${lv}</div>
       <div class="xp"><div style="width:${pct}%"></div><span>${PROFILE.xp - lo} / ${hi - lo} XP</span></div>
-      <div class="coins">🪙 ${PROFILE.coins.toLocaleString('id-ID')}</div></div>`;
+      <div class="coins">🪙 ${PROFILE.coins.toLocaleString('id-ID')}</div>
+      <div class="mat" title="Kristal Trait">💎 ${PROFILE.crystals}</div><div class="mat" title="Batu Evolusi">🔮 ${PROFILE.stones}</div></div>`;
   },
   header(title) { return `<div class="mhead"><button class="btn gray" data-act="back">← Kembali</button><h2>${title}</h2>${this.profileBar()}</div>`; },
   fmtTime(s) { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}j ${m}m` : m ? `${m}m ${s % 60}d` : `${s}d`; },
@@ -74,35 +75,78 @@ const Menu = {
     },
 
     towers() {
-      const sel = this.shopSel, d = TOWERS[sel], owned = PROFILE.unlocked.includes(sel), inLo = PROFILE.loadout.includes(sel);
-      const rows = d.levels.map((L, i) => `<tr><td>${i}</td><td>${esc(L.name)}</td><td>$${L.cost}</td><td>${
-        L.dmg ? `${L.dmg} dmg • ${L.range}r • ${L.rate}s` : L.income ? `$${L.income}/wave` : `+${L.buff * 100}% • ${L.range}r`}${
-        L.hidden ? ' • 👁' : ''}${L.pierceArmor ? ' • 🛡' : ''}${L.splash ? ' • 💥' : ''}${L.slow ? ' • ❄' : ''}${L.grantHidden ? ' • 📡' : ''}</td></tr>`).join('');
+      const sel = this.shopSel, d = TOWERS[sel], u = unitOf(sel), owned = PROFILE.unlocked.includes(sel), inLo = PROFILE.loadout.includes(sel);
+      const lv = unitLevel(u.xp), lo = unitXpFor(lv), hi = unitXpFor(lv + 1);
+      const mpct = lv >= UNIT_MAX_LV ? 100 : Math.min(100, (u.xp - lo) / (hi - lo) * 100);
+      const tr = u.trait && TRAITS[u.trait], ev = EVOS[sel], es = evoStatus(sel);
+      const rows = d.levels.map((_, i) => { const L = computeL(sel, i); return `<tr><td>${i}</td><td>${esc(L.name)}</td><td>$${costOf(sel, i)}</td><td>${
+        L.dmg ? `${L.dmg} dmg • ${L.range}r • ${L.rate}s` : L.income ? `$${L.income}/wave` : `+${Math.round(L.buff * 100)}% • ${L.range}r`}${
+        L.hidden ? ' • 👁' : ''}${L.pierceArmor ? ' • 🛡' : ''}${L.splash ? ' • 💥' : ''}${L.slow ? ' • ❄' : ''}${L.grantHidden ? ' • 📡' : ''}</td></tr>`; }).join('');
       let action;
       if (!owned) action = `<button class="btn gold" data-act="buy:${sel}" ${PROFILE.coins < d.unlock ? 'disabled' : ''}>🔓 Buka — 🪙 ${d.unlock}</button>`;
       else if (inLo) action = `<button class="btn red" data-act="lo-rem:${sel}" ${PROFILE.loadout.length <= 1 ? 'disabled' : ''}>Keluarkan dari loadout</button>`;
       else action = `<button class="btn" data-act="lo-add:${sel}" ${PROFILE.loadout.length >= LOADOUT_SIZE ? 'disabled' : ''}>Masukkan ke loadout</button>`;
+      const req = (ok, txt) => `<li class="${ok ? 'ok' : ''}">${ok ? '✅' : '⬜'} ${txt}</li>`;
+      const rollArmed = this.rollArm === sel;
       return `${this.header('Tower & Loadout')}
         <div class="loadout">${Array.from({ length: LOADOUT_SIZE }, (_, i) => {
           const k = PROFILE.loadout[i];
-          return k ? `<div class="lslot" data-act="shop:${k}"><div class="ico" style="background:${TOWERS[k].color}"></div>${TOWERS[k].name}</div>`
+          return k ? `<div class="lslot ${unitOf(k).evo ? 'evo' : ''}" data-act="shop:${k}"><div class="ico" style="background:${towerColor(k)}">${unitOf(k).evo ? '★' : ''}</div>${towerName(k)}</div>`
                    : `<div class="lslot empty">Kosong</div>`;
         }).join('')}</div>
         <div class="shop">
           <div class="tlist">${TOWER_ORDER.map(k => {
-            const o = PROFILE.unlocked.includes(k);
+            const o = PROFILE.unlocked.includes(k), uk = unitOf(k), tk = uk.trait && TRAITS[uk.trait];
             return `<div class="titem ${k === sel ? 'sel' : ''} ${o ? '' : 'locked'}" data-act="shop:${k}">
-              <div class="ico" style="background:${TOWERS[k].color}">${o ? '' : '🔒'}</div>
-              <div><b>${TOWERS[k].name}</b><small>${o ? (PROFILE.loadout.includes(k) ? '✔ Di loadout' : 'Dimiliki') : '🪙 ' + TOWERS[k].unlock}</small></div></div>`;
-          }).join('')}</div>
-          <div class="tdetail box">
-            <div class="ph"><div class="pico" style="background:${d.color}"></div><div><h3>${d.name}</h3><span class="tag">${d.role}</span></div></div>
-            <p>${d.desc}</p>
-            <table><tr><th>Lv</th><th>Upgrade</th><th>Harga</th><th>Statistik</th></tr>${rows}</table>
-            <small class="dim">👁 deteksi hidden • 🛡 tembus armor • 💥 area • ❄ slow • 📡 beri deteksi</small>
-            ${action}
+              <div class="ico" style="background:${towerColor(k)}">${o ? (uk.evo ? '★' : '') : '🔒'}</div>
+              <div><b>${towerName(k)}</b><small>${o ? `M${unitLevel(uk.xp)}${tk ? ` • <span style="color:${RARITY[tk.rarity].color}">${tk.icon} ${tk.name}</span>` : ''}${PROFILE.loadout.includes(k) ? ' • ✔' : ''}` : '🪙 ' + TOWERS[k].unlock}</small></div></div>`;
+          }).join('')}<button class="btn gold" data-act="go:shop">🛒 Toko Material</button></div>
+          <div class="tdetail">
+            <div class="box">
+              <div class="ph"><div class="pico" style="background:${towerColor(sel)}">${u.evo ? '★' : ''}</div>
+                <div><h3>${towerName(sel)} ${u.evo ? `<small class="dim">(${d.name})</small>` : ''}</h3><span class="tag">${d.role}</span></div></div>
+              <p>${d.desc}</p>
+              <div class="mastery"><b>Mastery Lv ${lv}</b>${lv >= UNIT_MAX_LV ? ' (MAKS)' : ''} <small class="dim">+${Math.round((lv - 1) * MASTERY_BONUS * 100)}% damage</small>
+                <div class="mbar"><div style="width:${mpct}%"></div><span>${lv >= UNIT_MAX_LV ? 'MAKS' : `${u.xp - lo} / ${hi - lo} XP`}</span></div>
+                <small class="dim">XP didapat dari damage & kill tower ini saat bermain.</small></div>
+              <table><tr><th>Lv</th><th>Upgrade</th><th>Harga</th><th>Statistik (efektif)</th></tr>${rows}</table>
+              <small class="dim">👁 deteksi hidden • 🛡 tembus armor • 💥 area • ❄ slow • 📡 beri deteksi</small>
+              ${action}
+            </div>
+            <div class="box2">
+              <div class="box trait-box" style="${tr ? `border-color:${RARITY[tr.rarity].color}` : ''}">
+                <h4>🎲 Trait</h4>
+                <div class="trait-cur" id="traitCur">${tr ? `<span class="ticon">${tr.icon}</span><div><b style="color:${RARITY[tr.rarity].color}">${tr.name}</b> <span class="rar" style="background:${RARITY[tr.rarity].color}">${RARITY[tr.rarity].name}</span><small>${tr.desc}</small></div>` : '<span class="dim">Belum ada trait</span>'}</div>
+                <button class="btn purple" data-act="roll:${sel}" ${!owned || PROFILE.crystals < 1 ? 'disabled' : ''}>${rollArmed ? '⚠️ Yakin? Trait ini akan hilang' : `🎲 Roll Trait — 💎 1`} </button>
+                <details><summary>Peluang trait</summary><div class="odds">${Object.entries(RARITY).map(([rk, r]) => {
+                  const list = Object.values(TRAITS).filter(t => t.rarity === rk), pct = list.reduce((a, t) => a + t.w, 0);
+                  return `<div><b style="color:${r.color}">${r.name} ${pct}%</b><small>${list.map(t => `${t.icon} ${t.name}: ${t.desc}`).join('<br>')}</small></div>`; }).join('')}</div></details>
+              </div>
+              <div class="box evo-box ${u.evo ? 'done' : ''}">
+                <h4>🧬 Evolusi → ${ev.name}</h4>
+                <div class="evo-prev"><div class="pico" style="background:${d.color}"></div><span>➜</span><div class="pico" style="background:${ev.color}">★</div>
+                  <div><b>${ev.name}</b><small>${ev.desc}</small><small class="dim">${Object.entries(ev.mul).map(([k, v]) => ({ dmg: `Damage ×${v}`, range: `Range ×${v}`, splash: `Splash ×${v}`, income: `Pendapatan ×${v}`, buffAdd: `Buff +${v * 100}%` })[k]).join(' • ')}</small></div></div>
+                ${u.evo ? '<div class="evo-ok">★ Sudah berevolusi</div>' : `<ul class="reqs">
+                  ${req(es.owned, 'Tower dimiliki')}${req(es.lvOk, `Mastery Lv ${EVO_REQ.level} (sekarang ${lv})`)}
+                  ${req(es.stonesOk, `🔮 ${EVO_REQ.stones} Batu Evolusi (punya ${PROFILE.stones})`)}${req(es.coinsOk, `🪙 ${EVO_REQ.coins} koin`)}</ul>
+                  <button class="btn gold" data-act="evo:${sel}" ${es.owned && es.lvOk && es.stonesOk && es.coinsOk ? '' : 'disabled'}>🧬 EVOLUSI</button>`}
+              </div>
+            </div>
           </div>
         </div>`;
+    },
+
+    shop() {
+      return `${this.header('Toko Material')}
+        <div class="cards">${Object.entries(MATERIALS).map(([k, m]) => `<div class="card shopc">
+          <div class="big-ic">${m.icon}</div><div class="nm">${m.name}</div><small>${m.desc}</small>
+          <div class="best">Dimiliki: ${PROFILE[k]}</div>
+          <div class="row2"><button class="btn gold sm" data-act="mat:${k}:1" ${PROFILE.coins < m.price ? 'disabled' : ''}>1× — 🪙 ${m.price}</button>
+          <button class="btn gold sm" data-act="mat:${k}:5" ${PROFILE.coins < m.price * 5 ? 'disabled' : ''}>5× — 🪙 ${m.price * 5}</button></div></div>`).join('')}</div>
+        <div class="box"><h4>Cara mendapatkan gratis</h4>
+          <p>💎 <b>Kristal Trait</b>: setiap boss dikalahkan, setiap 10 wave yang diselesaikan, menang (+2), Tantangan Harian (+3).</p>
+          <p>🔮 <b>Batu Evolusi</b>: menang di kesulitan Sulit, menang Tantangan Harian, wave 30+ di Endless, atau kalahkan 3+ boss dalam satu game.</p></div>
+        <button class="btn gray" data-act="go:towers">← Ke Tower & Loadout</button>`;
     },
 
     achievements() {
@@ -141,6 +185,7 @@ const Menu = {
             boss: 'Muncul tiap 10 wave. Membuat tower di dekatnya pingsan (stun) dan memanggil pasukan' }[k]}${ENEMY_INTRO[k] ? ` <small class="dim">(mulai wave ${ENEMY_INTRO[k]})</small>` : ''}</td></tr>`).join('')}</table>
           <h4>⚡ Skill & Skip</h4><p>Skill pemain (Serangan Udara, Badai Es, Perbaikan Base) terbuka saat level naik. Gunakan dengan tombol di kiri hotbar atau <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd>. Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
           <h4>📅 Mode</h4><p><b>Klasik</b>: menang di wave terakhir. <b>Endless</b>: wave tanpa batas, kejar skor tertinggi. <b>Tantangan Harian</b>: map, kesulitan, dan modifier berganti tiap hari. Selesaikan untuk bonus 🪙 ${DAILY_REWARD}.</p>
+          <h4>🧬 Trait, Mastery & Evolusi</h4><p>Setiap tower punya <b>Mastery</b> (Lv 1–${UNIT_MAX_LV}, +2% damage per level) yang naik saat tower dipakai. Roll <b>Trait</b> dengan 💎 Kristal untuk bonus acak dari Biasa sampai Mitos. Setelah Mastery Lv ${EVO_REQ.level}, <b>Evolusikan</b> tower dengan 🔮 ${EVO_REQ.stones} Batu Evolusi + 🪙 ${EVO_REQ.coins} untuk bentuk baru dengan kemampuan unik.</p>
           <h4>📈 Progres</h4><p>Setiap selesai bermain kamu mendapat <b>🪙 koin</b> dan <b>XP</b>. Gunakan koin untuk membuka tower baru di menu <b>Tower & Loadout</b>, lalu pilih hingga ${LOADOUT_SIZE} tower untuk dibawa ke pertandingan. Kesulitan dan map yang lebih sulit memberi koin lebih banyak.</p>
           <h4>⌨️ Kontrol</h4>
           <table><tr><td><kbd>1</kbd>–<kbd>${LOADOUT_SIZE}</kbd></td><td>Pilih tower</td></tr><tr><td>Klik</td><td>Pasang / pilih tower</td></tr>
@@ -225,7 +270,8 @@ const Menu = {
           <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
           <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
           <tr><td>Durasi</td><td><b>${this.fmtTime(S.time)}</b></td></tr>
-          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b></td></tr></table>
+          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.crystals ? ` &nbsp; <b>💎 +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}</td></tr></table>
+          ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${towerName(m.type)}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
         <div class="row2"><button class="btn big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
           <button class="btn blue" data-act="go:play">🗺️ Pilih Map</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`;
@@ -259,7 +305,25 @@ const Menu = {
       case 'start': startGame(); break;
       case 'resume': sfx('click'); this.close(); break;
       case 'quit': newGame(); this.go('main'); break;
-      case 'shop': this.shopSel = arg; this.go('towers'); break;
+      case 'shop': this.shopSel = arg; this.rollArm = null; this.go('towers'); break;
+      case 'roll': {
+        const u = unitOf(arg);
+        if (u.trait && RARITY[TRAITS[u.trait].rarity].rank >= 2 && this.rollArm !== arg) { this.rollArm = arg; this.go('towers'); break; }
+        this.rollArm = null;
+        const id = rollTrait(arg);
+        if (!id) { sfx('error'); break; }
+        this.show('towers'); this.animateRoll(id); break;
+      }
+      case 'evo':
+        if (evolve(arg)) { sfx('win'); UI.toast(`🧬 ${TOWERS[arg].name} berevolusi menjadi ${EVOS[arg].name}!`, 'gold', 4000); this.show('towers'); $('overlay').querySelector('.evo-box').classList.add('flash'); }
+        else sfx('error');
+        break;
+      case 'mat': {
+        const k = arg, n = +a.split(':')[2], cost = MATERIALS[k].price * n;
+        if (PROFILE.coins < cost) { sfx('error'); break; }
+        PROFILE.coins -= cost; PROFILE[k] += n; saveProfile(); sfx('coin');
+        UI.toast(`${MATERIALS[k].icon} +${n} ${MATERIALS[k].name}`, 'gold'); this.show('shop'); break;
+      }
       case 'buy': {
         const d = TOWERS[arg];
         if (PROFILE.coins < d.unlock) { sfx('error'); break; }
@@ -282,6 +346,23 @@ const Menu = {
     const m = MAPS.find(x => x.id === g.map) || MAPS[0];
     return `<div class="controw"><button class="btn gold big" data-act="continue">⏯ Lanjutkan <small>${m.name} • ${g.daily ? 'Harian' : MODES[g.mode].name} • Wave ${g.wave + 1} • $${Math.floor(g.cash)}</small></button>
       <button class="btn gray sm" data-act="discard" title="Hapus simpanan">✕</button></div>`;
+  },
+  /** Animasi roll trait: acak nama trait beberapa kali sebelum hasil akhir */
+  animateRoll(finalId) {
+    const el = $('traitCur'), keys = Object.keys(TRAITS); if (!el) return;
+    const final = el.innerHTML, box = el.closest('.trait-box');
+    let i = 0;
+    const show = id => { const t = TRAITS[id]; el.innerHTML = `<span class="ticon">${t.icon}</span><div><b style="color:${RARITY[t.rarity].color}">${t.name}</b></div>`; };
+    const iv = setInterval(() => {
+      if (++i > 14) {
+        clearInterval(iv); el.innerHTML = final;
+        const t = TRAITS[finalId], rank = RARITY[t.rarity].rank;
+        box.classList.add('flash'); sfx(rank >= 3 ? 'win' : rank >= 2 ? 'achieve' : 'upgrade');
+        if (rank >= 3) UI.toast(`🎉 ${RARITY[t.rarity].name}! ${t.icon} ${t.name}`, 'gold', 4000);
+        return;
+      }
+      show(keys[Math.floor(Math.random() * keys.length)]); sfx('click');
+    }, 60 + i * 4);
   },
   sortLoadout() { PROFILE.loadout.sort((a, b) => TOWER_ORDER.indexOf(a) - TOWER_ORDER.indexOf(b)); },
 };

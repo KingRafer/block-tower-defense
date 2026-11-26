@@ -19,6 +19,10 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 ## ✨ Fitur
 | Kategori | Isi |
 |---|---|
+| 🎲 Trait | 14 trait acak (Biasa → Langka → Epik → Legendaris → Mitos) yang diroll dengan 💎 Kristal |
+| 🧬 Evolusi | Setiap tower bisa berevolusi menjadi bentuk baru dengan kemampuan unik |
+| 📊 Mastery | Level tower 1–20 yang naik saat dipakai (+2% damage per level) |
+| 🛒 Material | 💎 Kristal Trait & 🔮 Batu Evolusi dari hadiah game atau toko |
 | 🎮 Mode | **Klasik**, **Endless** (wave tanpa batas), dan **Tantangan Harian** dengan modifier acak |
 | ⚡ Skill pemain | Serangan Udara, Badai Es, Perbaikan Base, terbuka sesuai level |
 | ⏭️ Skip wave | Mulai wave berikutnya lebih cepat dan dapat bonus uang |
@@ -32,7 +36,7 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | 👑 Boss | Muncul tiap 10 wave, bisa **stun** tower dan **memanggil pasukan** |
 | 📈 Progres | Koin, XP, dan level pemain yang tersimpan antar sesi |
 | 🛒 Toko & Loadout | Buka tower baru dengan koin, bawa maksimal 6 tower per game |
-| 🏅 Pencapaian | 18 pencapaian dengan hadiah koin |
+| 🏅 Pencapaian | 22 pencapaian dengan hadiah koin |
 | 📊 Statistik | Statistik lengkap dan tabel rekor per map/kesulitan |
 | 🔊 Audio | Efek suara dan musik latar yang dibuat langsung oleh browser (WebAudio) |
 | ⚙️ Pengaturan | Volume, angka damage, getaran layar, grid, FPS, kualitas partikel, auto-pause |
@@ -80,6 +84,29 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | `Z` `C` `V` | Skill: Serangan Udara, Badai Es, Perbaikan Base |
 | `F` | Ganti kecepatan 1x/2x/3x |
 | `Esc` / klik kanan | Batal / pause |
+
+## 🎲 Trait
+| Kelangkaan | Peluang | Contoh |
+|---|---|---|
+| Biasa | 60% | Kuat I (+5% dmg), Cepat I (−5% cooldown), Jangkauan I |
+| Langka | 25% | Kuat II, Cepat II, Jangkauan II, Hemat (−15% harga) |
+| Epik | 11% | Kuat III, Mata Elang (hidden), Penembus (tembus armor), Pemburu Raja |
+| Legendaris | 3,5% | Midas (+30% hadiah kill), Berserker (+25% dmg, −15% cooldown) |
+| Mitos | 0,5% | Dewa Perang (+40% dmg, −20% cooldown, +15% range, hidden) |
+
+## 🧬 Evolusi
+Syarat: **Mastery Lv 10 + 🔮 3 Batu Evolusi + 🪙 1.000**. Tower yang sudah berevolusi otomatis dipakai dalam bentuk barunya.
+
+| Tower | Evolusi | Kemampuan unik |
+|---|---|---|
+| Scout | Ranger | Setiap tembakan ke-4 memberi damage 3× |
+| Sniper | Deadeye | 25% peluang critical 3× |
+| Demoman | Bombardier | Ledakan membakar musuh |
+| Freezer | Cryomancer | 20% peluang membekukan musuh |
+| Farm | Bank | Pendapatan +50% + bunga 2% |
+| Minigunner | Gatling Titan | Damage naik hingga +80% saat terus menembak |
+| Commander | Panglima | Buff +10% & range +20% |
+| Rocketeer | Warlord | Menembak 2 misil sekaligus |
 
 ## ⚡ Skill Pemain
 | Skill | Tombol | Level | Cooldown | Efek |

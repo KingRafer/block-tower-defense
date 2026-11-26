@@ -42,11 +42,11 @@ const UI = {
   renderBar() {
     const lo = PROFILE.loadout;
     $('bar').innerHTML = lo.map((k, i) => {
-      const d = TOWERS[k], c = d.levels[0].cost;
-      return `<div class="slot ${S.placing === k ? 'sel' : ''}" data-k="${k}" data-i="${i}">
-        <span class="key">${i + 1}</span>
-        <div class="ico" style="background:${d.color}"></div>
-        <div class="nm">${d.name}</div><div class="pr">$${c}</div>
+      const d = TOWERS[k], c = costOf(k, 0), u = unitOf(k), tr = u.trait && TRAITS[u.trait];
+      return `<div class="slot ${S.placing === k ? 'sel' : ''} ${u.evo ? 'evo' : ''}" data-k="${k}" data-i="${i}" ${tr ? `style="--rc:${RARITY[tr.rarity].color}"` : ''}>
+        <span class="key">${i + 1}</span>${tr ? `<span class="tr" title="${tr.name}">${tr.icon}</span>` : ''}
+        <div class="ico" style="background:${towerColor(k)}">${u.evo ? '★' : ''}</div>
+        <div class="nm">${towerName(k)}</div><div class="pr">$${c}</div>
         <div class="cnt" data-cnt="${k}">${countType(k)}/${d.limit}</div></div>`;
     }).join('');
     $('bar').querySelectorAll('.slot').forEach(el => {
@@ -60,7 +60,7 @@ const UI = {
     $('bar').querySelectorAll('.slot').forEach(el => {
       const k = el.dataset.k, d = TOWERS[k];
       const banned = S.M.ban.includes(k);
-      el.classList.toggle('poor', banned || S.cash < d.levels[0].cost || countType(k) >= d.limit);
+      el.classList.toggle('poor', banned || S.cash < costOf(k, 0) || countType(k) >= d.limit);
       el.classList.toggle('banned', banned);
     });
   },
@@ -74,12 +74,13 @@ const UI = {
   tooltip(el, k) {
     const tt = $('tooltip');
     if (!el) { tt.style.display = 'none'; return; }
-    const d = TOWERS[k], L = d.levels[0];
+    const d = TOWERS[k], L = computeL(k, 0), u = unitOf(k), tr = u.trait && TRAITS[u.trait];
     let stats = '';
     if (L.dmg) stats += `Damage ${L.dmg} • Range ${L.range} • ${L.rate}s`;
     if (L.income) stats += `Pendapatan $${L.income}/wave`;
     if (L.buff) stats += `Buff +${L.buff * 100}% kecepatan • Range ${L.range}`;
-    tt.innerHTML = `<b>${d.name}</b> <span class="tag">${d.role}</span><br>${d.desc}<br><small>${stats}</small>`;
+    tt.innerHTML = `<b>${towerName(k)}</b> <span class="tag">${d.role}</span> <span class="tag mlv">Mastery ${unitLevel(u.xp)}</span><br>${u.evo ? '★ ' + EVOS[k].desc : d.desc}<br><small>${stats}</small>` +
+      (tr ? `<br><small style="color:${RARITY[tr.rarity].color}">${tr.icon} ${tr.name}: ${tr.desc}</small>` : '');
     const r = el.getBoundingClientRect(), wr = $('wrap').getBoundingClientRect();
     tt.style.display = 'block';
     tt.style.left = Math.max(0, Math.min(wr.width - 260, r.left - wr.left + r.width / 2 - 130)) + 'px';
@@ -99,11 +100,14 @@ const UI = {
 
   /** Panel tower terpilih */
   showPanel(t) {
-    const def = TOWERS[t.type], L = lvl(t), next = def.levels[t.level + 1];
+    const def = TOWERS[t.type], L = lvl(t), hasNext = t.level < def.levels.length - 1;
+    const next = hasNext ? Object.assign(computeL(t.type, t.level + 1), { cost: costOf(t.type, t.level + 1) }) : undefined;
+    const tr = t.trait && TRAITS[t.trait];
     const st = (lab, a, b) => `<div class="row"><span>${lab}</span><span>${a}${b !== undefined && b !== a ? ` → <b class="up">${b}</b>` : ''}</span></div>`;
     const yn = v => v ? '✅' : '❌';
-    let h = `<div class="ph"><div class="pico" style="background:${def.color}"></div><div><h3>${def.name}</h3>
-      <small>Lv ${t.level} • ${esc(L.name)}</small></div><button class="x" id="pClose">✕</button></div>`;
+    let h = `<div class="ph"><div class="pico" style="background:${towerColor(t.type)}">${t.evo ? '★' : ''}</div><div><h3>${towerName(t.type)}</h3>
+      <small>Lv ${t.level} • ${esc(L.name)} • M${unitLevel(unitOf(t.type).xp)}</small></div><button class="x" id="pClose">✕</button></div>`;
+    if (tr || t.evo) h += `<div class="ptags">${tr ? `<span class="tag" style="background:${RARITY[tr.rarity].color}" title="${tr.desc}">${tr.icon} ${tr.name}</span>` : ''}${t.evo ? `<span class="tag gold" title="${EVOS[t.type].desc}">★ Evolusi</span>` : ''}</div>`;
     h += `<div class="lvbar">${def.levels.map((_, i) => `<i class="${i <= t.level ? 'on' : ''}"></i>`).join('')}</div>`;
     if (t.type === 'farm') h += st('Pendapatan/wave', '$' + L.income, next && '$' + next.income);
     else if (t.type === 'commander') {
@@ -135,8 +139,7 @@ const UI = {
   },
   updatePanel() {
     const t = S.selected; if (!t) return;
-    const next = TOWERS[t.type].levels[t.level + 1];
-    if ($('upBtn') && next) $('upBtn').disabled = S.cash < next.cost;
+    if ($('upBtn') && !isMax(t)) $('upBtn').disabled = S.cash < costOf(t.type, t.level + 1);
     if ($('pDmg')) $('pDmg').textContent = fmtNum(t.dmg);
     if ($('pKills')) $('pKills').textContent = t.kills;
   },

@@ -23,10 +23,11 @@ const defaultSettings = () => ({
   dmgNum:true, shake:true, range:true, grid:false, fps:false, autoPause:true, quality:'high',
 });
 const defaultProfile = () => ({
-  coins:0, xp:0,
+  coins:0, xp:0, crystals:3, stones:0,
+  units: Object.fromEntries(TOWER_ORDER.map(k => [k, { xp:0, trait:null, evo:false }])),
   unlocked:[...DEFAULT_LOADOUT], loadout:[...DEFAULT_LOADOUT],
   achievements:[], best:{}, mapsPlayed:{}, runs:[], tips:[], daily:{ date:'', won:false, best:0 },
-  stats:{ games:0, wins:0, kills:0, bossKills:0, towersPlaced:0, cashEarned:0, maxed:0, playTime:0, abilities:0, skips:0, dailyWins:0 },
+  stats:{ games:0, wins:0, kills:0, bossKills:0, towersPlaced:0, cashEarned:0, maxed:0, playTime:0, abilities:0, skips:0, dailyWins:0, rolls:0 },
 });
 
 // Simpanan game yang sedang berjalan (lanjutkan nanti)

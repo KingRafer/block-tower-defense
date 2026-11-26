@@ -92,8 +92,13 @@ function drawDeco(d) {
 
 /* ---------------- TOWER ---------------- */
 function drawTower(t, ghost) {
-  const def = TOWERS[t.type], x = t.x, y = t.y;
+  const def = { ...TOWERS[t.type], color: towerColor(t.type) }, x = t.x, y = t.y;
   const stunned = !ghost && S.time < t.stunUntil;
+  const evo = ghost ? unitOf(t.type).evo : t.evo;
+  if (evo) {   // aura evolusi
+    const pr = 22 + Math.sin(S.time * 3 + t.x) * 3;
+    ctx.fillStyle = 'rgba(255,213,79,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 10, pr + 6, pr * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 16, 20, 7, 0, 0, Math.PI * 2); ctx.fill();
   block(x - 19, y + 4, 38, 12, 6, t.level >= 3 ? '#ffb300' : '#78909c');
   if (t.type === 'farm') {
@@ -123,6 +128,9 @@ function drawTower(t, ghost) {
     ctx.fillStyle = '#ffd54f'; ctx.fillRect(x - 14 + i * 8, y + 18, 6, 6);
     ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(x - 14 + i * 8, y + 18, 6, 6);
   }
+  if (evo && t.type !== 'farm') { ctx.fillStyle = '#ffd600'; for (let i = 0; i < 3; i++) ctx.fillRect(x - 8 + i * 6, y - 31 - (i === 1 ? 3 : 0), 4, 5); }
+  const tr = !ghost && t.trait && TRAITS[t.trait];
+  if (tr) { ctx.fillStyle = RARITY[tr.rarity].color; ctx.save(); ctx.translate(x + 18, y + 21); ctx.rotate(Math.PI / 4); ctx.fillRect(-4, -4, 8, 8); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(-4, -4, 8, 8); ctx.restore(); }
   if (!ghost && t.buff > 0) outlinedText('▲', x + 17, y - 18, 11, '#7c4dff');
   if (stunned) { outlinedText('💫', x, y - 34 + Math.sin(S.time * 8) * 2, 16, '#fff'); }
 }
@@ -141,6 +149,8 @@ function drawEnemy(e) {
   if (e.boss) { ctx.fillStyle = '#ffd600'; for (let i = 0; i < 3; i++) ctx.fillRect(x - s * 0.22 + i * s * 0.17, y - s * 0.86 + bob, s * 0.1, s * 0.14); }
   if (e.regen) outlinedText('+', x + s * 0.4, y - s * 0.4 + bob, 13, '#69f0ae');
   ctx.globalAlpha = 1;
+  if (e.burn && S.time < e.burn.until) outlinedText('🔥', x - s * 0.45, y - s * 0.3 + bob, 12, '#fff');
+  if (e.frozenUntil && S.time < e.frozenUntil) { ctx.fillStyle = 'rgba(179,229,252,.7)'; ctx.fillRect(x - s * 0.42, y - s * 0.75 + bob, s * 0.84, s * 1.1); }
   if (S.time < e.slowUntil) { ctx.fillStyle = 'rgba(129,212,250,.35)'; ctx.fillRect(x - s * 0.4, y - s * 0.7 + bob, s * 0.8, s * 1.05); }
   if (!e.boss) {
     const bw = Math.max(30, s), pct = Math.max(0, e.hp / e.maxHp);

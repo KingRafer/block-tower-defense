@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '2.1.0';
+const VERSION = '2.2.0';
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
 const SELL_RATE = 0.6;
 const LOADOUT_SIZE = 6;
@@ -186,4 +186,62 @@ ACHIEVEMENTS.push(
   { id:'daily_1',    name:'Penantang',       desc:'Selesaikan Tantangan Harian',   coins:300, test:(p)=>p.stats.dailyWins>=1 },
   { id:'skills_25',  name:'Komandan Taktis', desc:'Gunakan skill 25 kali',         coins:200, test:(p)=>p.stats.abilities>=25 },
   { id:'skipper',    name:'Tak Sabaran',     desc:'Skip 20 wave',                  coins:150, test:(p)=>p.stats.skips>=20 },
+);
+
+/* =========================================================
+ * SISTEM UNIT: mastery, trait, evolusi, material
+ * ========================================================= */
+const UNIT_MAX_LV = 20;
+const unitXpFor = lv => 40 * (lv - 1) * (lv - 1);                  // total XP untuk level lv
+const unitLevel = xp => Math.min(UNIT_MAX_LV, 1 + Math.floor(Math.sqrt(xp / 40)));
+const MASTERY_BONUS = 0.02;                                          // +2% damage per level
+
+const RARITY = {
+  common:    { name:'Biasa',      color:'#9e9e9e', rank:0 },
+  rare:      { name:'Langka',     color:'#42a5f5', rank:1 },
+  epic:      { name:'Epik',       color:'#ab47bc', rank:2 },
+  legendary: { name:'Legendaris', color:'#ffb300', rank:3 },
+  mythic:    { name:'Mitos',      color:'#ff1744', rank:4 },
+};
+/* w = bobot peluang (total 100). dmgMul juga berlaku untuk pendapatan Farm & buff Commander. */
+const TRAITS = {
+  kuat1:     { name:'Kuat I',        icon:'💪', rarity:'common',    w:20,  dmgMul:1.05,  desc:'+5% damage' },
+  cepat1:    { name:'Cepat I',       icon:'⚡', rarity:'common',    w:20,  rateMul:0.95, desc:'Cooldown −5%' },
+  jangkau1:  { name:'Jangkauan I',   icon:'🎯', rarity:'common',    w:20,  rangeMul:1.05,desc:'+5% range' },
+  kuat2:     { name:'Kuat II',       icon:'💪', rarity:'rare',      w:8,   dmgMul:1.12,  desc:'+12% damage' },
+  cepat2:    { name:'Cepat II',      icon:'⚡', rarity:'rare',      w:8,   rateMul:0.9,  desc:'Cooldown −10%' },
+  jangkau2:  { name:'Jangkauan II',  icon:'🎯', rarity:'rare',      w:5,   rangeMul:1.12,desc:'+12% range' },
+  hemat:     { name:'Hemat',         icon:'🏷️', rarity:'rare',      w:4,   costMul:0.85, desc:'Harga pasang & upgrade −15%' },
+  kuat3:     { name:'Kuat III',      icon:'💪', rarity:'epic',      w:3,   dmgMul:1.2,   desc:'+20% damage' },
+  mataelang: { name:'Mata Elang',    icon:'👁️', rarity:'epic',      w:3,   rangeMul:1.08, hidden:true, desc:'Deteksi hidden sejak Lv 0, +8% range' },
+  penembus:  { name:'Penembus',      icon:'🛡️', rarity:'epic',      w:2.5, dmgMul:1.08, pierce:true, desc:'Tembus armor, +8% damage' },
+  pemburu:   { name:'Pemburu Raja',  icon:'👑', rarity:'epic',      w:2.5, bossMul:1.35, desc:'+35% damage ke boss' },
+  midas:     { name:'Midas',         icon:'💰', rarity:'legendary', w:1.5, dmgMul:1.1, rewardMul:1.3, desc:'Hadiah kill +30%, +10% damage' },
+  berserker: { name:'Berserker',     icon:'🔥', rarity:'legendary', w:2,   dmgMul:1.25, rateMul:0.85, desc:'+25% damage, cooldown −15%' },
+  dewa:      { name:'Dewa Perang',   icon:'🌟', rarity:'mythic',    w:0.5, dmgMul:1.4, rateMul:0.8, rangeMul:1.15, hidden:true, desc:'+40% damage, cooldown −20%, +15% range, deteksi hidden' },
+};
+
+/* Evolusi: bentuk baru dengan pengali statistik dan perk unik */
+const EVOS = {
+  scout:     { name:'Ranger',        color:'#1b5e20', perk:'triple',   mul:{ dmg:1.5, range:1.1 },  desc:'Setiap tembakan ke-4 memberi damage 3×.' },
+  sniper:    { name:'Deadeye',       color:'#3e2723', perk:'crit',     mul:{ dmg:1.4, range:1.1 },  desc:'25% peluang critical hit 3× damage.' },
+  demoman:   { name:'Bombardier',    color:'#b71c1c', perk:'burn',     mul:{ dmg:1.4, splash:1.25 },desc:'Ledakan membakar musuh: 30% damage/detik selama 3 detik.' },
+  freezer:   { name:'Cryomancer',    color:'#01579b', perk:'freeze',   mul:{ dmg:2, range:1.15 },   desc:'20% peluang membekukan musuh 1 detik (bukan boss).' },
+  farm:      { name:'Bank',          color:'#f57f17', perk:'interest', mul:{ income:1.5 },          desc:'Pendapatan +50% dan bunga 2% dari uangmu tiap wave (maks $400).' },
+  minigun:   { name:'Gatling Titan', color:'#212121', perk:'ramp',     mul:{ dmg:1.3, range:1.1 },  desc:'Damage naik bertahap hingga +80% selama terus menembak.' },
+  commander: { name:'Panglima',      color:'#1a237e', perk:'marshal',  mul:{ buffAdd:0.1, range:1.2 }, desc:'Buff +10% lebih kuat dan jangkauan +20%.' },
+  rocketeer: { name:'Warlord',       color:'#4a148c', perk:'double',   mul:{ dmg:1.25, range:1.1 }, desc:'Meluncurkan 2 misil sekaligus.' },
+};
+const EVO_REQ = { level:10, stones:3, coins:1000 };
+
+const MATERIALS = {
+  crystals: { name:'Kristal Trait', icon:'💎', price:200, desc:'Dipakai untuk roll trait tower.' },
+  stones:   { name:'Batu Evolusi',  icon:'🔮', price:900, desc:'Dipakai untuk evolusi tower.' },
+};
+
+ACHIEVEMENTS.push(
+  { id:'trait_1',    name:'Coba Peruntungan', desc:'Roll trait pertama kali',          coins:50,  test:(p)=>p.stats.rolls>=1 },
+  { id:'trait_leg',  name:'Hoki Besar',       desc:'Dapatkan trait Legendaris/Mitos',  coins:400, test:(p)=>Object.values(p.units).some(u=>u.trait && RARITY[TRAITS[u.trait].rarity].rank>=3) },
+  { id:'evo_1',      name:'Evolusi!',         desc:'Evolusikan sebuah tower',          coins:300, test:(p)=>Object.values(p.units).some(u=>u.evo) },
+  { id:'mastery_20', name:'Ahli Sejati',      desc:'Capai mastery Lv 20 pada tower',   coins:500, test:(p)=>Object.values(p.units).some(u=>unitLevel(u.xp)>=UNIT_MAX_LV) },
 );
