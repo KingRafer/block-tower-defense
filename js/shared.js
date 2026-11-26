@@ -22,11 +22,11 @@
 
   /* ---------------- UNIT ---------------- */
   const UNIT_RARITY = {
-    scout: 'common', sniper: 'common', farm: 'common', pistol: 'common',
-    demoman: 'rare', freezer: 'rare', cannon: 'rare', flamer: 'rare', mortar: 'rare',
-    minigun: 'epic', commander: 'epic', tesla: 'epic', laser: 'epic', poison: 'epic',
-    rocketeer: 'legendary', railgun: 'legendary', warden: 'legendary',
-    nuke: 'mythic', dragon: 'mythic',
+    scout: 'common', sniper: 'common', farm: 'common', pistol: 'common', archer: 'common',
+    demoman: 'rare', freezer: 'rare', cannon: 'rare', flamer: 'rare', mortar: 'rare', shotgun: 'rare',
+    minigun: 'epic', commander: 'epic', tesla: 'epic', laser: 'epic', poison: 'epic', ninja: 'epic',
+    rocketeer: 'legendary', railgun: 'legendary', warden: 'legendary', samurai: 'legendary', wizard: 'legendary',
+    nuke: 'mythic', dragon: 'mythic', angel: 'mythic',
   };
   const UNIT_TYPES = Object.keys(UNIT_RARITY);
   const STARTER_UNITS = ['scout', 'sniper', 'demoman', 'farm'];

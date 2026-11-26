@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '4.4.0';
+const VERSION = '4.5.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
@@ -181,6 +181,54 @@ Object.assign(TOWERS, {
       {name:'Mata Naga',      cost:6000,  dmg:42,  range:4.8, rate:0.6,  splash:1.4, dot:{pct:0.6, dur:3, col:'burn'}, pierceArmor:true, hidden:true},
       {name:'Naga Purba',     cost:13000, dmg:85,  range:5.2, rate:0.5,  splash:1.6, dot:{pct:0.7, dur:3, col:'burn'}, pierceArmor:true, hidden:true}]},
 });
+/* ---------------- UNIT BARU v4.5 ---------------- */
+Object.assign(TOWERS, {
+  archer: { name:'Pemanah', color:'#2e7d32', limit:8, role:'Jarak jauh',
+    desc:'Pemanah hutan dengan jangkauan panjang dan anak panah yang akurat.',
+    levels:[
+      {name:'Pemanah',        cost:250,  dmg:3,   range:3.8, rate:1.1},
+      {name:'Busur Panjang',  cost:200,  dmg:4.5, range:4.2, rate:1.0},
+      {name:'Panah Api',      cost:500,  dmg:7,   range:4.5, rate:0.9, hidden:true, dot:{pct:0.4, dur:2, col:'burn'}},
+      {name:'Hujan Panah',    cost:1100, dmg:11,  range:4.8, rate:0.8, hidden:true, dot:{pct:0.5, dur:2, col:'burn'}, splashHit:0.6},
+      {name:'Pemanah Elf',    cost:2400, dmg:20,  range:5.3, rate:0.7, hidden:true, dot:{pct:0.6, dur:2.5, col:'burn'}, splashHit:0.8}]},
+  shotgun: { name:'Shotgunner', color:'#6d4c41', limit:6, role:'Area dekat',
+    desc:'Tembakan pelet jarak dekat yang mengenai beberapa musuh sekaligus.',
+    levels:[
+      {name:'Shotgunner',     cost:600,  dmg:6,  range:2.3, rate:1.2, splashHit:0.8},
+      {name:'Laras Ganda',    cost:500,  dmg:10, range:2.4, rate:1.1, splashHit:0.9},
+      {name:'Peluru Slug',    cost:1200, dmg:17, range:2.6, rate:1.0, splashHit:1.0, hidden:true},
+      {name:'Otomatis',       cost:2600, dmg:26, range:2.8, rate:0.7, splashHit:1.1, hidden:true, pierceArmor:true},
+      {name:'Pemusnah',       cost:5200, dmg:44, range:3.0, rate:0.6, splashHit:1.2, hidden:true, pierceArmor:true}]},
+  ninja: { name:'Ninja', color:'#263238', limit:4, role:'Berantai',
+    desc:'Shuriken super cepat yang memantul ke musuh lain. Melihat musuh hidden sejak awal.',
+    levels:[
+      {name:'Ninja',          cost:1300, dmg:4,  range:3.4, rate:0.45, chain:2, chainRange:1.4, hidden:true},
+      {name:'Shuriken Ganda', cost:1000, dmg:6,  range:3.6, rate:0.4,  chain:3, chainRange:1.5, hidden:true},
+      {name:'Bayangan',       cost:2400, dmg:10, range:3.9, rate:0.35, chain:3, chainRange:1.7, hidden:true, pierceArmor:true},
+      {name:'Jonin',          cost:5200, dmg:18, range:4.2, rate:0.3,  chain:4, chainRange:1.9, hidden:true, pierceArmor:true},
+      {name:'Master Ninja',   cost:10000,dmg:30, range:4.5, rate:0.25, chain:5, chainRange:2.1, hidden:true, pierceArmor:true}]},
+  samurai: { name:'Samurai', color:'#b71c1c', limit:3, role:'Jarak dekat',
+    desc:'Tebasan katana jarak dekat dengan damage besar, menembus armor & mengenai sekitar.',
+    levels:[
+      {name:'Samurai',        cost:2200, dmg:40,  range:1.7, rate:1.0, splashHit:0.7, pierceArmor:true},
+      {name:'Katana Baja',    cost:1800, dmg:65,  range:1.8, rate:0.95, splashHit:0.8, pierceArmor:true},
+      {name:'Ronin',          cost:4000, dmg:110, range:1.9, rate:0.85, splashHit:0.9, pierceArmor:true, hidden:true, bossMul:1.3},
+      {name:'Shogun',         cost:9000, dmg:210, range:2.1, rate:0.75, splashHit:1.1, pierceArmor:true, hidden:true, bossMul:1.6}]},
+  wizard: { name:'Penyihir', color:'#5e35b1', limit:3, role:'Sihir',
+    desc:'Bola sihir yang melompat ke banyak musuh dan memperlambat mereka.',
+    levels:[
+      {name:'Penyihir',       cost:2400, dmg:14, range:3.8, rate:1.4, chain:4, chainRange:1.8, slow:0.2},
+      {name:'Tongkat Kristal',cost:1900, dmg:22, range:4.0, rate:1.3, chain:5, chainRange:1.9, slow:0.25},
+      {name:'Archmage',       cost:4300, dmg:38, range:4.3, rate:1.15,chain:6, chainRange:2.1, slow:0.3, hidden:true},
+      {name:'Penyihir Agung', cost:9500, dmg:70, range:4.7, rate:1.0, chain:8, chainRange:2.3, slow:0.35, hidden:true, pierceArmor:true}]},
+  angel: { name:'Malaikat Agung', color:'#fff59d', limit:1, role:'Mitos',
+    desc:'Sinar suci yang menembus seluruh barisan dan membakar musuh. Melihat semua musuh hidden.',
+    levels:[
+      {name:'Malaikat Agung', cost:5000,  dmg:60,  range:6.0, rate:2.2, line:true, pierceArmor:true, hidden:true, dot:{pct:0.5, dur:3, col:'burn'}},
+      {name:'Sayap Cahaya',   cost:4000,  dmg:100, range:6.5, rate:2.0, line:true, pierceArmor:true, hidden:true, dot:{pct:0.6, dur:3, col:'burn'}},
+      {name:'Penghakiman',    cost:9000,  dmg:180, range:7.0, rate:1.8, line:true, pierceArmor:true, hidden:true, dot:{pct:0.7, dur:3, col:'burn'}, bossMul:1.3},
+      {name:'Serafim',        cost:18000, dmg:340, range:7.8, rate:1.5, line:true, pierceArmor:true, hidden:true, dot:{pct:0.8, dur:4, col:'burn'}, bossMul:1.6}]},
+});
 const TOWER_ORDER = [...UNIT_TYPES].sort((a, b) => RARITY[UNIT_RARITY[a]].rank - RARITY[UNIT_RARITY[b]].rank);
 const DEFAULT_LOADOUT = [...STARTER_UNITS];
 /* Jenis proyektil (tower lain memakai tembakan langsung) */
@@ -318,6 +366,12 @@ const EVOS = {
   warden:    { name:'Chronos',       color:'#004d40', perk:null,       mul:{ dmg:1.5, slowAdd:0.15, range:1.2 }, desc:'Perlambatan +15% dan jangkauan +20%.' },
   nuke:      { name:'Tsar Bomba',    color:'#33691e', perk:null,       mul:{ dmg:1.5, splash:1.3 }, desc:'Ledakan 50% lebih kuat dan 30% lebih luas.' },
   dragon:    { name:'Naga Purbakala',color:'#4a0000', perk:'double',   mul:{ dmg:1.3, range:1.1 },  desc:'Menyemburkan 2 bola api sekaligus.' },
+  archer:    { name:'Pemburu Elf',   color:'#1b5e20', perk:'crit',     mul:{ dmg:1.4, range:1.15 }, desc:'25% peluang critical hit 3× damage.' },
+  shotgun:   { name:'Penjagal',      color:'#3e2723', perk:'triple',   mul:{ dmg:1.4, range:1.1 },  desc:'Setiap tembakan ke-4 memberi damage 3×.' },
+  ninja:     { name:'Kage',          color:'#000000', perk:'crit',     mul:{ dmg:1.35, chainAdd:2 }, desc:'Shuriken memantul +2 dan 25% critical.' },
+  samurai:   { name:'Shogun Naga',   color:'#7f0000', perk:'crit',     mul:{ dmg:1.45, range:1.1 }, desc:'25% peluang tebasan critical 3× damage.' },
+  wizard:    { name:'Penyihir Waktu',color:'#311b92', perk:'freeze',   mul:{ dmg:1.35, chainAdd:2 }, desc:'Sihir 20% membekukan musuh 1 detik, +2 lompatan.' },
+  angel:     { name:'Serafim Emas',  color:'#ffd54f', perk:'crit',     mul:{ dmg:1.4, range:1.1 },  desc:'25% peluang sinar critical 3× damage.' },
 };
 
 

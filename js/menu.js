@@ -125,7 +125,7 @@ const Menu = {
       const streak = (v.daily || {}).streak || 0, nextLogin = SHARED.DAILY_LOGIN[streak % SHARED.DAILY_LOGIN.length];
       const ev = SHARED.EVENT, evOn = ev.rewardMul > 1 || ev.diamondMul > 1;
       const save = SaveGame.get(), sm = save && (MAPS.find(x => x.id === save.map) || MAPS[0]);
-      return `<div class="lobby sky-${sky}"><div class="sky"></div><div class="sun"></div><div class="clouds"><i></i><i></i><i></i></div>
+      return `<div class="hscene sky-${sky}"><div class="sky"></div><div class="sun"></div><div class="clouds"><i></i><i></i><i></i></div>
           <svg class="hills" viewBox="0 0 1200 300" preserveAspectRatio="none"><path class="h1" d="M0 190 L80 150 L160 170 L260 110 L360 160 L460 120 L560 165 L700 95 L820 150 L940 115 L1060 160 L1200 120 L1200 300 L0 300Z"/><path class="h2" d="M0 240 L120 200 L240 230 L380 190 L520 235 L660 200 L800 238 L940 205 L1080 232 L1200 210 L1200 300 L0 300Z"/></svg>
           <div class="ground"></div></div>
         <div class="lh">
@@ -162,7 +162,7 @@ const Menu = {
           <button class="lh-mis" data-act="go:missions"><b>🎯 MISI HARIAN</b>${misW}</button>
           <div class="lh-play">
             ${save ? `<button class="bigplay cont" data-act="continue"><span class="bp-ic">⏯</span><div><b>LANJUTKAN</b><small>${sm.name} • Wave ${save.wave + 1}</small></div></button>
-              <div class="bp-side"><button class="chip" data-act="go:play">＋ Baru</button><button class="chip" data-act="discard">✕ Hapus</button></div>`
+              <div class="bp-side"><button class="hchip" data-act="go:play">＋ Baru</button><button class="hchip" data-act="discard">✕ Hapus</button></div>`
             : `<button class="bigplay" data-act="go:play"><span class="bp-ic">▶</span><div><b>MAIN</b><small>${MAP.name} • ${DIFFS[DIFF].name}</small></div></button>`}
           </div>
           <button class="lh-coop" data-act="go:mabar"><span>🤝</span><div><b>MABAR</b><small>Co-op 2–4 pemain</small></div></button>
@@ -315,35 +315,36 @@ const Menu = {
       const host = Lobby.isHost(), me = Online.user.id;
       const slots = Array.from({ length: 4 }, (_, i) => {
         const p = r.players[i];
-        return p ? `<div class="slotp" style="--pc:${PLAYER_COLORS[i]}">${this.avatar(p, 56)}<b>${esc(p.name)}${p.id === me ? ' (kamu)' : ''}</b><small>Lv ${p.level}${p.id === r.host ? ' • 👑 Host' : ''}</small></div>`
-                 : `<div class="slotp empty"><div class="av">＋</div><b>Kosong</b><small>Menunggu pemain</small></div>`;
+        return p ? `<div class="rp" style="--pc:${PLAYER_COLORS[i]}"><span class="rp-n">P${i + 1}</span>${p.id === r.host ? '<span class="rp-crown">👑</span>' : ''}
+            ${this.avatar(p, 54)}<b>${esc(p.name)}</b><small>Lv ${p.level}${p.id === me ? ' • kamu' : ''}</small><i class="rp-ok">● SIAP</i></div>`
+          : `<div class="rp empty"><div class="rp-plus">＋</div><b>Kosong</b><small>Undang teman</small></div>`;
       }).join('');
       const m = MAPS[r.map] || MAPS[0];
-      const sel = (act, opts, cur) => opts.map(([k, l]) => `<button class="btn sm ${cur === k ? 'sel' : 'gray'}" data-act="${act}:${k}" ${host ? '' : 'disabled'}>${l}</button>`).join('');
+      const seg = (act, opts, cur) => `<div class="seg">${opts.map(([k, l]) => `<button class="${cur === k ? 'on' : ''}" data-act="${act}:${k}" ${host ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
       const f = this.friendsData, online = f ? f.friends.filter(x => x.online && !r.players.some(p => p.id === x.id)) : [];
-      return `${this.header('Lobby')}
-        <div class="lobby">
-          <div class="lcol">
-            <div class="box roomcode"><small>KODE ROOM</small><code>${r.code}</code><button class="btn sm blue" data-act="copy:${r.code}">Salin</button></div>
-            <div class="slots" id="lobbyPlayers">${slots}</div>
-            <div class="box" id="lobbySettings">
-              <div class="lset"><canvas width="160" height="96" data-map="${r.map}"></canvas>
-                <div><b>${m.name}</b> <span class="stars">${'★'.repeat(m.stars)}</span><br><small class="dim">${m.desc}</small></div></div>
-              <div class="lopts"><span>Map</span>${sel('lobby-map', MAPS.map((x, i) => [String(i), x.name]), String(r.map))}</div>
-              <div class="lopts"><span>Kesulitan</span>${sel('lobby-diff', Object.entries(DIFFS).map(([k, d]) => [k, d.name]), r.diff)}</div>
-              <div class="lopts"><span>Mode</span>${sel('lobby-mode', Object.entries(MODES).map(([k, d]) => [k, d.name]), r.mode)}</div>
-              ${host ? '' : '<small class="dim">Hanya host yang bisa mengubah pengaturan.</small>'}
+      return `<div class="mhead"><button class="btn gray" data-act="room-leave">← Keluar</button><h2>🤝 Room Mabar</h2>
+          <div class="rcode"><small>KODE</small><code>${r.code}</code><button class="btn sm blue" data-act="copy:${r.code}">📋 Salin</button></div></div>
+        <div class="room">
+          <section class="room-main">
+            <div class="rslots" id="lobbyPlayers">${slots}</div>
+            <div class="box rset" id="lobbySettings">
+              <div class="rset-head"><h4>🗺️ Pilih Map</h4>${host ? '' : '<small class="dim">Hanya host yang bisa mengubah</small>'}</div>
+              <div class="rmaps">${MAPS.map((x, i) => `<button class="rmap ${i === r.map ? 'on' : ''}" data-act="lobby-map:${i}" ${host ? '' : 'disabled'}>
+                <canvas width="160" height="96" data-map="${i}"></canvas><b>${x.name}</b><small>${'★'.repeat(x.stars)}</small></button>`).join('')}</div>
+              <small class="dim rdesc">${esc(m.desc)}</small>
+              <div class="ropts"><div><span>Kesulitan</span>${seg('lobby-diff', Object.entries(DIFFS).map(([k, d]) => [k, d.name]), r.diff)}</div>
+                <div><span>Mode</span>${seg('lobby-mode', Object.entries(MODES).map(([k, d]) => [k, d.name]), r.mode)}</div></div>
             </div>
-          </div>
-          <div class="rcol">
-            <div class="box chatbox"><h4>💬 Chat</h4><div class="clog" id="lobbyChat">${(r.chat || []).slice(-30).map(c => `<div><b>${esc(c.n)}:</b> ${esc(c.t)}</div>`).join('') || '<div class="dim">Belum ada pesan</div>'}</div>
+          </section>
+          <aside class="room-side">
+            <div class="box chatbox"><h4>💬 Chat Room</h4><div class="clog" id="lobbyChat">${(r.chat || []).slice(-30).map(c => `<div><b>${esc(c.n)}:</b> ${esc(c.t)}</div>`).join('') || '<div class="dim">Belum ada pesan. Sapa temanmu! 👋</div>'}</div>
               <div class="inrow"><input id="lobbyIn" placeholder="Ketik pesan…" maxlength="140"><button class="btn sm" data-act="lobby-chat">Kirim</button></div></div>
-            <div class="box"><h4>📨 Undang teman online</h4>${!f ? '<p class="dim">Memuat…</p>' : online.length ? online.map(x => `<div class="frow">${this.avatar(x, 32)}<div class="fi"><b>${esc(x.name)}</b></div><button class="btn sm purple" data-act="invite:${x.id}">Undang</button></div>`).join('') : '<p class="dim">Tidak ada teman online. Bagikan kode room!</p>'}</div>
-          </div>
+            <div class="box"><h4>📨 Undang teman online</h4>${!f ? '<p class="dim">Memuat…</p>' : online.length ? online.map(x => `<div class="frow">${this.avatar(x, 32)}<div class="fi"><b>${esc(x.name)}</b><small>🟢 Online</small></div><button class="btn sm purple" data-act="invite:${x.id}">Undang</button></div>`).join('') : '<p class="dim">Tidak ada teman online. Bagikan kode room di atas!</p>'}</div>
+          </aside>
         </div>
-        <div class="row2">
-          <button class="btn red" data-act="room-leave">🚪 Keluar Room</button>
-          ${host ? `<button class="btn big" data-act="room-start">MULAI ▶ <small>${r.players.length} pemain</small></button>` : '<div class="waiting">⏳ Menunggu host memulai…</div>'}
+        <div class="room-bar">
+          <div class="rb-info"><span><b>${m.name}</b> • ${DIFFS[r.diff] ? DIFFS[r.diff].name : r.diff} • ${MODES[r.mode] ? MODES[r.mode].name : r.mode}</span><small>${r.players.length}/4 pemain • bagikan kode room agar teman bisa bergabung</small></div>
+          ${host ? `<button class="bigplay rb-go" data-act="room-start"><span class="bp-ic">▶</span><div><b>MULAI</b><small>${r.players.length} pemain</small></div></button>` : '<div class="waiting">⏳ Menunggu host memulai…</div>'}
         </div>`;
     },
 

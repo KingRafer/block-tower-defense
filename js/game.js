@@ -584,6 +584,8 @@ const TRACER = {
   flamer: { col: '#ff7043', w: 6, life: 0.1, sfx: 'shoot' }, tesla: { col: '#18ffff', w: 3, life: 0.15, sfx: 'stun' },
   laser: { col: '#ff1744', w: 4, life: 0.11, sfx: 'shoot' }, poison: { col: '#76ff03', w: 4, life: 0.12, sfx: 'freeze' },
   railgun: { col: '#82b1ff', w: 6, life: 0.25, sfx: 'snipe' }, pistol: { col: '#ffe082', w: 2, life: 0.05, sfx: 'shoot' },
+  archer: { col: '#d7ccc8', w: 2, life: 0.1, sfx: 'shoot' }, shotgun: { col: '#ffcc80', w: 4, life: 0.07, sfx: 'snipe' }, ninja: { col: '#cfd8dc', w: 2, life: 0.08, sfx: 'shoot' },
+  samurai: { col: '#ffffff', w: 5, life: 0.12, sfx: 'snipe' }, wizard: { col: '#b388ff', w: 3, life: 0.16, sfx: 'stun' }, angel: { col: '#fff59d', w: 8, life: 0.3, sfx: 'snipe' },
 };
 function tracer(x1, y1, x2, y2, col, w, life, type) {
   S.effects.push({ kind: 'tracer', x1, y1, x2, y2, life, max: 0.15, col, w });
@@ -600,7 +602,10 @@ function applyDot(e, L, src) {
 /** Petir berantai (Tesla) */
 function fireChain(t, L, first) {
   const hit = new Set([first.id]); let cur = first, dmg = L.dmg;
-  damage(first, dmg, L, t);
+  const C = TRACER[t.type] || TRACER.tesla;
+  if (L.perk === 'crit' && Math.random() < 0.25) { dmg *= 3; addText(first.x, first.y - 34, 'CRIT!', '#ff5252', 0.7); }
+  const extra = o => { if (L.slow) applySlow(o, L.slow); if (L.perk === 'freeze' && !o.boss && Math.random() < 0.2) { o.frozenUntil = S.time + 1; addText(o.x, o.y - 34, '❄', '#81d4fa', 0.6); } };
+  damage(first, dmg, L, t); extra(first);
   for (let i = 1; i < L.chain; i++) {
     let next = null, nd = L.chainRange * T;
     for (const o of S.enemies) {
@@ -608,21 +613,22 @@ function fireChain(t, L, first) {
       const d = Math.hypot(o.x - cur.x, o.y - cur.y); if (d <= nd) { nd = d; next = o; }
     }
     if (!next) break;
-    tracer(cur.x, cur.y - 8, next.x, next.y - 8, '#18ffff', 3, 0.15, 'tesla');
-    dmg *= 0.85; damage(next, dmg, L, t); hit.add(next.id); cur = next;
+    tracer(cur.x, cur.y - 8, next.x, next.y - 8, C.col, C.w, 0.15, t.type);
+    dmg *= 0.85; damage(next, dmg, L, t); extra(next); hit.add(next.id); cur = next;
   }
 }
 /** Tembakan tembus garis (Railgun) */
 function fireLine(t, L, e, mx, my) {
   const ang = Math.atan2(e.y - t.y, e.x - t.x), len = L.range * T, ex = t.x + Math.cos(ang) * len, ey = t.y + Math.sin(ang) * len;
-  tracer(mx, my, ex, ey, '#82b1ff', 6, 0.25, 'railgun');
+  const C = TRACER[t.type] || TRACER.railgun;
+  tracer(mx, my, ex, ey, C.col, C.w, C.life, t.type);
   let dmg = L.dmg;
   if (L.perk === 'crit' && Math.random() < 0.25) { dmg *= 3; addText(e.x, e.y - 34, 'CRIT!', '#ff5252', 0.7); }
   for (const o of S.enemies) {
     if (o.dead || (o.hidden && !canSeeHidden(t))) continue;
     const px = o.x - t.x, py = o.y - t.y, proj = px * Math.cos(ang) + py * Math.sin(ang);
     if (proj < 0 || proj > len) continue;
-    if (Math.abs(-px * Math.sin(ang) + py * Math.cos(ang)) <= 16) damage(o, dmg, L, t);
+    if (Math.abs(-px * Math.sin(ang) + py * Math.cos(ang)) <= 16) { damage(o, dmg, L, t); if (L.dot && !o.dead) applyDot(o, L, t); }
   }
 }
 /** Aura (Penjaga Waktu): melukai & memperlambat semua musuh di dalam jangkauan */

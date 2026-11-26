@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.5.0] — 2026-11-26
+### Ditambahkan
+- **6 unit baru (total 25)**: Pemanah (Biasa), Shotgunner (Langka), Ninja (Epik), Samurai & Penyihir (Legendaris), Malaikat Agung (Mitos) — lengkap dengan evolusi.
+- **Karakter unit detail** (`js/chars.js`): setiap unit punya kostum, penutup kepala, wajah, perlengkapan punggung & senjata sendiri
+  (topi koboi, masker gas, helm samurai, topi penyihir, sayap malaikat, jetpack, dll.), menghadap ke arah musuh, animasi senjata.
+  Farm, Nuklir & Naga digambar ulang lebih detail.
+### Diubah
+- **Room mabar** didesain ulang: kartu pemain berwarna, pilihan map bergambar, pilihan kesulitan/mode bergaya segmen, bar MULAI menempel di bawah.
+- Tampilan HP lebih rapi: tombol, kartu, tile & header lebih kecil.
+### Diperbaiki
+- Tata letak room rusak karena nama class bentrok dengan latar menu utama.
+
 ## [4.4.0] — 2026-11-26
 ### Diubah
 - **Menu utama baru "Markas"**: langit hidup sesuai jam WIB (pagi/siang/senja/malam), awan bergerak, tim unit tampil di panggung (hover = statistik),

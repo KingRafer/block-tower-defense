@@ -124,57 +124,14 @@ function drawTower(t, ghost) {
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 16, 20, 7, 0, 0, Math.PI * 2); ctx.fill();
   if (!ghost && isMP() && t.owner) { ctx.strokeStyle = playerColor(t.owner); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 14, 22, 9, 0, 0, Math.PI * 2); ctx.stroke(); }
   block(x - 19, y + 4, 38, 12, 6, t.level >= 3 ? '#ffb300' : '#78909c');
-  const eyes = () => { ctx.fillStyle = sk.eyes || '#000'; ctx.fillRect(x - 5, y - 22, 3, 3); ctx.fillRect(x + 2, y - 22, 3, 3); };
-  if (t.type === 'farm') {
-    block(x - 16, y - 14, 32, 22, 10, sk.body || '#c62828');
-    ctx.fillStyle = sk.gun || '#5d4037'; ctx.beginPath(); ctx.moveTo(x - 20, y - 24); ctx.lineTo(x, y - 38); ctx.lineTo(x + 20, y - 24); ctx.fill();
-    outlinedText('$', x, y - 1, 14, '#ffd54f');
-  } else if (t.type === 'nuke') {
-    block(x - 15, y - 16, 30, 24, 8, body);
-    ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(x, y - 6, 8, 0, 7); ctx.fill();
-    ctx.fillStyle = '#212121'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.arc(x, y - 6, 7, k * 2.09 - 0.5, k * 2.09 + 0.5); ctx.fill(); }
-    ctx.fillStyle = '#9e9e9e'; ctx.fillRect(x - 4, y - 34 - t.recoil * 3, 8, 14); ctx.fillStyle = '#e53935'; ctx.fillRect(x - 4, y - 38 - t.recoil * 3, 8, 5);
-  } else if (t.type === 'dragon') {
-    ctx.fillStyle = sk.gun || '#8e0000';
-    ctx.beginPath(); ctx.moveTo(x - 10, y - 6); ctx.lineTo(x - 26, y - 22); ctx.lineTo(x - 12, y - 14); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(x + 10, y - 6); ctx.lineTo(x + 26, y - 22); ctx.lineTo(x + 12, y - 14); ctx.fill();
-    block(x - 12, y - 8, 24, 16, 6, body);
-    ctx.save(); ctx.translate(x, y - 16); ctx.rotate(t.angle);
-    block(2, -7, 18, 12, 3, body); ctx.fillStyle = '#ffeb3b'; ctx.fillRect(12, -5, 3, 3); ctx.fillStyle = '#fff'; ctx.fillRect(19, 2, 4, 2);
-    ctx.restore();
-  } else {
-    block(x - 11, y - 6, 22, 14, 5, body);
-    block(x - 8, y - 22, 16, 14, 5, head);
-    eyes();
-    if (t.type === 'commander') {
-      block(x - 10, y - 30, 20, 6, 3, sk.gun || '#1a237e');
-      ctx.fillStyle = '#fff'; ctx.fillRect(x + 12, y - 40, 2, 30); ctx.fillStyle = '#e53935'; ctx.fillRect(x + 14, y - 40, 12, 8);
-    } else if (t.type === 'tesla') {
-      ctx.fillStyle = '#607d8b'; ctx.fillRect(x + 12, y - 36, 3, 28);
-      ctx.fillStyle = sk.gun || '#18ffff'; ctx.beginPath(); ctx.arc(x + 13.5, y - 38, 5 + t.recoil * 2, 0, 7); ctx.fill();
-      if (t.recoil > 0.3) { ctx.strokeStyle = '#e0f7fa'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 13, y - 38); ctx.lineTo(x + 20, y - 44); ctx.lineTo(x + 16, y - 46); ctx.stroke(); }
-    } else if (t.type === 'warden') {
-      ctx.strokeStyle = sk.gun || '#64ffda'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(x, y - 15, 15, S.time * 2, S.time * 2 + 4.5); ctx.stroke();
-      ctx.fillStyle = '#004d40'; ctx.fillRect(x - 1, y - 32, 2, 6); ctx.fillRect(x - 1, y - 30, 6, 2);
-    } else {
-      const G = GUNS[t.type] || [18, 6, '#263238'];
-      ctx.save(); ctx.translate(x, y - 8); ctx.rotate(t.type === 'mortar' ? -Math.PI / 2.6 * (Math.cos(t.angle) >= 0 ? 1 : -1) + (Math.cos(t.angle) >= 0 ? 0 : Math.PI) : t.angle);
-      const rc = t.recoil * 4, gc = sk.gun || G[2];
-      ctx.fillStyle = gc; ctx.fillRect(4 - rc, -G[1] / 2, G[0], G[1]);
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.strokeRect(4 - rc, -G[1] / 2, G[0], G[1]);
-      if (t.type === 'pistol') { ctx.fillStyle = gc; ctx.fillRect(4 - rc, G[1] / 2 + 3, G[0], G[1]); ctx.strokeRect(4 - rc, G[1] / 2 + 3, G[0], G[1]); }
-      if (t.type === 'railgun') { ctx.fillStyle = '#82b1ff'; ctx.fillRect(6 - rc, -1, G[0] - 4, 2); }
-      if (t.type === 'laser') { ctx.fillStyle = '#ff1744'; ctx.fillRect(G[0] + 2 - rc, -2, 4, 4); }
-      ctx.restore();
-    }
-  }
+  if (t.type === 'farm') drawFarm(t, x, y, sk);
+  else if (t.type === 'nuke') drawNuke(t, x, y, sk, body);
+  else if (t.type === 'dragon') drawDragon(t, x, y, sk, body);
+  else drawHero(t, x, y, sk, evo, base);
   for (let i = 0; i < t.level; i++) {
     ctx.fillStyle = '#ffd54f'; ctx.fillRect(x - 14 + i * 8, y + 18, 6, 6);
     ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(x - 14 + i * 8, y + 18, 6, 6);
   }
-  if (sk.acc && !['farm', 'nuke', 'dragon'].includes(t.type)) drawAccessory(sk.acc, x, y, sk);
-  else if (evo && !['farm', 'nuke', 'dragon'].includes(t.type)) drawAccessory('crown', x, y, sk);
   const tr = !ghost && t.trait && TRAITS[t.trait];
   if (tr) { ctx.fillStyle = RARITY[tr.rarity].color; ctx.save(); ctx.translate(x + 18, y + 21); ctx.rotate(Math.PI / 4); ctx.fillRect(-4, -4, 8, 8); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(-4, -4, 8, 8); ctx.restore(); }
   if (!ghost && (t.buff > 0 || S.overclockT > 0)) outlinedText(S.overclockT > 0 ? '⚡' : '▲', x + 17, y - 18, 11, S.overclockT > 0 ? '#ffee58' : '#7c4dff');
