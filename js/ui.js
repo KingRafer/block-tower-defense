@@ -208,7 +208,20 @@ const UI = {
         <span>$${Math.floor(pcash(id)).toLocaleString('id-ID')}</span><small title="⚡ langsung (P2P) • ☁️ lewat server">${net}${id === S.mp.hostId ? ' 👑' : ''}</small></div>`;
     }).join('');
   },
+  /** Chat dalam game bisa diperkecil; pesan baru saat diperkecil memunculkan badge */
+  chatUnread: 0, chatSeen: 0,
+  toggleChat(force) {
+    SET.chatMin = force !== undefined ? force : !SET.chatMin; saveSettings();
+    if (!SET.chatMin) this.chatUnread = 0;
+    this.renderChat();
+  },
   renderChat() {
+    const box = $('chat'); if (box) box.classList.toggle('min', !!SET.chatMin);
+    const n = MP.chatLog.length;
+    if (n > this.chatSeen) { if (SET.chatMin) this.chatUnread += n - this.chatSeen; this.chatSeen = n; }
+    if (n < this.chatSeen) this.chatSeen = n;
+    const bd = $('chatBadge'); if (bd) bd.textContent = SET.chatMin && this.chatUnread ? this.chatUnread : '';
+    const tg = $('chatToggle'); if (tg) { const a = tg.querySelector('.ct-a'); if (a) a.textContent = SET.chatMin ? '+' : '–'; }
     const el = $('chatLog'); if (!el) return;
     $('chat').style.display = isMP() ? 'flex' : 'none';
     el.innerHTML = MP.chatLog.slice(-8).map(c => `<div class="${c.n ? '' : 'sys'} ${Date.now() - c.at > 12000 ? 'old' : ''}">${c.n ? `<b>${esc(c.n)}:</b> ` : ''}${esc(c.m)}</div>`).join('');

@@ -60,7 +60,7 @@ addEventListener('keydown', ev => {
   else if (k === ' ') { ev.preventDefault(); if (canSkip()) skipWave(); else startWave(); }
   else if (SKILL_KEYS.includes(k) && equippedSkills()[SKILL_KEYS.indexOf(k)]) useAbility(equippedSkills()[SKILL_KEYS.indexOf(k)]);
   else if (k === 'f' && !isGuest()) $('speedBtn').click();
-  else if (k === 'enter' && isMP()) { ev.preventDefault(); $('chatIn').focus(); }
+  else if (k === 'enter' && isMP()) { ev.preventDefault(); if (SET.chatMin) UI.toggleChat(false); $('chatIn').focus(); }
 });
 
 /* ---------------- TOMBOL HUD ---------------- */
@@ -90,6 +90,8 @@ $('overlay').addEventListener('click', ev => {
 // Audio harus diaktifkan oleh interaksi pengguna pertama
 addEventListener('pointerdown', () => Sound.unlock(), { once: true });
 addEventListener('keydown', () => Sound.unlock(), { once: true });
+
+$('chatToggle').onclick = () => UI.toggleChat();
 
 // Simpan ke cloud saat tab ditutup / disembunyikan
 addEventListener('pagehide', () => Online.flush());

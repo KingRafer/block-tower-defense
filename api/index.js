@@ -23,9 +23,11 @@ const cleanName = s => String(s || '').replace(/[<>"'`\\]/g, '').replace(/\s+/g,
 
 /** Data akun milik sendiri (termasuk status admin) */
 function selfUser(u) { return { ...publicUser(u), isAdmin: admin.isAdmin(u) }; }
+/** Foto profil: foto unggahan pemain (disajikan lewat /api?r=avatar) atau foto Google */
+const av = u => u.avatarV ? `/api?r=avatar&id=${encodeURIComponent(u._id)}&v=${u.avatarV}` : (u.avatar || '');
 function publicUser(u) {
   if (!u) return null;
-  return { id: u._id, name: u.name, avatar: u.avatar || '', level: u.level || 1, friendCode: u.friendCode,
+  return { id: u._id, name: u.name, avatar: av(u), hasCustomAvatar: !!u.avatarV, level: u.level || 1, friendCode: u.friendCode,
            online: !!u.lastSeen && Date.now() - u.lastSeen < ONLINE_MS, roomCode: u.roomCode || null };
 }
 
@@ -90,6 +92,30 @@ const routes = {
   },
 
   'me': async (req, d, u) => ({ user: selfUser(u) }),
+  /** Ganti foto profil: data URL gambar kecil (dikompres di browser) atau null = kembali ke foto Google */
+  'me.avatar': async (req, d, u) => {
+    const img = (req.body || {}).image;
+    if (img === null) {
+      await d.collection('avatars').deleteOne({ _id: u._id });
+      await d.collection('users').updateOne({ _id: u._id }, { $set: { avatarV: 0 } });
+      return { user: selfUser({ ...u, avatarV: 0 }) };
+    }
+    const m = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(img || ''));
+    if (!m) throw err(400, 'Format gambar tidak didukung (JPG/PNG/WEBP)');
+    const buf = Buffer.from(m[2], 'base64');
+    if (buf.length > 48 * 1024) throw err(413, 'Gambar terlalu besar (maks 48 KB setelah dikompres)');
+    const v = Date.now().toString(36);
+    await d.collection('avatars').deleteOne({ _id: u._id });
+    await d.collection('avatars').insertOne({ _id: u._id, type: 'image/' + m[1], data: m[2], at: Date.now() });
+    await d.collection('users').updateOne({ _id: u._id }, { $set: { avatarV: v } });
+    return { user: selfUser({ ...u, avatarV: v }) };
+  },
+  /** Sajikan foto profil unggahan (publik, cache lama karena URL berversi) */
+  'avatar': async (req, d) => {
+    const a = await d.collection('avatars').findOne({ _id: String(req.query.id || '') });
+    if (!a) throw err(404, 'Foto tidak ada');
+    return { __raw: Buffer.from(a.data, 'base64'), type: a.type };
+  },
 
   'me.update': async (req, d, u) => {
     const name = cleanName(req.body && req.body.name);
@@ -205,7 +231,7 @@ const routes = {
     const b = req.body || {};
     for (let i = 0; i < 5; i++) {
       const room = { _id: 'r_' + rid(8), code: randCode(5), host: u._id, state: 'lobby',
-        players: [{ id: u._id, name: u.name, avatar: u.avatar || '', level: u.level || 1, joinedAt: Date.now() }],
+        players: [{ id: u._id, name: u.name, avatar: av(u), level: u.level || 1, joinedAt: Date.now() }],
         map: Number(b.map) || 0, diff: ['easy', 'normal', 'hard'].includes(b.diff) ? b.diff : 'normal',
         mode: b.mode === 'endless' ? 'endless' : 'classic', chat: [], createdAt: Date.now(), updatedAt: new Date() };
       try { await d.collection('rooms').insertOne(room); return { room }; }
@@ -219,7 +245,7 @@ const routes = {
     if (room.players.some(p => p.id === u._id)) return { room };
     if (room.state !== 'lobby') throw err(409, 'Permainan di room ini sudah dimulai');
     if (room.players.length >= MAX_PLAYERS) throw err(409, 'Room penuh');
-    const player = { id: u._id, name: u.name, avatar: u.avatar || '', level: u.level || 1, joinedAt: Date.now() };
+    const player = { id: u._id, name: u.name, avatar: av(u), level: u.level || 1, joinedAt: Date.now() };
     await d.collection('rooms').updateOne({ _id: room._id }, { $push: { players: player }, $set: { updatedAt: new Date() } });
     return { room: { ...room, players: [...room.players, player] } };
   },
@@ -327,7 +353,7 @@ const routes = {
   /* ---------- Papan skor global ---------- */
   'lb.submit': async (req, d, u) => {
     const b = req.body || {};
-    const run = { _id: 'g_' + rid(8), user: u._id, name: u.name, avatar: u.avatar || '',
+    const run = { _id: 'g_' + rid(8), user: u._id, name: u.name, avatar: av(u),
       score: Math.max(0, Math.min(5e7, Math.round(Number(b.score) || 0))), wave: Math.max(0, Math.min(10000, Number(b.wave) || 0)),
       map: String(b.map || '').slice(0, 20), diff: String(b.diff || '').slice(0, 10), won: !!b.won,
       mode: ['classic', 'endless', 'daily', 'coop'].includes(b.mode) ? b.mode : 'classic', at: Date.now() };
@@ -344,7 +370,7 @@ const routes = {
   },
 };
 
-const PUBLIC = new Set(['config', 'auth.google', 'auth.dev', 'lb.get', 'pay.notify']);
+const PUBLIC = new Set(['config', 'auth.google', 'auth.dev', 'lb.get', 'pay.notify', 'avatar']);
 function devAuthEnabled() { return process.env.DEV_AUTH === '1' && process.env.NODE_ENV !== 'production' && process.env.VERCEL_ENV !== 'production'; }
 
 module.exports = async function handler(req, res) {
@@ -363,6 +389,7 @@ module.exports = async function handler(req, res) {
     if (g.maintenance && !isAdm && !['config', 'auth.google', 'auth.dev', 'me', 'pay.notify'].includes(route))
       throw err(503, g.maintenanceMsg || 'Server sedang maintenance, coba lagi nanti');
     const out = await fn(req, d, user);
+    if (out && out.__raw) { res.setHeader('Content-Type', out.type); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); return res.status(200).end(out.__raw); }
     res.status(200).json(out);
   } catch (e) {
     const status = e.status || 500;

@@ -1366,3 +1366,43 @@ canvas.pico { width: 44px !important; height: 44px !important; border-radius: 10
 .cloudlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 8px 0; padding: 10px; border-radius: 12px; background: #10162e; border: 1px solid var(--ui-edge); font-size: 12px; }
 .cloudlist b, .cloudlist small { grid-column: 1 / -1; } .cloudlist b { color: var(--gold-1); }
 @media (max-width: 760px) { .cloudlist { grid-template-columns: 1fr; } }
+/* foto profil */
+.avwrap { position: relative; display: inline-block; } .avwrap .av { object-fit: cover; }
+.avedit { position: absolute; right: -4px; bottom: -4px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #0b0f1e; background: linear-gradient(180deg, var(--gold-1), var(--gold-2)); cursor: pointer; font-size: 15px; }
+.avpick { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 10px; margin-top: 8px; border-radius: 12px; background: #10162e; border: 1px solid rgba(255,217,119,.3); }
+.avunits { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; max-height: 190px; overflow-y: auto; }
+.avu { aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--rc); background: radial-gradient(circle, color-mix(in srgb, var(--rc) 35%, #141b36), #141b36); cursor: pointer; padding: 0; overflow: hidden; }
+.avu canvas { width: 100%; height: 100%; } .avu:hover { transform: scale(1.08); }
+img.av { object-fit: cover; }
+.acc-card { flex-wrap: wrap; }
+/* chat dalam game: bisa diperkecil */
+#chatToggle { align-self: flex-start; display: flex; align-items: center; gap: 5px; pointer-events: auto; border: 1px solid rgba(255,217,119,.35); background: rgba(12,17,36,.9); color: var(--ui-text);
+  border-radius: 10px; padding: 3px 8px; font: 700 12px var(--font-h); cursor: pointer; }
+#chatToggle .ct-a { font-style: normal; opacity: .7; margin-left: 2px; }
+#chatBadge:empty { display: none; } #chatBadge { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #ff3b5c; color: #fff; font-size: 10px; line-height: 16px; text-align: center; }
+#chat.min #chatLog, #chat.min #chatIn { display: none; }
+#chat.min { width: auto !important; }
+
+/* =========================================================
+ * v4.9 — Gameplay desktop layar penuh: map mengisi seluruh jendela
+ * ========================================================= */
+@media (min-width: 761px) and (min-height: 561px) {
+  #wrap { position: fixed; inset: 0; max-width: none; width: 100vw; height: 100vh; height: 100dvh; padding: 6px 10px 8px; margin: 0;
+    display: flex; flex-direction: column; gap: 4px; }
+  #hud { flex: none; margin: 0; padding: 4px 6px; } #hud .stat { min-height: 36px; padding: 3px 10px; }
+  #preview { flex: none; margin: 0; }
+  #stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #stage canvas#game { width: auto !important; height: auto !important; max-width: 100% !important; max-height: 100% !important; aspect-ratio: 960 / 576; }
+  @supports (height: 100cqh) { #stage { container-type: size; } #stage canvas#game { width: min(100cqw, 100cqh * 1.6667) !important; } }
+  #bottom { flex: none; margin: 0; padding: 4px 8px; }
+  #bottom .slot { padding-top: 2px; padding-bottom: 2px; }
+}
+@media (min-width: 761px) and (min-height: 561px) {
+  #hud { gap: 6px; padding: 3px 6px; border-radius: 12px; } #hud .stat { min-height: 32px; font-size: 14px; padding: 2px 9px; } #hud .btn { padding: 4px 10px; font-size: 13px; border-bottom-width: 4px; }
+  #bottom { padding: 3px 8px; gap: 6px; border-radius: 12px; }
+  #bottom .slot { display: grid; grid-template-columns: 30px auto; grid-template-rows: auto auto; column-gap: 6px; align-items: center; text-align: left; padding: 3px 10px 3px 4px; min-width: 112px; }
+  #bottom .slot .ico { grid-row: 1 / 3; width: 30px; height: 30px; margin: 0; }
+  #bottom .slot .nm { font-size: 12px; line-height: 1.1; } #bottom .slot .pr { font-size: 12px; line-height: 1.1; }
+  #bottom .slot .cnt { position: absolute; right: 4px; bottom: 2px; font-size: 9px; } #bottom .slot .key { font-size: 9px; }
+  #abilities .abil { width: 42px; height: 42px; } #abilities .abil .ai { font-size: 20px; }
+}

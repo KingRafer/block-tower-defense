@@ -22,7 +22,7 @@ function deepMerge(a, b) {
 
 const defaultSettings = () => ({
   sound:true, music:true, sfxVol:0.5, musicVol:0.3,
-  dmgNum:true, shake:true, range:true, grid:false, fps:false, autoPause:true, quality:'high',
+  dmgNum:true, shake:true, range:true, grid:false, fps:false, autoPause:true, quality:'high', chatMin:false, autoFs:true,
 });
 const defaultProfile = () => {
   const vault = SHARED.newVault(Date.now(), Math.random);

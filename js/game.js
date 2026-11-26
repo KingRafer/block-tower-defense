@@ -147,9 +147,11 @@ function tip(id) {
 }
 
 /* ---------------- WAVE ---------------- */
+/* Durasi & kepadatan wave (v4.9): jumlah musuh dibatasi, sisanya jadi lebih kuat; emas per wave tetap sebanding */
+const WAVE_TUNE = { count: n => Math.round(6 + n * 2.5), duration: n => 11 + n * 1.3, hpComp: 0.92, goldComp: 1.1 };
 function buildWave(n) {
-  const q = []; let t = 0;
-  const add = (type, count, gap) => { for (let i = 0; i < count; i++) { q.push({ type, t }); t += gap; } t += 0.8; };
+  const groups = [];
+  const add = (type, count, gap) => { if (count > 0) groups.push({ type, count, gap }); };
   add('normal', Math.floor(4 + n * 1.4), Math.max(0.35, 1.0 - n * 0.02));
   if (S && S.M && S.M.earlyHidden && n >= 2 && n < ENEMY_INTRO.hidden) add('hidden', Math.floor(1 + n * 0.5), 0.8);
   if (n >= ENEMY_INTRO.fast)     add('fast', Math.floor(2 + n * 0.8), 0.45);
@@ -171,6 +173,19 @@ function buildWave(n) {
   if (n >= 18) add('fast', Math.min(n, 60), 0.25);
   if (n > 40) add('armored', Math.floor((n - 40) * 0.8), 0.6);
   if (n % 10 === 0) add('boss', Math.max(1, Math.floor(n / 10)), 4);
+  // padatkan: musuh biasa dikurangi ke target jumlah, boss & golem tetap utuh
+  const special = g => g.type === 'boss' || g.type === 'golem';
+  const total = groups.reduce((a, g) => a + (special(g) ? 0 : g.count), 0);
+  const target = WAVE_TUNE.count(n), f = total > target ? target / total : 1;
+  const q = []; let t = 0, natural = 0;
+  for (const g of groups) { g.keep = special(g) ? g.count : Math.max(1, Math.round(g.count * f)); natural += g.keep * g.gap + 0.8; }
+  const ts = Math.min(1, WAVE_TUNE.duration(n) / natural);           // percepat jeda bila wave terlalu lama
+  const m = f < 1 ? { hp: Math.pow(1 / f, WAVE_TUNE.hpComp), rw: (1 / f) * WAVE_TUNE.goldComp } : null;
+  for (const g of groups) {
+    const gap = Math.max(special(g) ? 1.5 : 0.18, g.gap * ts);
+    for (let i = 0; i < g.keep; i++) { q.push({ type: g.type, t, m: special(g) ? null : m }); t += gap; }
+    t += 0.8 * ts;
+  }
   return q;
 }
 function wavePreview(n) {
@@ -187,9 +202,11 @@ function startWave() {
   UI.banner(bt, bc); fxEmit(['n', bt, bc, 1600, 'wave']);
   UI.refreshAll();
 }
+/** Bonus akhir wave (dinaikkan di awal agar pembangunan tower tidak terlalu lambat) */
+const WAVE_BONUS = w => 150 + Math.min(w, 60) * 35;
 /** Bayar bonus akhir wave + pendapatan farm */
 function payWave(skipBonus = 0) {
-  const bonus = 100 + Math.min(S.wave, 60) * 30; let farm = 0;
+  const bonus = WAVE_BONUS(S.wave); let farm = 0;
   S.towers.filter(t => t.type === 'farm').forEach(t => {
     let inc = lvl(t).income;
     if (lvl(t).perk === 'interest') inc += Math.min(400, Math.floor(pcash(t.owner) * 0.02));
@@ -208,7 +225,7 @@ function endWave() {
   if (S.wave >= S.maxWave) { S.state = 'win'; finishGame(true); return; }
   S.state = 'ready'; S.autoTimer = AUTO_START_DELAY;
   UI.banner(`Wave selesai! +$${total}`, '#ffd54f', 1200);
-  fxEmit(['n', `Wave selesai! +$${100 + Math.min(S.wave, 60) * 30}`, '#ffd54f', 1200]);
+  fxEmit(['n', `Wave selesai! +$${WAVE_BONUS(S.wave)}`, '#ffd54f', 1200]);
   saveGameState();
   if (S.wave === 1) tip('wave1');
   if (S.wave === 2) tip('ability');
@@ -717,7 +734,10 @@ function update(dt) {
   }
   if (S.state === 'wave') {
     S.waveTime += dt;
-    while (S.spawnQ.length && S.spawnQ[0].t <= S.waveTime) spawn(S.spawnQ.shift().type);
+    while (S.spawnQ.length && S.spawnQ[0].t <= S.waveTime) {
+      const sq = S.spawnQ.shift(), e = spawn(sq.type);
+      if (e && sq.m) { e.hp *= sq.m.hp; e.maxHp *= sq.m.hp; e.shieldHp *= sq.m.hp; e.maxShield *= sq.m.hp; e.reward = Math.max(1, Math.round(e.reward * sq.m.rw)); e.elite = sq.m.hp > 1.6; if (e.elite) e.size *= 1.12; }
+    }
   }
 
   // Musuh

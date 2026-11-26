@@ -175,6 +175,25 @@ const Menu = {
         <small>Stok ${left}/${it.limit}</small><button class="btn sm ${can ? '' : 'gray'}" ${can ? '' : 'disabled'} data-act="pshop:${it.id}">🎟️ ${it.cost.toLocaleString('id-ID')}</button></div>`;
     }).join('')}</div><small class="dim">Stok & token direset setiap season. Unit dari Toko Pass bisa diperdagangkan.</small>`;
   },
+  avatarPicker(u) {
+    const types = [...new Set(PROFILE.vault.units.map(x => x.type))].sort((a, b) => RARITY[UNIT_RARITY[b]].rank - RARITY[UNIT_RARITY[a]].rank);
+    return `<div class="avpick"><b>Ganti foto profil</b>
+      <div class="row2"><label class="btn sm">🖼️ Unggah dari perangkat<input type="file" accept="image/*" id="avFile" hidden></label>
+        ${u.hasCustomAvatar ? '<button class="btn sm gray" data-act="avreset">↺ Pakai foto Google</button>' : ''}<button class="btn sm gray" data-act="avpick">Tutup</button></div>
+      <small class="dim">Atau pakai karakter unit yang kamu punya:</small>
+      <div class="avunits">${types.map(t => `<button class="avu" data-act="avunit:${t}" title="${TOWERS[t].name}" style="--rc:${RARITY[UNIT_RARITY[t]].color}"><canvas width="56" height="56" data-icon="${t}" data-skin="default" data-evo="0"></canvas></button>`).join('')}</div></div>`;
+  },
+  /** Kecilkan gambar jadi persegi 128px (JPEG) sebelum diunggah */
+  async avatarFromImage(img) {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    const sz = Math.min(img.width, img.height); g.fillStyle = '#1b2448'; g.fillRect(0, 0, 128, 128);
+    g.drawImage(img, (img.width - sz) / 2, (img.height - sz) / 2, sz, sz, 0, 0, 128, 128);
+    return c.toDataURL('image/jpeg', 0.85);
+  },
+  async uploadAvatar(dataUrl) {
+    try { const r = await Online.api('me.avatar', { image: dataUrl }); Online.user = r.user; this.avPick = false; sfx('coin'); UI.toast('✅ Foto profil diperbarui'); Online.refreshUi(); this.show(this.screen, true); }
+    catch (e) { UI.toast('❌ ' + e.message); }
+  },
   announce() {
     const g = Online.cfg.global || {}, a = g.announcement || {};
     let h = a.active && a.text ? `<div class="announce" style="--ac:${a.color || '#ffcc33'}">📢 ${esc(a.text)}</div>` : '';
@@ -351,7 +370,8 @@ const Menu = {
       const ago = Online.lastSync ? Math.max(0, Math.round((Date.now() - Online.lastSync) / 1000)) : null;
       return `${this.header('Akun')}
         <div class="acc">
-          <div class="box acc-card">${this.avatar(u, 84)}
+          <div class="box acc-card"><div class="avwrap">${this.avatar(u, 84)}<button class="avedit" data-act="avpick" title="Ganti foto profil">📷</button></div>
+            ${this.avPick ? this.avatarPicker(u) : ''}
             <div class="field"><label>Nama pemain</label><div class="inrow"><input id="accName" value="${esc(u.name)}" maxlength="20"><button class="btn sm" data-act="rename">Simpan</button></div></div>
             <div class="field"><label>Kode teman</label><div class="inrow"><code class="fcode">${u.friendCode}</code><button class="btn sm blue" data-act="copy:${u.friendCode}">Salin</button></div>
               <small class="dim">Bagikan kode ini agar temanmu bisa menambahkanmu.</small></div>
@@ -627,7 +647,7 @@ const Menu = {
           <h4>🔊 Audio</h4>${tg('sound', 'Efek suara')}${sl('sfxVol', 'Volume efek')}${tg('music', 'Musik latar')}${sl('musicVol', 'Volume musik')}
           <h4>🖥️ Tampilan</h4>${tg('dmgNum', 'Angka damage')}${tg('shake', 'Getaran layar')}${tg('range', 'Jangkauan tower terpilih')}${tg('grid', 'Garis grid')}${tg('fps', 'Tampilkan FPS')}
           <div class="tog"><span>Kualitas partikel</span><button class="btn sm blue" data-act="quality">${SET.quality === 'high' ? 'Tinggi' : 'Rendah'}</button></div>
-          <h4>🎮 Permainan</h4>${tg('autoPause', 'Pause otomatis saat pindah tab')}
+          <h4>🎮 Permainan</h4>${tg('autoPause', 'Pause otomatis saat pindah tab')}${tg('autoFs', 'Layar penuh otomatis saat bermain (desktop)')}
           <h4>💾 Data</h4>
           <div class="tog"><span>Hapus semua progres (koin, tower, rekor, pencapaian)</span><button class="btn sm red" data-act="reset">${this.resetArm ? 'Yakin? Klik lagi' : 'Reset'}</button></div>
         </div>`;
@@ -744,7 +764,15 @@ const Menu = {
       }
     },
     main() { Online.refreshBadge && Online.refreshBadge(); this.drawIcons(); this.tickCd(); },
-    account() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); },
+    account() {
+      document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); this.drawIcons();
+      const f = $('avFile');
+      if (f) f.onchange = () => { const file = f.files && f.files[0]; if (!file) return;
+        if (!/^image\//.test(file.type)) return UI.toast('❌ Pilih file gambar');
+        const img = new Image(), url = URL.createObjectURL(file);
+        img.onload = async () => { URL.revokeObjectURL(url); this.uploadAvatar(await this.avatarFromImage(img)); };
+        img.onerror = () => UI.toast('❌ Gambar tidak bisa dibuka'); img.src = url; };
+    },
     friends() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); if (Online.loggedIn && !this.loadingF && (!this.friendsData || Date.now() - this.friendsAt > 10000)) this.loadFriends(); },
     mabar() { this.after.friends.call(this); if (Lobby.room) this.after.lobby.call(this); },
     lobby() {
@@ -811,7 +839,7 @@ const Menu = {
       case 'diff': DIFF = arg; this.go('play'); break;
       case 'mode': MODE = arg; this.go('play'); break;
       case 'daily': startGame({ daily: dailyChallenge() }); break;
-      case 'continue': sfx('click'); if (loadSavedGame()) { this.close(); UI.banner(`Lanjut: Wave ${S.wave + 1}`, '#fff', 1400); } break;
+      case 'continue': sfx('click'); if (loadSavedGame()) { this.close(); autoFullscreen(); UI.banner(`Lanjut: Wave ${S.wave + 1}`, '#fff', 1400); } break;
       case 'discard': SaveGame.clear(); this.go('main'); break;
       case 'start': startGame(); break;
       case 'resume': sfx('click'); this.close(); break;
@@ -887,6 +915,15 @@ const Menu = {
         Eco.act('summon', { banner: this.banner || 'std', count: +arg }).then(r => { this.show('gacha', true); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })
           .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
         break;
+      case 'avpick': this.avPick = !this.avPick; this.show('account', true); break;
+      case 'avreset': this.uploadAvatar(null); break;
+      case 'avunit': {
+        const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+        const gr = g.createRadialGradient(64, 50, 10, 64, 64, 90); gr.addColorStop(0, RARITY[UNIT_RARITY[arg]].color); gr.addColorStop(1, '#141b36');
+        g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+        const ic = document.createElement('canvas'); ic.width = ic.height = 128; drawUnitIcon(ic, arg, 'default', false); g.drawImage(ic, 0, 6);
+        this.uploadAvatar(c.toDataURL('image/jpeg', 0.9)); break;
+      }
       case 'idx': this.idxSel = arg; this.show('gacha', true); break;
       case 'pullclose': { const el = $('pullResult'); if (el) el.innerHTML = ''; break; }
       case 'skillbuy': this.eco('unlockSkill', { skill: arg }, r => `🔓 Skill ${skillById(r.skill).name} terbuka! Pasang di slot kosong.`).then(r => { if (r && (PROFILE.skillLoadout || []).length < SKILL_SLOTS && !PROFILE.skillLoadout.includes(r.skill)) { PROFILE.skillLoadout.push(r.skill); saveProfile(); this.show('skills', true); } }); break;
@@ -1092,12 +1129,18 @@ const Menu = {
   },
 };
 
+/** Desktop: masuk layar penuh saat mulai bermain (dipicu klik, sehingga diizinkan browser) */
+function autoFullscreen() {
+  const desktop = !matchMedia('(pointer: coarse)').matches && innerWidth > 900;
+  if (desktop && SET.autoFs && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+}
 function startGame(opts = {}) {
   sfx('click');
   SaveGame.clear();
   newGame(opts);
   PROFILE.stats.games++; saveProfile(); checkAchievements(null);
   Menu.close();
+  autoFullscreen();
   UI.banner(opts.daily ? `📅 Tantangan Harian` : `${MAP.name} • ${DIFFS[DIFF].name}`, '#fff', 1400);
   tip('start');
 }

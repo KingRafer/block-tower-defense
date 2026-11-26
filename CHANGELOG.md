@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.9.0] — 2026-11-27
+### Ditambahkan
+- **Ganti foto profil** (Akun → 📷): unggah foto dari perangkat (otomatis dipotong persegi & dikompres) atau pakai karakter unit yang dimiliki; bisa kembali ke foto Google. Disimpan di database (`avatars`) & tampil di menu, teman, room & papan skor.
+- **Chat dalam game bisa diperkecil** (tombol 💬 Chat –/+), dengan badge jumlah pesan baru; pilihan tersimpan di pengaturan.
+### Diubah
+- **Gameplay desktop layar penuh**: map mengisi seluruh jendela (±23% lebih besar di 1366×768), HUD & bar tower lebih ringkas; otomatis masuk mode layar penuh saat mulai bermain (bisa dimatikan di Pengaturan).
+- **Durasi & kepadatan wave**: jumlah zombie dibatasi (wave 10: 33, wave 30: 86 — sebelumnya 49 & 222) dan jeda spawn dipadatkan; zombie yang tersisa sedikit lebih kuat (ditandai lebih besar). Satu game Normal 30 wave kini ±18–22 menit (sebelumnya ±40–55 menit).
+- **Emas**: hadiah kill disesuaikan agar total per wave tetap sebanding (+10%), bonus akhir wave naik (150 + 35×wave). Total emas 30 wave ±$48.600 (sebelumnya ±$41.700).
+
 ## [4.8.2] — 2026-11-27
 ### Diubah — penyimpanan cloud (akun Google)
 - **Pengaturan game** (suara, musik, grafis, angka damage, dll.) kini tersimpan di database & ikut ke perangkat lain (yang terbaru diubah yang dipakai).

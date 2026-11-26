@@ -65,7 +65,7 @@ async function log(d, admin, action, target, detail) {
   await d.collection('adminlog').insertOne({ _id: 'l_' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'), at: Date.now(), admin: admin.email, action, target: target || null, detail: detail || null });
 }
 const userRow = u => ({ id: u._id, name: u.name, email: u.email || '', friendCode: u.friendCode, level: u.level || 1, banned: !!u.banned,
-  lastSeen: u.lastSeen || 0, createdAt: u.createdAt || 0, avatar: u.avatar || '', online: u.lastSeen && Date.now() - u.lastSeen < 70000 });
+  lastSeen: u.lastSeen || 0, createdAt: u.createdAt || 0, avatar: u.avatarV ? `/api?r=avatar&id=${encodeURIComponent(u._id)}&v=${u.avatarV}` : (u.avatar || ''), online: u.lastSeen && Date.now() - u.lastSeen < 70000 });
 
 /* ---------- rute admin ---------- */
 const routes = {

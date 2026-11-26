@@ -39,6 +39,18 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   assert.strictEqual((await call('profile.get', { method: 'GET', token: A.token })).body.run, null, 'run null → dihapus');
   assert.strictEqual((await call('profile.save', { token: A.token, body: { profile: { xp: 1 }, run: { big: 'x'.repeat(50000) } } })).status, 413);
 
+  // foto profil
+  const png = 'data:image/png;base64,' + Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex').toString('base64');
+  let av = await call('me.avatar', { token: A.token, body: { image: png } });
+  assert.strictEqual(av.status, 200); assert(/r=avatar&id=/.test(av.body.user.avatar), 'url foto unggahan'); assert.strictEqual(av.body.user.hasCustomAvatar, true);
+  const raw = await new Promise(resolve => { const q = new URLSearchParams(av.body.user.avatar.split('?')[1]); const req = { method: 'GET', query: Object.fromEntries(q), headers: {} };
+    const res = { statusCode: 200, h: {}, setHeader(k, v) { this.h[k] = v; }, status(c) { this.statusCode = c; return this; }, json(o) { resolve({ status: this.statusCode, body: o }); }, end(b) { resolve({ status: this.statusCode, buf: b, h: this.h }); } }; handler(req, res); });
+  assert.strictEqual(raw.status, 200); assert.strictEqual(raw.h['Content-Type'], 'image/png'); assert(raw.buf.length > 0, 'gambar disajikan');
+  assert.strictEqual((await call('me.avatar', { token: A.token, body: { image: 'data:text/html;base64,PGI+' } })).status, 400, 'tipe ditolak');
+  assert.strictEqual((await call('me.avatar', { token: A.token, body: { image: 'data:image/jpeg;base64,' + 'A'.repeat(70000) } })).status, 413, 'terlalu besar');
+  av = await call('me.avatar', { token: A.token, body: { image: null } });
+  assert.strictEqual(av.body.user.hasCustomAvatar, false, 'kembali ke foto Google');
+
   // teman
   const add = await call('friends.add', { token: A.token, body: { code: B.user.friendCode } });
   assert.strictEqual(add.body.accepted, false);

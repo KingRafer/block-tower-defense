@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '4.8.2';
+const VERSION = '4.9.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
