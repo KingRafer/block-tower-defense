@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const { db } = require('./_lib/db');
 const { signSession, verifySession, verifyGoogleToken } = require('./_lib/auth');
 const eco = require('./_lib/eco');
+const admin = require('./_lib/admin');
 
 const ONLINE_MS = 70 * 1000;          // dianggap online jika heartbeat < 70 dtk
 const MAX_PLAYERS = 4;
@@ -20,6 +21,8 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const randCode = n => Array.from(crypto.randomBytes(n), b => CODE_CHARS[b % CODE_CHARS.length]).join('');
 const cleanName = s => String(s || '').replace(/[<>"'`\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20);
 
+/** Data akun milik sendiri (termasuk status admin) */
+function selfUser(u) { return { ...publicUser(u), isAdmin: admin.isAdmin(u) }; }
 function publicUser(u) {
   if (!u) return null;
   return { id: u._id, name: u.name, avatar: u.avatar || '', level: u.level || 1, friendCode: u.friendCode,
@@ -42,6 +45,7 @@ async function requireUser(req, d) {
   if (!uid) throw err(401, 'Silakan login dulu');
   const u = await d.collection('users').findOne({ _id: uid });
   if (!u) throw err(401, 'Akun tidak ditemukan');
+  if (u.banned) throw err(403, 'Akun diblokir' + (u.bannedReason ? ': ' + u.bannedReason : ''));
   return u;
 }
 
@@ -56,29 +60,36 @@ const pairKey = (x, y) => (x < y ? { a: x, b: y } : { a: y, b: x });
 /* ---------------- HANDLER ---------------- */
 const routes = {
   /* Konfigurasi publik untuk client */
-  'config': async () => ({ googleClientId: process.env.GOOGLE_CLIENT_ID || '', devAuth: devAuthEnabled(),
-    midtransClientKey: process.env.MIDTRANS_CLIENT_KEY || '', midtransProd: process.env.MIDTRANS_PRODUCTION === '1', topup: !!process.env.MIDTRANS_SERVER_KEY }),
+  'config': async (req, d) => {
+    let g = {};
+    try { g = admin.cleanGlobal(await admin.getGlobal(d)); } catch (e) { console.error('global', e.message); }
+    return { googleClientId: process.env.GOOGLE_CLIENT_ID || '', devAuth: devAuthEnabled(),
+      midtransClientKey: process.env.MIDTRANS_CLIENT_KEY || '', midtransProd: process.env.MIDTRANS_PRODUCTION === '1',
+      topup: !!process.env.MIDTRANS_SERVER_KEY && g.topupEnabled !== false, global: g };
+  },
 
   /* Login / daftar dengan Google (akun dibuat otomatis saat login pertama) */
   'auth.google': async (req, d) => {
     const g = await verifyGoogleToken(req.body && req.body.credential);
     let user = await d.collection('users').findOne({ googleId: g.sub });
     let isNew = false;
-    if (!user) { user = await createUser(d, { googleId: g.sub, email: g.email, name: cleanName(g.name) || 'Pemain', avatar: g.picture }); isNew = true; }
-    else await d.collection('users').updateOne({ _id: user._id }, { $set: { avatar: g.picture, email: g.email, lastSeen: Date.now() } });
-    return { token: signSession(user._id), user: publicUser(user), isNew };
+    if (!user) { user = await createUser(d, { googleId: g.sub, email: g.email, emailVerified: g.emailVerified, name: cleanName(g.name) || 'Pemain', avatar: g.picture }); isNew = true; }
+    else { await d.collection('users').updateOne({ _id: user._id }, { $set: { avatar: g.picture, email: g.email, emailVerified: g.emailVerified, lastSeen: Date.now() } }); user = { ...user, email: g.email, emailVerified: g.emailVerified }; }
+    if (user.banned) throw err(403, 'Akun diblokir' + (user.bannedReason ? ': ' + user.bannedReason : ''));
+    return { token: signSession(user._id), user: selfUser(user), isNew };
   },
 
   /* Login uji coba lokal (hanya aktif jika DEV_AUTH=1 dan bukan production) */
   'auth.dev': async (req, d) => {
     if (!devAuthEnabled()) throw err(403, 'Tidak tersedia');
     const name = cleanName(req.body && req.body.name) || 'Tester';
+    const email = req.body && req.body.email ? String(req.body.email).toLowerCase().slice(0, 100) : undefined;
     let user = await d.collection('users').findOne({ devName: name });
-    if (!user) user = await createUser(d, { devName: name, name });
-    return { token: signSession(user._id), user: publicUser(user), isNew: false };
+    if (!user) user = await createUser(d, { devName: name, name, ...(email ? { email, emailVerified: true } : {}) });
+    return { token: signSession(user._id), user: selfUser(user), isNew: false };
   },
 
-  'me': async (req, d, u) => ({ user: publicUser(u) }),
+  'me': async (req, d, u) => ({ user: selfUser(u) }),
 
   'me.update': async (req, d, u) => {
     const name = cleanName(req.body && req.body.name);
@@ -289,7 +300,7 @@ const routes = {
   },
 
   /* ---------- Top up (Midtrans) ---------- */
-  'pay.create': async (req, d, u) => eco.payCreate(d, u, req.body || {}),
+  'pay.create': async (req, d, u) => { const g = await admin.getGlobal(d); if (g.topupEnabled === false) throw err(503, 'Top up sedang dinonaktifkan'); return eco.payCreate(d, u, req.body || {}); },
   'pay.status': async (req, d, u) => eco.payStatus(d, u, req.query.order || (req.body && req.body.order)),
   'pay.notify': async (req, d) => eco.payNotify(d, req.body),
   'pay.history': async (req, d, u) => ({ payments: (await d.collection('payments').find({ user: u._id }).sort({ createdAt: -1 }).limit(10).toArray())
@@ -322,12 +333,17 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(204).end();
   const route = String((req.query && req.query.r) || '');
-  const fn = routes[route];
+  const fn = routes[route] || admin.routes[route];
   try {
     if (!fn) throw err(404, 'Rute tidak dikenal');
     if (typeof req.body === 'string') { try { req.body = JSON.parse(req.body); } catch (e) { req.body = {}; } }
-    const d = route === 'config' ? null : await db();
+    const d = await db();
+    const g = await admin.getGlobal(d);     // juga menerapkan pengaturan global ke modul ekonomi
     const user = PUBLIC.has(route) ? null : await requireUser(req, d);
+    const isAdm = admin.isAdmin(user);
+    if (route.startsWith('admin.') && !isAdm) throw err(403, 'Khusus developer');
+    if (g.maintenance && !isAdm && !['config', 'auth.google', 'auth.dev', 'me', 'pay.notify'].includes(route))
+      throw err(503, g.maintenanceMsg || 'Server sedang maintenance, coba lagi nanti');
     const out = await fn(req, d, user);
     res.status(200).json(out);
   } catch (e) {

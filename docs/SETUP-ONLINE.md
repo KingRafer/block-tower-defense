@@ -84,3 +84,8 @@ node test/eco.test.js
 - IP access list Atlas dibuka `0.0.0.0/0` karena IP Vercel dinamis; akses tetap dilindungi user & password database.
 - Game berjalan di browser, jadi progres/skor tidak 100% anti-cheat.
 - Saat mabar, **host sebaiknya tidak memindahkan tab** ke latar belakang karena browser memperlambat game di tab yang tidak aktif.
+
+## Panel Developer
+Menu **🛠️ Developer** hanya muncul untuk akun Google `rafermazaya@gmail.com` (bisa diganti/ditambah lewat env `ADMIN_EMAILS`, dipisah koma).
+Hak akses diperiksa di server untuk setiap rute `admin.*`, dan email Google harus terverifikasi. Semua aksi tercatat di collection `adminlog`.
+Pengaturan game global disimpan di collection `settings` (dokumen `global`) dan berlaku langsung untuk server & semua pemain.

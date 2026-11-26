@@ -21,6 +21,7 @@ const Online = {
       const r = await fetch(API_BASE + '?r=config', { cache: 'no-store' });
       if (!r.ok) throw new Error('no api');
       this.cfg = await r.json(); this.available = true;
+      if (this.cfg.global) SHARED.applyGlobal(this.cfg.global);   // harga/rate/event dari panel developer
     } catch (e) { this.available = false; return this.refreshUi(); }
     this.initGoogle();
     if (this.token) {

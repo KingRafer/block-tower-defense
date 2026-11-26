@@ -9,7 +9,7 @@
 const crypto = require('crypto');
 const SHARED = require('../../js/shared.js');
 
-const VAULT_KEYS = ['coins', 'gems', 'diamonds', 'crystals', 'stones', 'skins', 'skillUses', 'pity', 'achClaimed', 'daily', 'dailyWon', 'lastClaimAt', 'pulls'];
+const VAULT_KEYS = ['coins', 'gems', 'diamonds', 'skills', 'crystals', 'stones', 'skins', 'skillUses', 'pity', 'achClaimed', 'daily', 'dailyWon', 'lastClaimAt', 'pulls'];
 const err = (status, message) => Object.assign(new Error(message), { status });
 const rng = () => crypto.randomBytes(4).readUInt32BE(0) / 4294967296;
 const unitDoc = (u, owner) => ({ _id: u.id, owner, type: u.type, trait: u.trait || null, evo: !!u.evo, xp: u.xp | 0, skin: u.skin || 'default', lock: !!u.lock, tradable: u.tradable !== false, at: u.at || Date.now() });
@@ -38,6 +38,7 @@ function applyImport(v, im, now) {
   if (Array.isArray(im.skins)) v.skins = [...new Set(['default', ...im.skins.filter(s => SHARED.SKINS[s])])];
   if (im.skillUses && typeof im.skillUses === 'object')
     for (const k of Object.keys(SHARED.SKILL_SHOP)) v.skillUses[k] = Math.max(v.skillUses[k] || 0, cap(im.skillUses[k], 30));
+  if (Array.isArray(im.skills)) v.skills = [...new Set([...v.skills, ...im.skills.filter(k => k in SHARED.SKILL_PRICES && !SHARED.SKILL_PRICES[k])])];
   if (Array.isArray(im.achClaimed)) v.achClaimed = im.achClaimed.filter(a => a in SHARED.ACH_REWARDS);
   if (Array.isArray(im.units) && im.units.length) {
     v.units = im.units.filter(u => u && SHARED.UNIT_RARITY[u.type]).slice(0, 80).map(u => SHARED.makeUnit(u.type, rng, now, {
@@ -244,4 +245,4 @@ async function payStatus(d, me, orderId) {
   return applyPayStatus(d, pay._id, st);
 }
 
-module.exports = { loadVault, runAction, tradeCreate, tradeAccept, tradeList, checkUnits, payCreate, payNotify, payStatus, docUnit, applyPayStatus };
+module.exports = { saveVaultPublic: saveVault, loadVault, runAction, tradeCreate, tradeAccept, tradeList, checkUnits, payCreate, payNotify, payStatus, docUnit, applyPayStatus };

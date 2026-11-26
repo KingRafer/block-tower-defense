@@ -61,6 +61,12 @@ const Menu = {
     if (Online.cfg.devAuth) h += `<div class="devlogin"><input id="devName" placeholder="Nama uji coba" maxlength="20"><button class="btn sm gray" data-act="login-dev">Login uji coba</button></div>`;
     return h;
   },
+  announce() {
+    const g = Online.cfg.global || {}, a = g.announcement || {};
+    let h = a.active && a.text ? `<div class="announce" style="--ac:${a.color || '#ffcc33'}">📢 ${esc(a.text)}</div>` : '';
+    if (g.maintenance) h += `<div class="announce" style="--ac:#ff5252">🚧 ${esc(g.maintenanceMsg || 'Server sedang maintenance')}</div>`;
+    return h;
+  },
   header(title) { return `<div class="mhead"><button class="btn gray" data-act="back">← Kembali</button><h2>${title}</h2>${this.profileBar()}</div>`; },
   fmtTime(s) { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}j ${m}m` : m ? `${m}m ${s % 60}d` : `${s}d`; },
 
@@ -74,6 +80,7 @@ const Menu = {
       const reqBadge = `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`;
       return `<div class="cubes">${Array.from({ length: 14 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
         <div class="home">
+          ${this.announce()}
           <div class="home-top">
             <button class="pcard" data-act="go:account">
               ${this.avatar(u, 52)}
@@ -101,7 +108,7 @@ const Menu = {
           <div class="tiles">
             ${tile('go:gacha', '🎰', 'Summon', `💎 ${GACHA.cost1} • 🍀 Lucky`, 't-gold big-tile')}
             ${tile('go:units', '🗼', 'Unit', `${PROFILE.vault.units.length} unit • Trait • Evo`, 't-purple')}
-            ${tile('go:shop', '🛒', 'Toko', 'Skin • Material • Top Up', 't-pink')}
+            ${tile('go:shop', '🛒', 'Toko', 'Skill • Skin • Top Up', 't-pink')}
             ${tile('go:trade', '🔁', 'Trading', u ? 'Tukar unit' : 'Perlu login', 't-teal')}
             ${tile('go:skills', '⚡', 'Skill', `${equippedSkills().length}/${SKILL_SLOTS} terpasang`, 't-orange')}
             ${tile('go:friends', '👥', 'Teman', u ? 'Undang & gabung' : 'Perlu login', 't-blue', reqBadge)}
@@ -109,6 +116,7 @@ const Menu = {
             ${tile('go:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`, 't-green')}
             ${tile('go:stats', '📊', 'Statistik', PROFILE.stats.games + ' game', 't-gray')}
             ${tile('go:howto', '📖', 'Cara Main', 'Panduan', 't-gray')}
+            ${u && u.isAdmin ? tile('go:dev', '🛠️', 'Developer', 'Atur semua', 't-red') : ''}
           </div>
           <div class="foot">v${VERSION} • ${Online.available ? '🟢 Server online' : '⚪ Offline'} • ${TOWER_ORDER.length} unit • <a href="privacy.html" target="_blank">Privasi</a> • <a href="terms.html" target="_blank">Syarat & Ketentuan</a></div>
         </div>`;
@@ -262,7 +270,8 @@ const Menu = {
 
     shop() {
       const tab = this.shopTab && this.shopTab !== 'skill' ? this.shopTab : 'skin', v = PROFILE.vault;
-      const tabs = [['skin', '🎨 Skin'], ['material', '✨ Material'], ['topup', '💠 Top Up']];
+      const tabs = [['skillx', '⚡ Skill'], ['skin', '🎨 Skin'], ['material', '✨ Material'], ['topup', '💠 Top Up']];
+      if (tab === 'skillx') { this.shopTab = 'skin'; setTimeout(() => this.go('skills'), 0); }
       let body = '';
       if (false) body = '';
       else if (tab === 'skin') body = `<div class="shopgrid skins">${Object.entries(SKINS).filter(([k]) => k !== 'default').map(([k, sk]) => {
@@ -372,7 +381,7 @@ const Menu = {
           <h4>💰 Ekonomi</h4><p>Dapatkan uang dari mengalahkan musuh, bonus akhir wave, dan tower <b>Farm</b>. Jual tower untuk mendapat kembali ${SELL_RATE * 100}% total biaya.</p>
           <h4>🧟 Musuh</h4>
           <table>${Object.entries(ENEMIES).filter(([, e]) => !e.hide).map(([k, e]) => `<tr><td><i class="dot" style="background:${e.color}"></i> ${e.name}</td><td>${e.desc}${ENEMY_INTRO[k] ? ` <small class="dim">(mulai wave ${ENEMY_INTRO[k]})</small>` : ''}</td></tr>`).join('')}</table>
-          <h4>⚡ Skill & Skip</h4><p>Ada ${ABILITIES.length} skill. Pasang hingga ${SKILL_SLOTS} skill di menu <b>Skill</b> dan gunakan dengan <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd>. Semua skill gratis tanpa batas pemakaian, hanya ada cooldown. Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
+          <h4>⚡ Skill & Skip</h4><p>Ada ${ABILITIES.length} skill. Pasang hingga ${SKILL_SLOTS} skill di menu <b>Skill</b> dan gunakan dengan <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd>. Buka skill sekali bayar di menu <b>Skill</b>; setelah terbuka bebas dipakai tanpa batas (hanya cooldown). Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
           <h4>📅 Mode</h4><p><b>Klasik</b>: menang di wave terakhir. <b>Endless</b>: wave tanpa batas, kejar skor tertinggi. <b>Tantangan Harian</b>: map, kesulitan, dan modifier berganti tiap hari. Selesaikan untuk bonus 🪙 ${DAILY_REWARD}.</p>
           <h4>🧬 Trait, Mastery & Evolusi</h4><p>Setiap tower punya <b>Mastery</b> (Lv 1–${UNIT_MAX_LV}, +2% damage per level) yang naik saat tower dipakai. Roll <b>Trait</b> dengan ✨ Kristal untuk bonus acak dari Biasa sampai Mitos. Setelah Mastery Lv ${EVO_REQ.level}, <b>Evolusikan</b> tower dengan 🔮 ${EVO_REQ.stones} Batu Evolusi + 🪙 ${EVO_REQ.coins} untuk bentuk baru dengan kemampuan unik.</p>
           <h4>📈 Progres</h4><p>Setiap selesai bermain kamu mendapat <b>🪙 koin</b> dan <b>XP</b>. Dapatkan unit baru lewat <b>Summon</b> (💎 Diamond dari bermain, atau 💠 Permata untuk Lucky Summon), lalu pasang hingga ${LOADOUT_SIZE} unit di menu <b>Unit</b>. Unit bisa diperdagangkan dengan teman di menu <b>Trading</b>. Kesulitan dan map yang lebih sulit memberi koin lebih banyak.</p>
@@ -441,14 +450,16 @@ const Menu = {
     },
 
     skills() {
-      const eq = equippedSkills();
+      const eq = equippedSkills(), v = PROFILE.vault;
+      const priceTxt = id => { const p = SHARED.SKILL_PRICES[id]; return p ? Object.entries(p).map(([c, n]) => `${CURRENCY[c].icon} ${n.toLocaleString('id-ID')}`).join(' + ') : 'Gratis'; };
       return `${this.header('Skill')}
         <div class="box"><h4>Skill terpasang (${eq.length}/${SKILL_SLOTS}) — tombol ${SKILL_KEYS.map(k => `<kbd>${k.toUpperCase()}</kbd>`).join(' ')}</h4>
           <div class="sk-eq">${Array.from({ length: SKILL_SLOTS }, (_, i) => { const a = skillById(eq[i]); return a ? `<div class="sk-slot" style="--c:${a.color}" data-act="skilltog:${a.id}"><span>${a.icon}</span><b>${a.name}</b><small>${SKILL_KEYS[i].toUpperCase()} • CD ${a.cd} dtk</small></div>` : '<div class="sk-slot empty">Kosong</div>'; }).join('')}</div>
-          <small class="dim">Semua skill gratis & tanpa batas pemakaian — hanya ada cooldown. Klik untuk memasang/melepas (maks ${SKILL_SLOTS}).</small></div>
-        <div class="shopgrid">${ABILITIES.map(a => { const on = eq.includes(a.id);
-          return `<div class="sitem ${on ? 'on' : ''}" data-act="skilltog:${a.id}"><div class="sic" style="background:${a.color}">${a.icon}</div><div class="sinfo"><b>${a.name} ${on ? '✔' : ''}</b><small>${a.desc}</small><small class="dim">Cooldown ${a.cd} detik</small></div>
-            <button class="btn sm ${on ? 'red' : 'blue'}" data-act="skilltog:${a.id}">${on ? 'Lepas' : 'Pasang'}</button></div>`; }).join('')}</div>`;
+          <small class="dim">Buka skill sekali bayar, setelah itu bebas dipakai tanpa batas (hanya cooldown). Pasang maksimal ${SKILL_SLOTS}.</small></div>
+        <div class="shopgrid">${ABILITIES.map(a => { const on = eq.includes(a.id), own = skillOwned(a.id);
+          return `<div class="sitem ${on ? 'on' : ''} ${own ? '' : 'locked-sk'}"><div class="sic" style="background:${a.color}">${own ? a.icon : '🔒'}</div><div class="sinfo"><b>${a.name} ${on ? '✔' : ''}</b><small>${a.desc}</small><small class="dim">Cooldown ${a.cd} detik</small></div>
+            ${own ? `<button class="btn sm ${on ? 'red' : 'blue'}" data-act="skilltog:${a.id}">${on ? 'Lepas' : 'Pasang'}</button>`
+                  : `<button class="btn sm gold" data-act="skillbuy:${a.id}">🔓 ${priceTxt(a.id)}</button>`}</div>`; }).join('')}</div>`;
     },
 
     pause() {
@@ -464,7 +475,7 @@ const Menu = {
           <button class="btn blue big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Ulangi</button>
           <button class="btn gray big" data-act="settings:pause">⚙️ Pengaturan</button>
           <button class="btn red big" data-act="quit">🏠 ${S.wave > 0 ? 'Simpan & Keluar' : 'Keluar ke Menu'}</button>
-        </div><small class="dim">${S.wave > 0 ? `Progres tersimpan di awal wave ${S.state === 'ready' ? S.wave + 1 : S.wave}. Lanjutkan dari menu utama.` : ''}</small>`;
+        </div>${DevPanel.pauseTools()}<small class="dim">${S.wave > 0 ? `Progres tersimpan di awal wave ${S.state === 'ready' ? S.wave + 1 : S.wave}. Lanjutkan dari menu utama.` : ''}</small>`;
     },
 
     end() {
@@ -579,6 +590,7 @@ const Menu = {
       case 'resume': sfx('click'); this.close(); break;
       case 'quit': if (isMP()) MP.cleanup(); else abandonGame(); newGame(); this.go('main'); break;
       case 'noop': break;
+      case 'dev': DevPanel.act(a); break;
       case 'unit': this.unitSel = arg; this.rollArm = null; this.scrapArm = null; this.show('units', true); break;
       case 'ufilter': this.unitFilter = arg; this.show('units', true); break;
       case 'equip': {
@@ -618,7 +630,9 @@ const Menu = {
           .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
         break;
       case 'pullclose': { const el = $('pullResult'); if (el) el.innerHTML = ''; break; }
+      case 'skillbuy': this.eco('unlockSkill', { skill: arg }, r => `🔓 Skill ${skillById(r.skill).name} terbuka! Pasang di slot kosong.`).then(r => { if (r && (PROFILE.skillLoadout || []).length < SKILL_SLOTS && !PROFILE.skillLoadout.includes(r.skill)) { PROFILE.skillLoadout.push(r.skill); saveProfile(); this.show('skills', true); } }); break;
       case 'skilltog': {
+        if (!skillOwned(arg)) { UI.toast('🔒 Buka skill ini dulu'); break; }
         const eq = PROFILE.skillLoadout || (PROFILE.skillLoadout = []);
         if (eq.includes(arg)) PROFILE.skillLoadout = eq.filter(x => x !== arg);
         else if (eq.length < SKILL_SLOTS) eq.push(arg);

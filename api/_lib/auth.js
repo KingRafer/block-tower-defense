@@ -41,7 +41,7 @@ async function verifyGoogleToken(credential) {
   const issOk = info.iss === 'accounts.google.com' || info.iss === 'https://accounts.google.com';
   if (info.aud !== clientId || !issOk || Number(info.exp) * 1000 < Date.now())
     throw Object.assign(new Error('Token Google tidak cocok'), { status: 401 });
-  return { sub: info.sub, email: info.email, name: info.name || info.given_name || 'Pemain', picture: info.picture || '' };
+  return { sub: info.sub, email: info.email, emailVerified: info.email_verified === true || info.email_verified === 'true', name: info.name || info.given_name || 'Pemain', picture: info.picture || '' };
 }
 
 module.exports = { signSession, verifySession, verifyGoogleToken };

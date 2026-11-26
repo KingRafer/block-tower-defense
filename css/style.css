@@ -692,3 +692,21 @@ canvas#game { width: auto; max-width: 100%; max-height: calc(100dvh - 205px); as
   #toasts { left: 8px; right: auto; align-items: flex-start; top: 44px; }
   #panel, #panel.left, #panel.bottom { top: 40px; }
 }
+.sitem.locked-sk { opacity: .85; border-style: dashed; }
+
+/* ---------- v4.2 panel developer & pengumuman ---------- */
+.announce { width: 100%; padding: 8px 14px; border-radius: 12px; font-weight: 700; background: color-mix(in srgb, var(--ac) 22%, transparent); border: 2px solid var(--ac); color: #fff; text-align: center; }
+.t-red { --tc: #e53935; }
+.devwrap { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.devwrap h4 { margin-bottom: 6px; }
+.devrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0; }
+.devrow input, .devrow select, .devwrap textarea { background: #1b2238; color: #fff; border: 2px solid #3d4766; border-radius: 8px; padding: 5px 8px; font: inherit; font-size: 13px; }
+.devwrap textarea { width: 100%; font-family: monospace; }
+.devwrap label { display: inline-flex; gap: 5px; align-items: center; font-size: 13px; }
+.devstats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.devstat { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+.devstat span { font-size: 24px; } .devstat b { font-size: 20px; } .devstat small { opacity: .7; }
+.devunits { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+.devunits select, .devunits input { background: #1b2238; color: #fff; border: 1px solid #3d4766; border-radius: 6px; padding: 2px 4px; }
+tr.click, td.click { cursor: pointer; } tr.click:hover { background: #ffffff10; }
+.devtools { margin-top: 10px; max-width: 560px; }

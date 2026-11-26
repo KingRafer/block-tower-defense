@@ -1,12 +1,13 @@
 {
   "name": "block-tower-defense",
-  "version": "3.0.0",
+  "version": "4.2.0",
   "private": true,
   "description": "Game tower defense bergaya Roblox dengan mabar co-op, teman, dan cloud save (Vercel + MongoDB).",
   "license": "MIT",
   "engines": { "node": ">=18" },
   "scripts": {
     "dev": "node dev-server.js",
+    "test": "node test/eco.test.js && node test/api.test.js && node test/admin.test.js",
     "test:api": "node test/api.test.js"
   },
   "dependencies": {

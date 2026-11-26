@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.2.0] — 2026-11-26
+### Ditambahkan
+- **Panel Developer** (khusus akun `rafermazaya@gmail.com`, diatur lewat env `ADMIN_EMAILS`; diperiksa di server + email Google terverifikasi):
+  ringkasan statistik & pendapatan, cari/kelola pemain (beri/kurangi mata uang, beri/ubah/hapus unit, buka semua skill/skin, blokir, reset inventori),
+  pengaturan game global (pengumuman, maintenance, top up on/off, event pengali koin/diamond, unit unggulan, harga & rate summon/lucky, pity, hadiah login, harga skill),
+  daftar transaksi + kredit manual, riwayat trading, moderasi papan skor, log audit, alat uji di dalam permainan (uang, HP, god mode, bunuh semua, lompat wave, spawn boss).
+- Skill premium harus **dibuka sekali** (🪙/💎), setelah itu bebas dipakai. Airstrike, Freeze, Repair gratis.
+- Pengumuman & status maintenance tampil di menu utama.
+
 ## [4.1.0] — 2026-11-26
 ### Ditambahkan
 - **💎 Diamond**: mata uang gratis dari bermain (wave, boss, menang, Tantangan Harian), login harian & pencapaian — untuk Summon biasa dan trading.

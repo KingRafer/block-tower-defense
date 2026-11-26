@@ -235,11 +235,13 @@ const playerLevel = () => levelFromXp(PROFILE.xp);
 const skillById = id => ABILITIES.find(a => a.id === id);
 /** Sisa pemakaian skill untuk pemain ini (stok dikurangi yang sudah dipakai di game ini) */
 const skillLeft = () => Infinity;   // skill tidak terbatas, hanya cooldown
-const equippedSkills = () => (PROFILE.skillLoadout || []).filter(skillById).slice(0, SKILL_SLOTS);
+const skillOwned = id => (PROFILE.vault.skills || SHARED.FREE_SKILLS).includes(id);
+const equippedSkills = () => (PROFILE.skillLoadout || []).filter(id => skillById(id) && skillOwned(id)).slice(0, SKILL_SLOTS);
 
 function useAbility(id) {
   const a = skillById(id);
   if (!a || !S || S.state === 'win' || S.state === 'lose' || (Menu.open && !isMP())) return;
+  if (!skillOwned(id)) { sfx('error'); UI.toast(`🔒 ${a.name} belum dibuka — buka di menu Skill`); return; }
   if (S.abilityCd[id] > 0) { sfx('error'); return; }
   if (a.target) {
     S.targeting = S.targeting === id ? null : id; S.placing = null; S.selected = null;
@@ -723,6 +725,7 @@ function update(dt) {
         addText(W - 80, (exitRow() - 1) * T, `-$${steal} dicuri!`, '#ff8a80', 1.5); fxEmit(['x', W - 80, (exitRow() - 1) * T, `-$${steal} dicuri!`, '#ff8a80', 1.5]);
         dmg = Math.ceil(dmg * 0.3);
       }
+      if (S.godMode) dmg = 0;
       S.hp -= dmg; sfx(dmg ? 'leak' : 'freeze'); if (SET.shake && dmg) S.shake = 8;
       addText(W - 60, (exitRow() + 0.5) * T, '-' + dmg, '#ef5350', 1.2);
     }
@@ -847,7 +850,7 @@ async function finishGame(won) {
   // Papan skor lokal (15 terbaik)
   const score = calcScore(cleared, won);
   const run = { score, map: MAP.id, diff: S.diff, mode: S.mode, daily: !!S.daily, coop: isMP(), wave: S.wave, won, kills: S.kills, date: todayStr(), id: Date.now() };
-  if (typeof Online !== 'undefined') Online.submitRun({ score, wave: S.wave, map: MAP.id, diff: S.diff, won, mode: isMP() ? 'coop' : S.daily ? 'daily' : S.mode });
+  if (typeof Online !== 'undefined' && !S.devUsed) Online.submitRun({ score, wave: S.wave, map: MAP.id, diff: S.diff, won, mode: isMP() ? 'coop' : S.daily ? 'daily' : S.mode });
   PROFILE.runs.push(run);
   PROFILE.runs.sort((a, b) => b.score - a.score);
   PROFILE.runs = PROFILE.runs.slice(0, 15);

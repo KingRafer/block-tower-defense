@@ -94,6 +94,17 @@
     storm:     { uses: 3, price: 60,  currency: 'diamonds' },
   };
   const STARTER_SKILLS = { airstrike: 2, freeze: 2, repair: 1 };
+  /* Harga membuka skill (sekali bayar, lalu bebas dipakai tanpa batas) */
+  const SKILL_PRICES = {
+    airstrike: null, freeze: null, repair: null,          // gratis sejak awal
+    cash: { coins: 800 }, radar: { coins: 1200 }, overclock: { coins: 2000 }, shield: { coins: 2500 },
+    meteor: { diamonds: 300 }, rewind: { diamonds: 300 }, storm: { diamonds: 500 },
+  };
+  const FREE_SKILLS = Object.keys(SKILL_PRICES).filter(k => !SKILL_PRICES[k]);
+
+  /* Pengaturan global yang bisa diubah dari panel developer */
+  const DEFAULTS = {};
+  const EVENT = { rewardMul: 1, diamondMul: 1, featured: null };
   /* Paket top up Permata (harga dalam Rupiah) */
   const TOPUP = [
     { id: 'p60',   gems: 60,   bonus: 0,   price: 15000 },
@@ -118,6 +129,7 @@
   const unitsOfRarity = r => UNIT_TYPES.filter(t => UNIT_RARITY[t] === r);
   function dayStr(now) { const d = new Date(now + 7 * 3600e3); return d.toISOString().slice(0, 10); } // zona WIB
   function featuredUnit(now) {
+    if (EVENT.featured && UNIT_RARITY[EVENT.featured]) return EVENT.featured;
     const pool = [...unitsOfRarity('legendary'), ...unitsOfRarity('mythic')];
     const s = dayStr(now).split('-').reduce((a, x) => a * 31 + +x, 7);
     return pool[s % pool.length];
@@ -138,7 +150,7 @@
 
   /* ---------------- VAULT ---------------- */
   function newVault(now, rng) {
-    const v = { coins: 0, gems: 0, diamonds: 300, crystals: 3, stones: 0, units: [], skins: ['default'], skillUses: { ...STARTER_SKILLS },
+    const v = { coins: 0, gems: 0, diamonds: 300, crystals: 3, stones: 0, units: [], skins: ['default'], skillUses: { ...STARTER_SKILLS }, skills: [...FREE_SKILLS],
       pity: { std: 0, feat: 0, lucky: 0 }, achClaimed: [], daily: { day: '', streak: 0 }, dailyWon: '', lastClaimAt: 0, pulls: 0 };
     STARTER_UNITS.forEach(t => v.units.push(makeUnit(t, rng, now, { tradable: false })));
     return v;
@@ -146,6 +158,7 @@
   /** Lengkapi vault lama (sebelum ada Diamond / Lucky) */
   function fixVault(v) {
     if (v.diamonds == null) v.diamonds = 300;
+    if (!Array.isArray(v.skills)) v.skills = [...new Set([...FREE_SKILLS, ...Object.keys(v.skillUses || {}).filter(k => v.skillUses[k] > 0)])];
     v.pity = { std: 0, feat: 0, lucky: 0, ...(v.pity || {}) };
     return v;
   }
@@ -169,10 +182,10 @@
     const D = DIFF_INFO[res.diff] || DIFF_INFO.normal, stars = MAP_STARS[res.map] || 1;
     const c = res.cleared, won = res.won, boss = res.bossKills;
     return {
-      coins: Math.round((c * 12 + (won ? 250 : 0) + boss * 40) * D.coinMul * (1 + stars * 0.1)) + (res.dailyFirstWin ? DAILY_REWARD : 0),
+      coins: Math.round((c * 12 + (won ? 250 : 0) + boss * 40) * D.coinMul * (1 + stars * 0.1) * EVENT.rewardMul) + (res.dailyFirstWin ? DAILY_REWARD : 0),
       crystals: boss + Math.floor(c / 10) + (won ? 2 : 0) + (res.daily && won ? 3 : 0),
       stones: (won && res.diff === 'hard' ? 1 : 0) + (res.daily && won ? 1 : 0) + (res.mode === 'endless' && c >= 30 ? 1 : 0) + (boss >= 3 ? 1 : 0),
-      diamonds: c * 3 + boss * 15 + (won ? 60 : 0) + (res.daily && won ? 50 : 0),
+      diamonds: Math.round((c * 3 + boss * 15 + (won ? 60 : 0) + (res.daily && won ? 50 : 0)) * EVENT.diamondMul),
     };
   }
 
@@ -227,6 +240,15 @@
       pay(v, s.currency, s.price * packs);
       v.skillUses[p.skill] = (v.skillUses[p.skill] || 0) + s.uses * packs;
       return { skill: p.skill, uses: v.skillUses[p.skill] };
+    },
+    unlockSkill(v, p) {
+      if (!(p.skill in SKILL_PRICES)) throw err('Skill tidak dikenal');
+      if (v.skills.includes(p.skill)) throw err('Skill sudah terbuka');
+      const price = SKILL_PRICES[p.skill] || {};
+      for (const [cur, n] of Object.entries(price)) if ((v[cur] || 0) < n) throw err((CURRENCY[cur] || {}).name + ' tidak cukup');
+      for (const [cur, n] of Object.entries(price)) v[cur] -= n;
+      v.skills.push(p.skill);
+      return { skill: p.skill };
     },
     buySkin(v, p) {
       const s = SKINS[p.skin];
@@ -306,10 +328,38 @@
 
   for (const k of Object.keys(actions)) { const fn = actions[k]; actions[k] = (v, p, ctx) => fn(fixVault(v), p, ctx); }
 
+  /* ---------------- PENGATURAN GLOBAL (panel developer) ---------------- */
+  const clone = o => JSON.parse(JSON.stringify(o));
+  Object.assign(DEFAULTS, { gacha: clone({ cost1: GACHA.cost1, cost10: GACHA.cost10, pity: GACHA.pity, rates: GACHA.rates }), lucky: clone(LUCKY),
+    dailyLogin: [...DAILY_LOGIN], skillPrices: clone(SKILL_PRICES), event: clone(EVENT) });
+  const num = (x, min, max, d) => { const n = +x; return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : d; };
+  /** Terapkan pengaturan global (dipakai server & client agar selalu sama). Nilai tidak valid diabaikan. */
+  function applyGlobal(g) {
+    g = g || {};
+    const G = g.gacha || {}, L = g.lucky || {}, D = DEFAULTS;
+    GACHA.cost1 = num(G.cost1, 1, 1e6, D.gacha.cost1); GACHA.cost10 = num(G.cost10, 1, 1e7, D.gacha.cost10); GACHA.pity = num(G.pity, 1, 1000, D.gacha.pity);
+    LUCKY.cost1 = num(L.cost1, 1, 1e6, D.lucky.cost1); LUCKY.cost10 = num(L.cost10, 1, 1e7, D.lucky.cost10); LUCKY.pity = num(L.pity, 1, 1000, D.lucky.pity);
+    for (const r of RARITY_ORDER) {
+      GACHA.rates[r] = num(G.rates && G.rates[r], 0, 1000, D.gacha.rates[r]);
+      LUCKY.rates[r] = num(L.rates && L.rates[r], 0, 1000, D.lucky.rates[r]);
+    }
+    const dl = Array.isArray(g.dailyLogin) && g.dailyLogin.length === 7 ? g.dailyLogin : D.dailyLogin;
+    dl.forEach((x, i) => { DAILY_LOGIN[i] = num(x, 0, 1e5, D.dailyLogin[i]); });
+    for (const k of Object.keys(SKILL_PRICES)) {
+      const sp = g.skillPrices && g.skillPrices[k];
+      SKILL_PRICES[k] = sp === null ? null : sp && typeof sp === 'object'
+        ? Object.fromEntries(Object.entries(sp).filter(([c, n]) => ['coins', 'diamonds', 'gems'].includes(c) && +n > 0).map(([c, n]) => [c, num(n, 1, 1e7, 1)]))
+        : clone(D.skillPrices[k]);
+    }
+    const E = g.event || {};
+    EVENT.rewardMul = num(E.rewardMul, 0, 20, 1); EVENT.diamondMul = num(E.diamondMul, 0, 20, 1);
+    EVENT.featured = UNIT_RARITY[E.featured] ? E.featured : null;
+  }
+
   return {
     RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
     TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, STARTER_SKILLS, TOPUP, GACHA, LUCKY, CURRENCY, unitsOfRarity, featuredUnit, dayStr, SCRAP,
     MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
-    newVault, makeUnit, fixVault, actions,
+    newVault, makeUnit, fixVault, actions, SKILL_PRICES, FREE_SKILLS, EVENT, DEFAULTS, applyGlobal,
   };
 });
