@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.3.0] — 2026-11-26
+### Ditambahkan
+- **Aplikasi (PWA)**: tombol ⬇️ Download di menu utama — pasang di Android, iPhone/iPad, dan PC; layar penuh, ikon sendiri, bisa main solo saat offline.
+- **Misi harian & mingguan** dengan hadiah 💎/🪙/✨/🔮 + XP Season Pass (dicek di server).
+- **Season Pass** bulanan 30 tier: jalur gratis (unit Epik di tier 30) & Premium 💠 (skin eksklusif tier 15, unit Mitos tier 30).
+- **Kode Redeem**: dibuat dari Panel Developer (hadiah, kuota, masa berlaku), sekali per akun.
+### Diubah
+- Menu utama lebih bersih: dock ikon (Summon, Unit, Skill, Misi, Pass, Toko, Teman, Lainnya) + badge hadiah siap diambil; menu lain dipindah ke "Lainnya".
+- 💠 Permata (top up) selalu mulai dari 0 untuk semua akun.
+
 ## [4.2.0] — 2026-11-26
 ### Ditambahkan
 - **Panel Developer** (khusus akun `rafermazaya@gmail.com`, diatur lewat env `ADMIN_EMAILS`; diperiksa di server + email Google terverifikasi):

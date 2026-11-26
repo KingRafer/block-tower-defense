@@ -151,7 +151,7 @@
   /* ---------------- VAULT ---------------- */
   function newVault(now, rng) {
     const v = { coins: 0, gems: 0, diamonds: 300, crystals: 3, stones: 0, units: [], skins: ['default'], skillUses: { ...STARTER_SKILLS }, skills: [...FREE_SKILLS],
-      pity: { std: 0, feat: 0, lucky: 0 }, achClaimed: [], daily: { day: '', streak: 0 }, dailyWon: '', lastClaimAt: 0, pulls: 0 };
+      pity: { std: 0, feat: 0, lucky: 0 }, achClaimed: [], daily: { day: '', streak: 0 }, dailyWon: '', lastClaimAt: 0, pulls: 0, missions: null, pass: null };
     STARTER_UNITS.forEach(t => v.units.push(makeUnit(t, rng, now, { tradable: false })));
     return v;
   }
@@ -160,6 +160,8 @@
     if (v.diamonds == null) v.diamonds = 300;
     if (!Array.isArray(v.skills)) v.skills = [...new Set([...FREE_SKILLS, ...Object.keys(v.skillUses || {}).filter(k => v.skillUses[k] > 0)])];
     v.pity = { std: 0, feat: 0, lucky: 0, ...(v.pity || {}) };
+    if (!v.missions || typeof v.missions !== 'object') v.missions = {};
+    if (v.pass && typeof v.pass !== 'object') v.pass = null;
     return v;
   }
   function makeUnit(type, rng, now, extra) {
@@ -189,6 +191,78 @@
     };
   }
 
+
+  /* ---------------- MISI HARIAN & MINGGUAN ---------------- */
+  // stat: games, waves, bosses, wins, hardWins, summons
+  const MISSIONS = {
+    daily: [
+      { id: 'd_play',   name: 'Mainkan 3 permainan',   stat: 'games',   target: 3,  reward: { diamonds: 30, pxp: 150 } },
+      { id: 'd_wave',   name: 'Selesaikan 25 wave',    stat: 'waves',   target: 25, reward: { coins: 300, pxp: 150 } },
+      { id: 'd_boss',   name: 'Kalahkan 2 boss',       stat: 'bosses',  target: 2,  reward: { diamonds: 40, pxp: 200 } },
+      { id: 'd_win',    name: 'Menangkan 1 permainan', stat: 'wins',    target: 1,  reward: { diamonds: 50, pxp: 250 } },
+      { id: 'd_summon', name: 'Summon 5 kali',         stat: 'summons', target: 5,  reward: { crystals: 2, pxp: 100 } },
+      { id: 'd_all',    name: 'Selesaikan semua misi harian', stat: 'dailyDone', target: 5, reward: { diamonds: 60, stones: 1, pxp: 300 } },
+    ],
+    weekly: [
+      { id: 'w_win',    name: 'Menang 10 kali',             stat: 'wins',     target: 10,  reward: { diamonds: 200, stones: 2, pxp: 800 } },
+      { id: 'w_wave',   name: 'Selesaikan 300 wave',        stat: 'waves',    target: 300, reward: { coins: 3000, pxp: 800 } },
+      { id: 'w_boss',   name: 'Kalahkan 25 boss',           stat: 'bosses',   target: 25,  reward: { diamonds: 250, pxp: 800 } },
+      { id: 'w_hard',   name: 'Menang 3 kali di Sulit',     stat: 'hardWins', target: 3,   reward: { stones: 3, crystals: 5, pxp: 1000 } },
+      { id: 'w_summon', name: 'Summon 40 kali',             stat: 'summons',  target: 40,  reward: { diamonds: 150, pxp: 600 } },
+    ],
+  };
+  function weekStr(now) { const d = new Date(now + 7 * 3600e3), dow = (d.getUTCDay() + 6) % 7; return dayStr(now - dow * 864e5); }
+  function rollMissions(v, now) {
+    const m = v.missions || (v.missions = {}), day = dayStr(now), wk = weekStr(now);
+    if (m.day !== day) { m.day = day; m.d = {}; m.dc = []; }
+    if (m.week !== wk) { m.week = wk; m.w = {}; m.wc = []; }
+    return m;
+  }
+  function bumpMissions(v, now, inc) {
+    const m = rollMissions(v, now);
+    for (const [k, n] of Object.entries(inc)) if (n > 0) { m.d[k] = (m.d[k] || 0) + n; m.w[k] = (m.w[k] || 0) + n; }
+  }
+  function missionProgress(v, now, kind, def) {
+    const m = rollMissions(v, now);
+    if (def.stat === 'dailyDone') return m.dc.filter(id => id !== 'd_all').length;
+    return (kind === 'daily' ? m.d : m.w)[def.stat] || 0;
+  }
+
+  /* ---------------- SEASON PASS (reset tiap bulan) ---------------- */
+  const PASS = { tiers: 30, xpPerTier: 600, premiumCost: 300 /* 💠 */ };
+  const seasonStr = now => dayStr(now).slice(0, 7);
+  function seasonName(season) {
+    const [y, mo] = season.split('-').map(Number);
+    return 'Season ' + ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][mo - 1] + ' ' + y;
+  }
+  function passReward(track, tier, season) {
+    const idx = season.split('-').reduce((a, x) => a * 13 + +x, 3);
+    const skins = Object.keys(SKINS).filter(k => k !== 'default'), mythics = unitsOfRarity('mythic'), epics = unitsOfRarity('epic');
+    if (track === 'f') {
+      if (tier === 30) return { unit: epics[idx % epics.length], diamonds: 150 };
+      if (tier % 10 === 0) return { stones: 2, diamonds: 100 };
+      if (tier % 5 === 0) return { diamonds: 100 };
+      return [{ coins: 400 }, { diamonds: 30 }, { crystals: 1 }][tier % 3];
+    }
+    if (tier === 30) return { unit: mythics[idx % mythics.length], premiumUnit: true };
+    if (tier === 15) return { skin: skins[idx % skins.length] };
+    if (tier % 5 === 0) return { diamonds: 200, stones: 1 };
+    return [{ diamonds: 60 }, { coins: 800 }, { crystals: 2, diamonds: 30 }][tier % 3];
+  }
+  function rollPass(v, now) {
+    const s = seasonStr(now);
+    if (!v.pass || v.pass.season !== s) v.pass = { season: s, xp: 0, premium: false, f: [], p: [] };
+    return v.pass;
+  }
+  const passTier = p => Math.min(PASS.tiers, Math.floor(p.xp / PASS.xpPerTier));
+  function giveReward(v, rw, rng, now) {
+    const got = {};
+    for (const k of ['coins', 'diamonds', 'gems', 'crystals', 'stones']) if (rw[k]) { v[k] = (v[k] || 0) + rw[k]; got[k] = rw[k]; }
+    if (rw.skin) { if (v.skins.includes(rw.skin)) { v.diamonds += 300; got.diamonds = (got.diamonds || 0) + 300; got.skinDup = rw.skin; } else { v.skins.push(rw.skin); got.skin = rw.skin; } }
+    if (rw.unit && UNIT_RARITY[rw.unit]) { const u = makeUnit(rw.unit, rng || Math.random, now, { tradable: !!rw.premiumUnit }); v.units.push(u); got.unit = u; }
+    return got;
+  }
+
   /* ---------------- AKSI ---------------- */
   /* Setiap aksi: (vault, payload, ctx{rng, now, server}) → hasil. Vault diubah langsung. */
   const actions = {
@@ -196,6 +270,7 @@
       const banner = GACHA.banners[p.banner] ? p.banner : 'std', n = p.count === 10 ? 10 : 1;
       const lucky = banner === 'lucky', cfg = lucky ? LUCKY : GACHA;
       pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
+      bumpMissions(v, ctx.now, { summons: n });
       const featured = featuredUnit(ctx.now), out = [];
       for (let i = 0; i < n; i++) {
         v.pity[banner] = (v.pity[banner] || 0) + 1;
@@ -299,6 +374,9 @@
       if (dailyFirstWin) v.dailyWon = today;
       const rw = rewardsFor({ ...r, diff, cleared, won, bossKills, dailyFirstWin });
       for (const k in rw) v[k] = (v[k] || 0) + rw[k];
+      bumpMissions(v, ctx.now, { games: 1, waves: cleared, bosses: bossKills, wins: won ? 1 : 0, hardWins: won && diff === 'hard' ? 1 : 0 });
+      const pxp = Math.min(1500, cleared * 8 + bossKills * 20 + (won ? 150 : 0));
+      rollPass(v, ctx.now).xp += pxp;
       const mastery = [];
       for (const [id, g] of Object.entries(r.uxp || {})) {
         const u = v.units.find(x => x.id === id); if (!u) continue;
@@ -306,7 +384,7 @@
         const before = unitLevel(u.xp); u.xp += gain;
         mastery.push({ unitId: id, type: u.type, gain, lv: unitLevel(u.xp), up: unitLevel(u.xp) > before });
       }
-      return { ...rw, dailyFirstWin, dailyReward: dailyFirstWin ? DAILY_REWARD : 0, mastery, used, cleared };
+      return { ...rw, pxp, dailyFirstWin, dailyReward: dailyFirstWin ? DAILY_REWARD : 0, mastery, used, cleared };
     },
     dailyLogin(v, p, ctx) {
       const today = dayStr(ctx.now);
@@ -317,6 +395,34 @@
       const diamonds = DAILY_LOGIN[(v.daily.streak - 1) % DAILY_LOGIN.length];
       v.diamonds = (v.diamonds || 0) + diamonds;
       return { diamonds, streak: v.daily.streak };
+    },
+    missionClaim(v, p, ctx) {
+      const kind = p.kind === 'weekly' ? 'weekly' : 'daily', def = MISSIONS[kind].find(x => x.id === p.id);
+      if (!def) throw err('Misi tidak dikenal');
+      const m = rollMissions(v, ctx.now), claimed = kind === 'daily' ? m.dc : m.wc;
+      if (claimed.includes(def.id)) throw err('Hadiah misi sudah diambil');
+      if (missionProgress(v, ctx.now, kind, def) < def.target) throw err('Misi belum selesai');
+      claimed.push(def.id);
+      const { pxp, ...rw } = def.reward;
+      if (pxp) rollPass(v, ctx.now).xp += pxp;
+      return { ...giveReward(v, rw, ctx.rng, ctx.now), pxp: pxp || 0, id: def.id };
+    },
+    passBuy(v, p, ctx) {
+      const ps = rollPass(v, ctx.now);
+      if (ps.premium) throw err('Pass Premium sudah aktif');
+      pay(v, 'gems', PASS.premiumCost); ps.premium = true;
+      return { premium: true };
+    },
+    passClaim(v, p, ctx) {
+      const ps = rollPass(v, ctx.now), lv = passTier(ps), out = [];
+      const tracks = ps.premium ? ['f', 'p'] : ['f'];
+      for (let t = 1; t <= lv; t++) for (const tr of tracks) {
+        if (p.tier !== 'all' && (p.tier !== t || p.track !== tr)) continue;
+        if (ps[tr].includes(t)) continue;
+        ps[tr].push(t); out.push({ tier: t, track: tr, got: giveReward(v, passReward(tr, t, ps.season), ctx.rng, ctx.now) });
+      }
+      if (!out.length) throw err(p.tier === 'all' ? 'Tidak ada hadiah yang bisa diambil' : 'Hadiah belum bisa diambil');
+      return { claimed: out };
     },
     achClaim(v, p) {
       if (!(p.id in ACH_REWARDS)) throw err('Pencapaian tidak dikenal');
@@ -331,7 +437,7 @@
   /* ---------------- PENGATURAN GLOBAL (panel developer) ---------------- */
   const clone = o => JSON.parse(JSON.stringify(o));
   Object.assign(DEFAULTS, { gacha: clone({ cost1: GACHA.cost1, cost10: GACHA.cost10, pity: GACHA.pity, rates: GACHA.rates }), lucky: clone(LUCKY),
-    dailyLogin: [...DAILY_LOGIN], skillPrices: clone(SKILL_PRICES), event: clone(EVENT) });
+    dailyLogin: [...DAILY_LOGIN], skillPrices: clone(SKILL_PRICES), event: clone(EVENT), pass: { premiumCost: PASS.premiumCost } });
   const num = (x, min, max, d) => { const n = +x; return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : d; };
   /** Terapkan pengaturan global (dipakai server & client agar selalu sama). Nilai tidak valid diabaikan. */
   function applyGlobal(g) {
@@ -351,6 +457,7 @@
         ? Object.fromEntries(Object.entries(sp).filter(([c, n]) => ['coins', 'diamonds', 'gems'].includes(c) && +n > 0).map(([c, n]) => [c, num(n, 1, 1e7, 1)]))
         : clone(D.skillPrices[k]);
     }
+    PASS.premiumCost = num((g.pass || {}).premiumCost, 1, 1e5, D.pass.premiumCost);
     const E = g.event || {};
     EVENT.rewardMul = num(E.rewardMul, 0, 20, 1); EVENT.diamondMul = num(E.diamondMul, 0, 20, 1);
     EVENT.featured = UNIT_RARITY[E.featured] ? E.featured : null;
@@ -361,5 +468,6 @@
     TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, STARTER_SKILLS, TOPUP, GACHA, LUCKY, CURRENCY, unitsOfRarity, featuredUnit, dayStr, SCRAP,
     MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
     newVault, makeUnit, fixVault, actions, SKILL_PRICES, FREE_SKILLS, EVENT, DEFAULTS, applyGlobal,
+    MISSIONS, missionProgress, rollMissions, PASS, rollPass, passTier, passReward, seasonName, seasonStr, giveReward,
   };
 });

@@ -276,6 +276,7 @@ const routes = {
     const { vault } = await eco.loadVault(d, u, req.body && req.body.import);
     return { vault, created: !had };
   },
+  'redeem': async (req, d, u) => admin.redeem(d, u, req.body && req.body.code),
   'eco.act': async (req, d, u) => eco.runAction(d, u, String(req.body && req.body.action || ''), req.body && req.body.payload),
 
   /* ---------- Trading ---------- */

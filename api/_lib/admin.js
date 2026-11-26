@@ -35,7 +35,7 @@ function cleanGlobal(g) {
     announcement: { text: String((g.announcement || {}).text || '').slice(0, 300), color: /^#[0-9a-f]{6}$/i.test((g.announcement || {}).color) ? g.announcement.color : '#ffcc33', active: !!(g.announcement || {}).active },
     maintenance: !!g.maintenance, maintenanceMsg: String(g.maintenanceMsg || '').slice(0, 200),
     topupEnabled: g.topupEnabled !== false,
-    gacha: g.gacha || {}, lucky: g.lucky || {}, dailyLogin: g.dailyLogin, skillPrices: g.skillPrices || {}, event: g.event || {},
+    gacha: g.gacha || {}, lucky: g.lucky || {}, dailyLogin: g.dailyLogin, skillPrices: g.skillPrices || {}, event: g.event || {}, pass: g.pass || {},
   };
   SHARED.applyGlobal(out);          // validasi: nilai salah otomatis kembali ke default
   out.gacha = { cost1: SHARED.GACHA.cost1, cost10: SHARED.GACHA.cost10, pity: SHARED.GACHA.pity, rates: { ...SHARED.GACHA.rates } };
@@ -43,6 +43,7 @@ function cleanGlobal(g) {
   out.dailyLogin = [...SHARED.DAILY_LOGIN];
   out.skillPrices = JSON.parse(JSON.stringify(SHARED.SKILL_PRICES));
   out.event = { ...SHARED.EVENT };
+  out.pass = { premiumCost: SHARED.PASS.premiumCost };
   return out;
 }
 
@@ -200,7 +201,42 @@ const routes = {
     await log(d, admin, 'lbDelete', null, { id });
     return { ok: true };
   },
+  'admin.codes': async (req, d) => ({ codes: await d.collection('codes').find({}).sort({ createdAt: -1 }).limit(100).toArray() }),
+  'admin.codeCreate': async (req, d, admin) => {
+    const b = req.body || {}, code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20) || crypto.randomBytes(4).toString('hex').toUpperCase();
+    const rw = {};
+    for (const k of CURRENCIES) { const n = Math.trunc(+(b.rewards || {})[k] || 0); if (n > 0) rw[k] = Math.min(n, 1e6); }
+    if (SHARED.UNIT_RARITY[(b.rewards || {}).unit]) rw.unit = b.rewards.unit;
+    if (SHARED.SKINS[(b.rewards || {}).skin] && b.rewards.skin !== 'default') rw.skin = b.rewards.skin;
+    if (!Object.keys(rw).length) throw err(400, 'Isi minimal satu hadiah');
+    const doc = { _id: code, rewards: rw, maxUses: Math.max(1, Math.min(1e7, b.maxUses | 0 || 1000)), uses: 0,
+      expiresAt: b.days > 0 ? Date.now() + Math.min(365, +b.days) * 864e5 : 0, note: String(b.note || '').slice(0, 80), createdAt: Date.now(), by: admin.email };
+    try { await d.collection('codes').insertOne(doc); } catch (e) { if (e.code === 11000) throw err(409, 'Kode sudah ada'); throw e; }
+    await log(d, admin, 'codeCreate', null, { code, rw });
+    return { code: doc };
+  },
+  'admin.codeDelete': async (req, d, admin) => {
+    const code = String((req.body || {}).code || '');
+    await d.collection('codes').deleteOne({ _id: code });
+    await log(d, admin, 'codeDelete', null, { code });
+    return { ok: true };
+  },
   'admin.log': async (req, d) => ({ log: await d.collection('adminlog').find({}).sort({ at: -1 }).limit(60).toArray() }),
 };
 
-module.exports = { routes, isAdmin, getGlobal, cleanGlobal };
+/** Pemain menukar kode redeem (sekali per akun) */
+async function redeem(d, user, raw) {
+  const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const c = code && await d.collection('codes').findOne({ _id: code });
+  if (!c) throw err(404, 'Kode tidak valid');
+  if (c.expiresAt && Date.now() > c.expiresAt) throw err(410, 'Kode sudah kedaluwarsa');
+  const key = code + '|' + user._id;
+  try { await d.collection('redeems').insertOne({ _id: key, code, user: user._id, at: Date.now() }); }
+  catch (e) { if (e.code === 11000) throw err(409, 'Kode ini sudah kamu pakai'); throw e; }
+  const r = await d.collection('codes').updateOne({ _id: code, uses: { $lt: c.maxUses } }, { $inc: { uses: 1 } });
+  if (!r.matchedCount) { await d.collection('redeems').deleteOne({ _id: key }); throw err(410, 'Kuota kode sudah habis'); }
+  const { res, vault } = await mutateVault(d, user._id, v => SHARED.giveReward(v, c.rewards, rng, Date.now()));
+  return { got: res, vault };
+}
+
+module.exports = { routes, isAdmin, getGlobal, cleanGlobal, redeem };

@@ -12,7 +12,7 @@ const DevPanel = {
     if (this.busy || (!force && this.data[kind])) return;
     this.busy = true;
     const req = { stats: ['admin.stats'], players: ['admin.search', { q: this.q }], global: ['admin.getGlobal'],
-      pay: ['admin.payments'], trades: ['admin.trades'], lb: ['admin.lb', { mode: this.lbMode || 'classic' }], log: ['admin.log'] }[kind];
+      pay: ['admin.payments'], codes: ['admin.codes'], trades: ['admin.trades'], lb: ['admin.lb', { mode: this.lbMode || 'classic' }], log: ['admin.log'] }[kind];
     try { this.data[kind] = await Online.api(req[0], null, 'GET', req[1] || {}); }
     catch (e) { UI.toast('❌ ' + e.message); this.data[kind] = { error: e.message }; }
     this.busy = false;
@@ -37,8 +37,8 @@ const DevPanel = {
 
   render() {
     if (!this.isAdmin()) return `${Menu.header('🛠️ Developer')}<div class="box center-box"><div class="big-ic">🔒</div><h3>Khusus developer</h3></div>`;
-    const tabs = [['stats', '📈 Ringkasan'], ['players', '👤 Pemain'], ['global', '🌐 Game Global'], ['pay', '💳 Transaksi'], ['trades', '🔁 Trading'], ['lb', '🏆 Skor'], ['log', '📜 Log'], ['tools', '🧪 Alat Uji']];
-    const body = { stats: this.tStats, players: this.tPlayers, global: this.tGlobal, pay: this.tPay, trades: this.tTrades, lb: this.tLb, log: this.tLog, tools: this.tTools }[this.tab].call(this);
+    const tabs = [['stats', '📈 Ringkasan'], ['players', '👤 Pemain'], ['global', '🌐 Game Global'], ['codes', '🎁 Kode'], ['pay', '💳 Transaksi'], ['trades', '🔁 Trading'], ['lb', '🏆 Skor'], ['log', '📜 Log'], ['tools', '🧪 Alat Uji']];
+    const body = { stats: this.tStats, players: this.tPlayers, global: this.tGlobal, codes: this.tCodes, pay: this.tPay, trades: this.tTrades, lb: this.tLb, log: this.tLog, tools: this.tTools }[this.tab].call(this);
     return `${Menu.header('🛠️ Panel Developer')}<div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${this.tab === k ? 'on' : ''}" data-act="dev:tab:${k}">${l}</button>`).join('')}</div><div class="devwrap">${body}</div>`;
   },
   wait(kind) { this.load(kind); const d = this.data[kind]; return !d ? '<div class="box">⏳ Memuat…</div>' : d.error ? `<div class="box warn">❌ ${esc(d.error)}</div>` : null; },
@@ -117,12 +117,29 @@ const DevPanel = {
         <label>1x <input id="dgL1" type="number" value="${g.lucky.cost1}" style="width:80px"></label><label>10x <input id="dgL10" type="number" value="${g.lucky.cost10}" style="width:80px"></label>
         <label>Pity <input id="dgLP" type="number" value="${g.lucky.pity}" style="width:70px"></label></div>
         <label>Rate <textarea id="dgLR" rows="2">${J(g.lucky.rates)}</textarea></label></div>
+      <div class="box"><h4>🎫 Season Pass</h4><label>Harga Premium (💠) <input id="dgPass" type="number" value="${(g.pass || {}).premiumCost || SHARED.PASS.premiumCost}" style="width:90px"></label></div>
       <div class="box"><h4>📅 Hadiah login harian (7 hari, 💎)</h4><input id="dgDaily" style="width:100%" value="${g.dailyLogin.join(', ')}"></div>
       <div class="box"><h4>⚡ Harga buka skill</h4><small class="dim">Format: {"meteor":{"diamonds":300}} • null = gratis • mata uang: coins / diamonds / gems</small>
         <textarea id="dgSkill" rows="5">${J(g.skillPrices)}</textarea></div>
       <div class="devrow"><button class="btn green" data-act="dev:saveGlobal">💾 Simpan & terapkan</button><button class="btn gray" data-act="dev:resetGlobal">↺ Kembalikan default</button></div>`;
   },
 
+  tCodes() {
+    const w = this.wait('codes');
+    const cur = [['coins', '🪙'], ['diamonds', '💎'], ['gems', '💠'], ['crystals', '✨'], ['stones', '🔮']];
+    const units = SHARED.UNIT_TYPES.map(t => `<option value="${t}">${TOWERS[t] ? TOWERS[t].name : t}</option>`).join('');
+    const skins = Object.keys(SKINS).filter(k => k !== 'default').map(k => `<option value="${k}">${SKINS[k].name}</option>`).join('');
+    const form = `<div class="box"><h4>➕ Buat kode redeem</h4>
+      <div class="devrow"><input id="dcCode" placeholder="KODE (kosong = acak)" maxlength="20"><input id="dcMax" type="number" value="1000" style="width:100px" title="Maks pemakaian"> kali
+        <input id="dcDays" type="number" value="7" style="width:70px" title="Berlaku (hari), 0 = selamanya"> hari <input id="dcNote" placeholder="Catatan" style="flex:1"></div>
+      <div class="devrow">${cur.map(([k, i]) => `<label>${i}<input id="dc_${k}" type="number" min="0" value="0" style="width:90px"></label>`).join('')}
+        <select id="dcUnit"><option value="">— tanpa unit —</option>${units}</select><select id="dcSkin"><option value="">— tanpa skin —</option>${skins}</select>
+        <button class="btn sm green" data-act="dev:codeNew">Buat</button></div></div>`;
+    const list = w || `<div class="box devunits"><table><tr><th>Kode</th><th>Hadiah</th><th>Dipakai</th><th>Berakhir</th><th>Catatan</th><th></th></tr>
+      ${this.data.codes.codes.map(c => `<tr><td><b class="click" data-act="copy:${c._id}">${c._id}</b></td><td>${Menu.rw(c.rewards)}</td><td>${c.uses}/${c.maxUses}</td><td>${c.expiresAt ? this.date(c.expiresAt) : '∞'}</td><td>${esc(c.note || '')}</td>
+        <td><button class="btn sm red" data-act="dev:codeDel:${c._id}">🗑</button></td></tr>`).join('') || '<tr><td colspan="6">Belum ada kode</td></tr>'}</table></div>`;
+    return form + list;
+  },
   tPay() {
     const w = this.wait('pay'); if (w) return w;
     return `<div class="box devunits"><table><tr><th>Waktu</th><th>Pemain</th><th>Paket</th><th>Harga</th><th>Status</th><th></th></tr>
@@ -166,7 +183,7 @@ const DevPanel = {
     const p = a.split(':'), cmd = p[1];
     const cheat = () => { if (S) S.devUsed = true; };
     switch (cmd) {
-      case 'tab': this.tab = p[2]; if (p[2] !== 'players') this.sel = null; if (['stats', 'pay', 'trades', 'log', 'lb'].includes(p[2])) delete this.data[p[2]]; Menu.show('dev', true); break;
+      case 'tab': this.tab = p[2]; if (p[2] !== 'players') this.sel = null; if (['stats', 'pay', 'trades', 'log', 'lb', 'codes'].includes(p[2])) delete this.data[p[2]]; Menu.show('dev', true); break;
       case 'reload': delete this.data[p[2]]; Menu.show('dev', true); break;
       case 'search': this.q = this.v('devQ'); delete this.data.players; Menu.show('dev', true); break;
       case 'user': this.tab = 'players'; this.openUser(p[2]); break;
@@ -181,6 +198,14 @@ const DevPanel = {
       case 'credit': this.call('admin.credit', { orderId: p[2] }, 'Permata dikreditkan').then(() => { delete this.data.pay; Menu.show('dev', true); }); break;
       case 'lbmode': this.lbMode = p[2]; delete this.data.lb; Menu.show('dev', true); break;
       case 'lbdel': if (confirm('Hapus skor ini?')) this.call('admin.lbDelete', { id: p[2] }, 'Skor dihapus').then(() => { delete this.data.lb; Menu.show('dev', true); }); break;
+      case 'codeNew': {
+        const rewards = {}; ['coins', 'diamonds', 'gems', 'crystals', 'stones'].forEach(k => { const n = +this.v('dc_' + k); if (n > 0) rewards[k] = n; });
+        if (this.v('dcUnit')) rewards.unit = this.v('dcUnit'); if (this.v('dcSkin')) rewards.skin = this.v('dcSkin');
+        this.call('admin.codeCreate', { code: this.v('dcCode'), maxUses: +this.v('dcMax'), days: +this.v('dcDays'), note: this.v('dcNote'), rewards }, 'Kode dibuat')
+          .then(r => { if (r) { delete this.data.codes; Menu.show('dev', true); } });
+        break;
+      }
+      case 'codeDel': if (confirm('Hapus kode ' + p[2] + '?')) this.call('admin.codeDelete', { code: p[2] }, 'Kode dihapus').then(() => { delete this.data.codes; Menu.show('dev', true); }); break;
       case 'saveGlobal': this.saveGlobal(); break;
       case 'resetGlobal': if (confirm('Kembalikan semua pengaturan game ke default?')) this.applyGlobal({}); break;
       case 'resync': Online.refreshVault().then(() => UI.toast('✅ Inventori disinkron')); break;
@@ -202,6 +227,7 @@ const DevPanel = {
         event: { rewardMul: +this.v('dgRew'), diamondMul: +this.v('dgDia'), featured: this.v('dgFeat') || null },
         gacha: { cost1: +this.v('dgG1'), cost10: +this.v('dgG10'), pity: +this.v('dgGP'), rates: this.json('dgGR', 'Rate summon') },
         lucky: { cost1: +this.v('dgL1'), cost10: +this.v('dgL10'), pity: +this.v('dgLP'), rates: this.json('dgLR', 'Rate lucky') },
+        pass: { premiumCost: +this.v('dgPass') },
         dailyLogin: this.v('dgDaily').split(',').map(x => +x.trim()), skillPrices: this.json('dgSkill', 'Harga skill') };
       if (g.dailyLogin.length !== 7 || g.dailyLogin.some(isNaN)) throw new Error('Hadiah login harus 7 angka');
     } catch (e) { return UI.toast('❌ ' + e.message); }

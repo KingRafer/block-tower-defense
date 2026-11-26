@@ -4,6 +4,19 @@
  * ========================================================= */
 'use strict';
 
+/** Jumlah hadiah misi / season pass yang siap diambil (untuk badge) */
+function missionsReady() {
+  const v = PROFILE.vault, now = Date.now(), m = SHARED.rollMissions(v, now); let n = 0;
+  for (const kind of ['daily', 'weekly']) for (const d of SHARED.MISSIONS[kind])
+    if (!(kind === 'daily' ? m.dc : m.wc).includes(d.id) && SHARED.missionProgress(v, now, kind, d) >= d.target) n++;
+  return n;
+}
+function passReady() {
+  const ps = SHARED.rollPass(PROFILE.vault, Date.now()), lv = SHARED.passTier(ps); let n = 0;
+  for (let t = 1; t <= lv; t++) { if (!ps.f.includes(t)) n++; if (ps.premium && !ps.p.includes(t)) n++; }
+  return n;
+}
+
 const Menu = {
   open: false, screen: null, back: 'main', endData: null, resetArm: false, shopSel: 'scout',
 
@@ -61,6 +74,11 @@ const Menu = {
     if (Online.cfg.devAuth) h += `<div class="devlogin"><input id="devName" placeholder="Nama uji coba" maxlength="20"><button class="btn sm gray" data-act="login-dev">Login uji coba</button></div>`;
     return h;
   },
+  badge(n) { return n ? `<span class="badge-dot on">${n}</span>` : ''; },
+  rw(r) {
+    const I = { coins: '🪙', diamonds: '💎', gems: '💠', crystals: '✨', stones: '🔮' };
+    return Object.keys(I).filter(k => r[k]).map(k => `${I[k]} ${r[k].toLocaleString('id-ID')}`).concat(r.skin ? [`🎨 ${SKINS[r.skin].name}`] : [], r.unit ? [`🗼 ${TOWERS[r.unit.type || r.unit] ? TOWERS[r.unit.type || r.unit].name : r.unit}`] : [], r.pxp ? [`🎫 ${r.pxp} XP`] : []).join(' • ');
+  },
   announce() {
     const g = Online.cfg.global || {}, a = g.announcement || {};
     let h = a.active && a.text ? `<div class="announce" style="--ac:${a.color || '#ffcc33'}">📢 ${esc(a.text)}</div>` : '';
@@ -75,9 +93,7 @@ const Menu = {
     main() {
       const u = Online.user, lv = levelFromXp(PROFILE.xp), lo = lv > 1 ? xpForLevel(lv - 1) : 0, hi = xpForLevel(lv);
       const pct = Math.min(100, (PROFILE.xp - lo) / (hi - lo) * 100);
-      const tile = (act, icon, label, sub, cls = '', badge = '') =>
-        `<button class="tile ${cls}" data-act="${act}"><span class="ti">${icon}</span><b>${label}</b><small>${sub}</small>${badge}</button>`;
-      const reqBadge = `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`;
+      const dock = (act, icon, label, cls, badge = '') => `<button class="dk ${cls}" data-act="${act}"><span>${icon}</span><b>${label}</b>${badge}</button>`;
       return `<div class="cubes">${Array.from({ length: 14 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
         <div class="home">
           ${this.announce()}
@@ -90,13 +106,13 @@ const Menu = {
             </button>
             <div class="chips">
               ${this.currency()}
+              ${PWA.installed() ? '' : `<button class="icon-btn dl" data-act="go:download" title="Download aplikasi">⬇️</button>`}
               <button class="icon-btn" data-act="settings:main" title="Pengaturan">⚙️</button>
             </div>
           </div>
           <div class="home-mid">
             <div class="hero">
               <div class="logo3d"><span>🧱</span><h1>BLOCK<br><em>TOWER DEFENSE</em></h1></div>
-              <p class="sub">Bangun tower, kumpulkan trait, evolusikan unit, dan bertahan bersama teman!</p>
               ${this.saveButton()}
             </div>
             <div class="playcol">
@@ -105,23 +121,97 @@ const Menu = {
               <button class="play-btn daily" data-act="go:daily"><span>📅</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai hari ini' : 'Hadiah 🪙 ' + DAILY_REWARD}</small></div></button>
             </div>
           </div>
-          <div class="tiles">
-            ${tile('go:gacha', '🎰', 'Summon', `💎 ${GACHA.cost1} • 🍀 Lucky`, 't-gold big-tile')}
-            ${tile('go:units', '🗼', 'Unit', `${PROFILE.vault.units.length} unit • Trait • Evo`, 't-purple')}
-            ${tile('go:shop', '🛒', 'Toko', 'Skill • Skin • Top Up', 't-pink')}
-            ${tile('go:trade', '🔁', 'Trading', u ? 'Tukar unit' : 'Perlu login', 't-teal')}
-            ${tile('go:skills', '⚡', 'Skill', `${equippedSkills().length}/${SKILL_SLOTS} terpasang`, 't-orange')}
-            ${tile('go:friends', '👥', 'Teman', u ? 'Undang & gabung' : 'Perlu login', 't-blue', reqBadge)}
-            ${tile('go:scores', '🏆', 'Papan Skor', 'Lokal & global', 't-gold')}
-            ${tile('go:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`, 't-green')}
-            ${tile('go:stats', '📊', 'Statistik', PROFILE.stats.games + ' game', 't-gray')}
-            ${tile('go:howto', '📖', 'Cara Main', 'Panduan', 't-gray')}
-            ${u && u.isAdmin ? tile('go:dev', '🛠️', 'Developer', 'Atur semua', 't-red') : ''}
-          </div>
-          <div class="foot">v${VERSION} • ${Online.available ? '🟢 Server online' : '⚪ Offline'} • ${TOWER_ORDER.length} unit • <a href="privacy.html" target="_blank">Privasi</a> • <a href="terms.html" target="_blank">Syarat & Ketentuan</a></div>
+          <nav class="dock">
+            ${dock('go:gacha', '🎰', 'Summon', 'd-gold')}
+            ${dock('go:units', '🗼', 'Unit', 'd-purple')}
+            ${dock('go:skills', '⚡', 'Skill', 'd-orange')}
+            ${dock('go:missions', '🎯', 'Misi', 'd-green', this.badge(missionsReady()))}
+            ${dock('go:pass', '🎫', 'Pass', 'd-pink', this.badge(passReady()))}
+            ${dock('go:shop', '🛒', 'Toko', 'd-teal')}
+            ${dock('go:friends', '👥', 'Teman', 'd-blue', `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`)}
+            ${dock('go:more', '☰', 'Lainnya', 'd-gray')}
+          </nav>
+          <div class="foot">v${VERSION} • ${Online.available ? '🟢 Online' : '⚪ Offline'}</div>
         </div>`;
     },
 
+    more() {
+      const u = Online.user, row = (act, ic, t, d) => `<button class="mrow" data-act="${act}"><span>${ic}</span><div><b>${t}</b><small>${d}</small></div><i>›</i></button>`;
+      return `${this.header('Lainnya')}<div class="mlist">
+        ${row('mgo:trade', '🔁', 'Trading', u ? 'Tukar unit dengan teman' : 'Perlu login')}
+        ${row('mgo:redeem', '🎁', 'Kode Redeem', 'Tukar kode hadiah')}
+        ${row('mgo:scores', '🏆', 'Papan Skor', 'Lokal & global')}
+        ${row('mgo:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`)}
+        ${row('mgo:stats', '📊', 'Statistik', PROFILE.stats.games + ' game')}
+        ${row('mgo:download', '📲', 'Download Aplikasi', PWA.installed() ? 'Sudah terpasang' : 'Android • iPhone • PC')}
+        ${row('mgo:howto', '📖', 'Cara Main', 'Panduan')}
+        ${row('mgo:account', '👤', 'Akun', u ? esc(u.name) : 'Masuk dengan Google')}
+        ${u && u.isAdmin ? row('mgo:dev', '🛠️', 'Panel Developer', 'Atur semua') : ''}
+      </div><div class="foot center"><a href="privacy.html" target="_blank">Privasi</a> • <a href="terms.html" target="_blank">Syarat & Ketentuan</a> • ${TOWER_ORDER.length} unit</div>`;
+    },
+    missions() {
+      const now = Date.now(), v = PROFILE.vault, m = SHARED.rollMissions(v, now);
+      const card = (kind, def) => {
+        const claimed = (kind === 'daily' ? m.dc : m.wc).includes(def.id), pr = Math.min(def.target, SHARED.missionProgress(v, now, kind, def)), done = pr >= def.target;
+        return `<div class="mis ${claimed ? 'claimed' : done ? 'done' : ''}"><div class="mi"><b>${def.name}</b><small>${this.rw(def.reward)}</small>
+          <div class="mbar"><div style="width:${pr / def.target * 100}%"></div><span>${pr}/${def.target}</span></div></div>
+          ${claimed ? '<span class="ok">✅</span>' : `<button class="btn sm ${done ? 'green' : 'gray'}" ${done ? '' : 'disabled'} data-act="mclaim:${kind}:${def.id}">${done ? 'Ambil' : 'Belum'}</button>`}</div>`;
+      };
+      const left = ms => { const h = Math.max(0, Math.floor(ms / 3600e3)); return h >= 24 ? Math.floor(h / 24) + ' hari' : h + ' jam'; };
+      const nextDay = Date.parse(SHARED.dayStr(now + 864e5) + 'T00:00:00+07:00'), nextWeek = Date.parse(m.week + 'T00:00:00+07:00') + 7 * 864e5;
+      return `${this.header('🎯 Misi')}<div class="cols2">
+        <div class="box"><h3>Harian <small class="dim">• reset ${left(nextDay - now)} lagi</small></h3>${SHARED.MISSIONS.daily.map(d => card('daily', d)).join('')}</div>
+        <div class="box"><h3>Mingguan <small class="dim">• reset ${left(nextWeek - now)} lagi</small></h3>${SHARED.MISSIONS.weekly.map(d => card('weekly', d)).join('')}</div></div>
+        <small class="dim">Misi juga memberi 🎫 XP Season Pass.</small>`;
+    },
+    pass() {
+      const now = Date.now(), ps = SHARED.rollPass(PROFILE.vault, now), P = SHARED.PASS, lv = SHARED.passTier(ps);
+      const into = ps.xp - lv * P.xpPerTier, pct = lv >= P.tiers ? 100 : into / P.xpPerTier * 100;
+      const end = new Date(Date.parse(ps.season + '-01T00:00:00+07:00')); end.setMonth(end.getMonth() + 1);
+      const days = Math.max(0, Math.ceil((end - now) / 864e5));
+      const cell = (tr, t) => {
+        const rw = SHARED.passReward(tr, t, ps.season), got = ps[tr].includes(t), open = t <= lv && (tr === 'f' || ps.premium);
+        const first = this.rw(rw).split(' • ')[0].split(' '), more = Object.keys(rw).filter(k => rw[k] && k !== 'premiumUnit').length > 1 ? '+' : '';
+        const ic = rw.unit ? '🗼' : rw.skin ? '🎨' : first[0];
+        const lab = rw.unit ? (TOWERS[rw.unit] ? TOWERS[rw.unit].name : rw.unit) : rw.skin ? SKINS[rw.skin].name : first.slice(1).join(' ') + more;
+        return `<button class="pc ${tr} ${got ? 'got' : open ? 'open' : ''} ${tr === 'p' && !ps.premium ? 'lock' : ''}" ${open && !got ? `data-act="pclaim:${tr}:${t}"` : 'data-act="noop"'} title="${esc(this.rw(rw))}">
+          <span>${ic}</span><small>${esc(lab)}</small>${got ? '<i>✓</i>' : tr === 'p' && !ps.premium ? '<i>🔒</i>' : ''}</button>`;
+      };
+      let cols = '';
+      for (let t = 1; t <= P.tiers; t++) cols += `<div class="pcol ${t <= lv ? 'reached' : ''}"><b>${t}</b>${cell('f', t)}${cell('p', t)}</div>`;
+      const ready = passReady();
+      return `${this.header('🎫 Season Pass')}
+        <div class="box passhead"><div><h3>${SHARED.seasonName(ps.season)}</h3><small class="dim">Berakhir ${days} hari lagi • XP dari bermain & misi</small></div>
+          <div class="plv"><b>Tier ${lv}/${P.tiers}</b><div class="xpbar wide"><div style="width:${pct}%"></div></div><small>${lv >= P.tiers ? 'MAKS' : `${into}/${P.xpPerTier} XP`}</small></div>
+          <div class="prow">${ready ? `<button class="btn green" data-act="pclaimall">🎁 Ambil semua (${ready})</button>` : ''}
+          ${ps.premium ? '<span class="rar" style="background:#e040fb">⭐ PREMIUM AKTIF</span>' : `<button class="btn gold" data-act="pbuy">⭐ Premium • 💠 ${P.premiumCost}</button>`}</div></div>
+        <div class="passrail"><div class="pcol plabels"><b>&nbsp;</b><span>Gratis</span><span>⭐ Premium</span></div>${cols}</div>
+        <small class="dim">Premium: unit Mitos di tier 30, skin eksklusif di tier 15, dan bonus tiap tier. Season reset setiap awal bulan.</small>`;
+    },
+    redeem() {
+      if (!Online.user) return this.needLogin('Kode Redeem', 'Masuk dengan Google untuk menukar kode hadiah.');
+      return `${this.header('🎁 Kode Redeem')}<div class="box center-box"><div class="big-ic">🎁</div>
+        <p class="dim">Masukkan kode hadiah dari event, media sosial, atau developer. Setiap kode hanya bisa dipakai sekali per akun.</p>
+        <div class="devrow center"><input id="rcode" class="bigin" placeholder="KODE" maxlength="20" autocomplete="off"><button class="btn green" data-act="redeem">Tukar</button></div>
+        <div id="rres"></div></div>`;
+    },
+    download() {
+      const P = PWA, ios = P.isIOS();
+      return `${this.header('📲 Download Aplikasi')}<div class="box center-box">
+        <img class="appic" src="icons/icon-192.png" alt="">
+        <h3>Block Tower Defense</h3>
+        <p class="dim">Pasang sebagai aplikasi: buka langsung dari layar utama, layar penuh tanpa bilah browser, lebih ringan, dan tetap bisa main solo saat offline.</p>
+        ${P.installed() ? '<p class="okmsg">✅ Aplikasi sudah terpasang di perangkat ini.</p>'
+          : P.canPrompt() ? `<button class="btn green big" data-act="install">⬇️ Pasang Aplikasi</button>`
+          : ios ? '<p class="okmsg">Di iPhone/iPad: ketuk <b>Bagikan</b> di Safari, lalu pilih <b>Tambah ke Layar Utama</b>.</p>'
+          : '<p class="okmsg">Buka menu browser (⋮) lalu pilih <b>Instal aplikasi</b> / <b>Tambahkan ke layar utama</b>.</p>'}
+        <div class="dlgrid">
+          <div><span>🤖</span><b>Android</b><small>Chrome → ⋮ → Instal aplikasi</small></div>
+          <div><span>🍎</span><b>iPhone / iPad</b><small>Safari → Bagikan → Tambah ke Layar Utama</small></div>
+          <div><span>💻</span><b>PC / Laptop</b><small>Chrome / Edge → ikon pasang di bilah alamat</small></div>
+        </div>
+        <small class="dim">Progres tersimpan di akun Google, jadi sama di semua perangkat.</small></div>`;
+    },
     account() {
       const u = Online.user;
       if (!u) return `${this.header('Akun')}<div class="box center-box"><div class="big-ic">🧑‍🚀</div><h3>Masuk / Daftar dengan Google</h3>
@@ -578,6 +668,8 @@ const Menu = {
       case 'back':
         this.resetArm = false;
         if (this.screen === 'lobby' || (this.screen === 'mabar' && Lobby.room)) { Lobby.leave(); UI.toast('Kamu keluar dari room'); }
+        if (this.ret && this.screen !== this.ret && this.screen !== 'settings') { const r = this.ret; this.ret = null; this.go(r); break; }
+        this.ret = null;
         this.go(this.screen === 'settings' ? this.back : 'main'); break;
       case 'settings': this.back = arg; this.go('settings'); break;
       case 'map': MAP = MAPS[+arg]; loadMap(MAP); this.go('play'); break;
@@ -591,6 +683,20 @@ const Menu = {
       case 'quit': if (isMP()) MP.cleanup(); else abandonGame(); newGame(); this.go('main'); break;
       case 'noop': break;
       case 'dev': DevPanel.act(a); break;
+      case 'mgo': this.ret = 'more'; this.go(arg); break;
+      case 'mclaim': { const [, kind, id] = a.split(':'); this.eco('missionClaim', { kind, id }, r => '🎯 ' + this.rw(r)).then(() => this.show('missions', true)); break; }
+      case 'pclaim': { const [, track, t] = a.split(':'); this.eco('passClaim', { track, tier: +t }, r => '🎫 ' + this.rw(r.claimed[0].got)).then(() => this.show('pass', true)); break; }
+      case 'pclaimall': this.eco('passClaim', { tier: 'all' }, r => `🎁 ${r.claimed.length} hadiah diambil!`).then(() => this.show('pass', true)); break;
+      case 'pbuy': if (confirm(`Aktifkan Season Pass Premium seharga 💠 ${SHARED.PASS.premiumCost} Permata?`)) this.eco('passBuy', {}, () => '⭐ Pass Premium aktif!').then(() => this.show('pass', true)); break;
+      case 'install': PWA.install().then(() => this.show('download', true)); break;
+      case 'redeem': {
+        const code = ($('rcode') || {}).value || '';
+        if (!code.trim()) { UI.toast('Masukkan kode'); break; }
+        Online.api('redeem', { code }).then(r => { Eco.apply(r.vault); sfx('coin'); const t = this.rw(r.got); UI.toast('🎁 ' + t); const el = $('rres'); if (el) el.innerHTML = `<p class="okmsg">✅ Didapat: ${t}</p>`; $('rcode').value = ''; })
+          .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
+        break;
+      }
+
       case 'unit': this.unitSel = arg; this.rollArm = null; this.scrapArm = null; this.show('units', true); break;
       case 'ufilter': this.unitFilter = arg; this.show('units', true); break;
       case 'equip': {
