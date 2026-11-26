@@ -109,7 +109,7 @@ const Menu = {
             ${tile('go:stats', '📊', 'Statistik', PROFILE.stats.games + ' game', 't-gray')}
             ${tile('go:howto', '📖', 'Cara Main', 'Panduan', 't-gray')}
           </div>
-          <div class="foot">v${VERSION} • ${Online.available ? '🟢 Server online' : '⚪ Offline'} • ${TOWER_ORDER.length} tower • ${Object.keys(ENEMIES).length - 1} musuh</div>
+          <div class="foot">v${VERSION} • ${Online.available ? '🟢 Server online' : '⚪ Offline'} • ${TOWER_ORDER.length} unit • <a href="privacy.html" target="_blank">Privasi</a> • <a href="terms.html" target="_blank">Syarat & Ketentuan</a></div>
         </div>`;
     },
 

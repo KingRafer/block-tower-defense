@@ -555,3 +555,4 @@ input:focus { border-color: var(--cyan); }
   .lo-slots { grid-template-columns: repeat(3, 1fr); }
   .sk-eq { grid-template-columns: repeat(2, 1fr); }
 }
+.foot a { color: var(--dim); }
