@@ -91,6 +91,10 @@ $('overlay').addEventListener('click', ev => {
 addEventListener('pointerdown', () => Sound.unlock(), { once: true });
 addEventListener('keydown', () => Sound.unlock(), { once: true });
 
+// Simpan ke cloud saat tab ditutup / disembunyikan
+addEventListener('pagehide', () => Online.flush());
+document.addEventListener('visibilitychange', () => { if (document.hidden) Online.flush(); });
+
 // Pause otomatis saat tab tidak aktif
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && SET.autoPause && S && !isMP() && !Menu.open && S.state !== 'win' && S.state !== 'lose' && S.wave > 0) Menu.show('pause');

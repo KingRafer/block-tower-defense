@@ -1,5 +1,7 @@
 /* =========================================================
- * Penyimpanan: pengaturan & profil pemain (localStorage)
+ * Penyimpanan: pengaturan & profil pemain
+ * Lokal (localStorage) untuk tamu & cadangan; untuk akun Google disinkron ke database:
+ * profil (XP, statistik, pencapaian, loadout, rekor), pengaturan, dan permainan yang sedang berjalan.
  * ========================================================= */
 'use strict';
 
@@ -50,8 +52,8 @@ function migrateProfile(p) {
 // Simpanan game yang sedang berjalan (lanjutkan nanti)
 const SaveGame = {
   get() { try { return JSON.parse(localStorage.getItem('btd_save') || 'null'); } catch (e) { return null; } },
-  set(v) { Storage.save('btd_save', v); },
-  clear() { try { localStorage.removeItem('btd_save'); } catch (e) {} },
+  set(v, local) { Storage.save('btd_save', v); if (!local && typeof Online !== 'undefined') Online.markRun(); },
+  clear(local) { try { localStorage.removeItem('btd_save'); } catch (e) {} if (!local && typeof Online !== 'undefined') Online.markRun(); },
 };
 
 const SET = Storage.load('btd_settings', defaultSettings());
@@ -61,7 +63,7 @@ const PROFILE = migrateProfile((() => {
   if (!raw.vault) return deepMerge({ ...defaultProfile(), vault: undefined }, raw);
   return deepMerge(defaultProfile(), raw);
 })());
-const saveSettings = () => Storage.save('btd_settings', SET);
+const saveSettings = (local) => { if (!local) SET.updatedAt = Date.now(); Storage.save('btd_settings', SET); if (!local && typeof Online !== 'undefined') Online.queueSave(); };
 const saveProfile = () => {
   PROFILE.updatedAt = Date.now();
   Storage.save('btd_profile', PROFILE);

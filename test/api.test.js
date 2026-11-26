@@ -27,6 +27,17 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   await call('profile.save', { token: A.token, body: { profile: { xp: 500, coins: 10 }, updatedAt: Date.now(), level: 3 } });
   const pg = await call('profile.get', { method: 'GET', token: A.token });
   assert.strictEqual(pg.body.profile.xp, 500, 'profil tersimpan');
+  // pengaturan & permainan berjalan ikut tersimpan; inventori tidak diduplikasi di profil
+  await call('profile.save', { token: A.token, body: { profile: { xp: 600, vault: { units: [1, 2, 3] }, ownerId: 'x' }, settings: { sfxVol: 0.2, music: false, bad: { x: 1 }, 'evil key': 1 }, settingsAt: 123, run: { map: 'grass', wave: 7, saved: 99 }, level: 3 } });
+  let pg2 = (await call('profile.get', { method: 'GET', token: A.token })).body;
+  assert.strictEqual(pg2.profile.vault, undefined, 'vault tidak disimpan di profil'); assert.strictEqual(pg2.profile.ownerId, undefined);
+  assert.deepStrictEqual(pg2.settings, { sfxVol: 0.2, music: false }, 'hanya pengaturan sederhana'); assert.strictEqual(pg2.settingsAt, 123);
+  assert.strictEqual(pg2.run.wave, 7, 'permainan berjalan tersimpan');
+  await call('profile.save', { token: A.token, body: { profile: { xp: 600 }, level: 3 } });
+  assert.strictEqual((await call('profile.get', { method: 'GET', token: A.token })).body.run.wave, 7, 'tanpa field run → tidak diubah');
+  await call('profile.save', { token: A.token, body: { profile: { xp: 600 }, run: null, level: 3 } });
+  assert.strictEqual((await call('profile.get', { method: 'GET', token: A.token })).body.run, null, 'run null → dihapus');
+  assert.strictEqual((await call('profile.save', { token: A.token, body: { profile: { xp: 1 }, run: { big: 'x'.repeat(50000) } } })).status, 413);
 
   // teman
   const add = await call('friends.add', { token: A.token, body: { code: B.user.friendCode } });

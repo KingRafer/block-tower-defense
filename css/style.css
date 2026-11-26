@@ -1363,3 +1363,6 @@ canvas.pico { width: 44px !important; height: 44px !important; border-radius: 10
 }
 .refreshbox { border: 1px solid rgba(255,217,119,.35); } .refreshbox input { background: #10162e; color: #fff; border: 1px solid #2a3256; border-radius: 8px; padding: 6px 10px; margin: 6px 0; font: inherit; }
 .refreshbox details summary { cursor: pointer; color: var(--gold-1); font-size: 12px; margin-top: 6px; }
+.cloudlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 8px 0; padding: 10px; border-radius: 12px; background: #10162e; border: 1px solid var(--ui-edge); font-size: 12px; }
+.cloudlist b, .cloudlist small { grid-column: 1 / -1; } .cloudlist b { color: var(--gold-1); }
+@media (max-width: 760px) { .cloudlist { grid-template-columns: 1fr; } }

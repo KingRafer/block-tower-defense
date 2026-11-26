@@ -1,6 +1,6 @@
 {
   "name": "block-tower-defense",
-  "version": "4.8.1",
+  "version": "4.8.2",
   "private": true,
   "description": "Game tower defense bergaya Roblox dengan mabar co-op, teman, dan cloud save (Vercel + MongoDB).",
   "license": "MIT",

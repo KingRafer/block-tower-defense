@@ -31,9 +31,9 @@ const Online = {
     this.refreshUi();
   },
 
-  async api(route, body, method = 'POST', query = {}) {
+  async api(route, body, method = 'POST', query = {}, keepalive = false) {
     const qs = new URLSearchParams({ r: route, ...query }).toString();
-    const opt = { method, headers: { 'Content-Type': 'application/json' } };
+    const opt = { method, headers: { 'Content-Type': 'application/json' }, keepalive };
     if (this.token) opt.headers.Authorization = 'Bearer ' + this.token;
     if (body && method !== 'GET') opt.body = JSON.stringify(body);
     let r;
@@ -86,7 +86,7 @@ const Online = {
     if (this.user) this.pushProfile();
     this.setToken(null); this.user = null; this.vaultReady = false;
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
-    replaceProfile(defaultProfile()); Storage.save('btd_profile', PROFILE);
+    replaceProfile(defaultProfile()); Storage.save('btd_profile', PROFILE); SaveGame.clear(true);
     UI.toast('Kamu sudah keluar. Progres aman tersimpan di akunmu.');
     this.refreshUi(); Menu.show('main');
   },
@@ -100,9 +100,16 @@ const Online = {
     if (!this.user) return;
     this.syncing = true;
     try {
-      const { profile: cloud, updatedAt } = await this.api('profile.get', null, 'GET');
+      const { profile: cloud, updatedAt, settings: cSet, settingsAt, run: cRun } = await this.api('profile.get', null, 'GET');
       const localFresh = !PROFILE.stats.games && !PROFILE.xp;
       const sameOwner = PROFILE.ownerId === this.user.id;
+      if (PROFILE.ownerId && !sameOwner) SaveGame.clear(true);           // simpanan permainan milik akun lain
+      // pengaturan: pakai yang paling baru diubah
+      if (cSet && (settingsAt || 0) > (SET.updatedAt || 0)) { Object.assign(SET, cSet, { updatedAt: settingsAt }); saveSettings(true); try { Sound.applyVolume(); } catch (e) {} }
+      // permainan yang sedang berjalan: pakai yang paling baru disimpan
+      const lRun = SaveGame.get();
+      if (cRun && (!lRun || (cRun.saved || 0) > (lRun.saved || 0))) SaveGame.set(cRun, true);
+      else if (lRun && (!cRun || (lRun.saved || 0) > (cRun.saved || 0))) this.runDirty = true;
       let useCloud = false;
       if (cloud) {
         if (localFresh) useCloud = true;
@@ -113,7 +120,7 @@ const Online = {
       if (useCloud) replaceProfile(cloud);
       PROFILE.ownerId = this.user.id;
       Storage.save('btd_profile', PROFILE);
-      if (!useCloud) await this.pushProfile();
+      if (!useCloud || this.runDirty || !cSet) await this.pushProfile();
       await this.loadVault();
       this.lastSync = Date.now();
     } catch (e) { UI.toast('⚠️ Sinkronisasi gagal: ' + e.message); }
@@ -133,15 +140,24 @@ const Online = {
   queueSave() {
     if (!this.user) return;
     clearTimeout(this.saveT);
-    this.saveT = setTimeout(() => this.pushProfile(), 4000);
+    this.saveT = setTimeout(() => { this.saveT = null; this.pushProfile(); }, 4000);
   },
-  async pushProfile() {
+  /** Simpanan permainan berubah → ikut dikirim ke cloud */
+  markRun() { this.runDirty = true; this.queueSave(); },
+  /** Profil untuk cloud: tanpa inventori (sudah disimpan server) & data khusus perangkat */
+  cloudProfile() { const { vault, ownerId, vaultOwner, ...rest } = PROFILE; return rest; },
+  async pushProfile(keepalive) {
     if (!this.user) return;
+    const body = { profile: this.cloudProfile(), updatedAt: PROFILE.updatedAt || Date.now(), level: levelFromXp(PROFILE.xp), settings: SET, settingsAt: SET.updatedAt || 0 };
+    const sendRun = this.runDirty; if (sendRun) body.run = SaveGame.get();
     try {
-      await this.api('profile.save', { profile: PROFILE, updatedAt: PROFILE.updatedAt || Date.now(), level: levelFromXp(PROFILE.xp) });
+      await this.api('profile.save', body, 'POST', {}, keepalive);
+      if (sendRun) this.runDirty = false;
       this.lastSync = Date.now();
     } catch (e) { if (e.status === 401) { this.setToken(null); this.user = null; this.refreshUi(); } }
   },
+  /** Tab ditutup / disembunyikan: kirim perubahan yang belum tersimpan */
+  flush() { if (this.user && this.saveT) { clearTimeout(this.saveT); this.saveT = null; this.pushProfile(true); } },
   submitRun(run) { if (this.user) this.api('lb.submit', run).catch(() => {}); },
 
   /* ---------- Presence, undangan, notifikasi ---------- */
@@ -167,6 +183,7 @@ const Online = {
 /** Ganti seluruh isi PROFILE (objek tetap sama agar referensi lain aman) */
 function replaceProfile(obj) {
   const src = JSON.parse(JSON.stringify(obj || {})), base = defaultProfile();
+  if (!src.vault && PROFILE.vault) src.vault = JSON.parse(JSON.stringify(PROFILE.vault));   // profil cloud tidak membawa inventori
   if (!src.vault) delete base.vault;
   const fresh = migrateProfile(deepMerge(base, src));
   for (const k of Object.keys(PROFILE)) delete PROFILE[k];

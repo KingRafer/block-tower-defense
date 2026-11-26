@@ -99,17 +99,34 @@ const routes = {
   },
 
   /* Simpan progres di cloud */
-  'profile.get': async (req, d, u) => ({ profile: u.profile || null, updatedAt: u.profileUpdatedAt || 0 }),
+  'profile.get': async (req, d, u) => {
+    const profile = u.profile ? { ...u.profile } : null; if (profile) delete profile.vault;   // inventori disimpan terpisah (vault)
+    return { profile, updatedAt: u.profileUpdatedAt || 0, settings: u.settings || null, settingsAt: u.settingsAt || 0, run: u.runSave || null };
+  },
 
   'profile.save': async (req, d, u) => {
-    const p = req.body && req.body.profile;
-    if (!p || typeof p !== 'object') throw err(400, 'Profil tidak valid');
+    const b = req.body || {}, p = b.profile && typeof b.profile === 'object' ? { ...b.profile } : null;
+    if (!p) throw err(400, 'Profil tidak valid');
+    delete p.vault; delete p.ownerId; delete p.vaultOwner;          // data milik server / perangkat tidak disimpan di profil
+    if (Array.isArray(p.runs)) p.runs = p.runs.slice(0, 15);
     const json = JSON.stringify(p);
     if (json.length > MAX_PROFILE_BYTES) throw err(413, 'Profil terlalu besar');
+    const extra = {}, unset = {};
+    // pengaturan game (suara, grafis) — hanya kunci sederhana
+    if (b.settings && typeof b.settings === 'object') {
+      const st = {};
+      for (const [k, v] of Object.entries(b.settings).slice(0, 40)) if (/^[a-zA-Z]{1,20}$/.test(k) && ['boolean', 'number', 'string'].includes(typeof v) && String(v).length <= 20) st[k] = v;
+      extra.settings = st; extra.settingsAt = Math.min(Number(b.settingsAt) || Date.now(), Date.now() + 60000);
+    }
+    // permainan yang sedang berjalan (tombol "Lanjutkan" di perangkat lain)
+    if ('run' in b) {
+      if (b.run && typeof b.run === 'object') { if (JSON.stringify(b.run).length > 40 * 1024) throw err(413, 'Simpanan permainan terlalu besar'); extra.runSave = b.run; }
+      else unset.runSave = '';
+    }
     const updatedAt = Math.min(Number(req.body.updatedAt) || Date.now(), Date.now() + 60000);
     const xp = Math.max(0, Number(p.xp) || 0);
     const level = Math.max(1, Math.min(999, Number(req.body.level) || 1));
-    await d.collection('users').updateOne({ _id: u._id }, { $set: { profile: p, profileUpdatedAt: updatedAt, xp, level } });
+    await d.collection('users').updateOne({ _id: u._id }, { $set: { profile: p, profileUpdatedAt: updatedAt, xp, level, ...extra, ...(unset.runSave === '' ? { runSave: null } : {}) } });
     return { ok: true, updatedAt };
   },
 

@@ -360,6 +360,7 @@ const Menu = {
             <h4>☁️ Cloud Save</h4>
             <p>Status: ${Online.syncing ? '⏳ Menyinkronkan…' : '✅ Aktif'} ${ago !== null ? `<span class="dim">• terakhir ${ago < 60 ? ago + ' detik' : Math.round(ago / 60) + ' menit'} lalu</span>` : ''}</p>
             <p class="dim">Progres disimpan otomatis setiap ada perubahan.</p>
+            <div class="cloudlist"><b>☁️ Tersimpan di database akunmu</b><span>🗼 Unit, item & mata uang</span><span>📊 Level, XP, statistik & rekor</span><span>🏅 Pencapaian, misi & Season Pass</span><span>🎒 Loadout unit & skill</span><span>⚙️ Pengaturan game</span><span>⏯ Permainan yang sedang berjalan</span><span>👥 Teman, trading & riwayat top up</span><small class="dim">Login akun yang sama di perangkat lain untuk melanjutkan.</small></div>
             <div class="row2"><button class="btn blue" data-act="sync">🔄 Sinkronkan sekarang</button><button class="btn red" data-act="logout">🚪 Keluar</button></div>
           </div>
         </div>`;

@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.8.2] — 2026-11-27
+### Diubah — penyimpanan cloud (akun Google)
+- **Pengaturan game** (suara, musik, grafis, angka damage, dll.) kini tersimpan di database & ikut ke perangkat lain (yang terbaru diubah yang dipakai).
+- **Permainan yang sedang berjalan** (tombol ⏯ Lanjutkan) tersimpan di database — bisa dilanjutkan di perangkat lain.
+- Profil di cloud tidak lagi membawa salinan inventori (unit & mata uang sudah disimpan terpisah di server) → data lebih ringan & tidak dobel.
+- Perubahan dikirim otomatis (jeda 4 detik) dan langsung saat tab ditutup / disembunyikan.
+- Keluar akun menghapus simpanan permainan lokal agar tidak terbawa ke akun lain.
+- Layar Akun menampilkan daftar data yang tersimpan di database.
+- Tetap di perangkat saja: token login, cache aplikasi & data tamu (belum login).
+
 ## [4.8.1] — 2026-11-27
 ### Ditambahkan
 - **Panel Developer → 🔄 Refresh & Alat**: tombol **Refresh semua pemain** dan **Bersihkan cache & refresh** (hapus cache aplikasi/service worker) dengan pesan opsional.
