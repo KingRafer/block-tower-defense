@@ -4,9 +4,9 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '4.0.0';
+const VERSION = '4.1.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
-  TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, ACH_REWARDS, ACH_GEMS } = SHARED;
+  TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
 const SELL_RATE = 0.6;
 const LOADOUT_SIZE = 6;
@@ -188,17 +188,30 @@ const PROJ = { demoman: 'rocket', rocketeer: 'rocket', cannon: 'shell', mortar: 
 
 /* ---------------- MUSUH ---------------- */
 const ENEMIES = {
-  normal:   {name:'Zombie',       hp:6,   spd:1.2, reward:4,  color:'#7cb342', size:0.55},
-  fast:     {name:'Pelari',       hp:4,   spd:2.4, reward:4,  color:'#fbc02d', size:0.45},
-  tank:     {name:'Tank',         hp:30,  spd:0.8, reward:10, color:'#8d6e63', size:0.7, armor:0.25},
-  hidden:   {name:'Hantu',        hp:10,  spd:1.6, reward:8,  color:'#b0bec5', size:0.5, hidden:true},
-  regen:    {name:'Penyembuh',    hp:22,  spd:1.1, reward:10, color:'#26a69a', size:0.58, regen:0.04},
-  armored:  {name:'Berzirah',     hp:45,  spd:1.0, reward:16, color:'#607d8b', size:0.65, armor:0.5},
-  splitter: {name:'Pemecah',      hp:35,  spd:1.0, reward:12, color:'#ec407a', size:0.62, split:'mini'},
-  mini:     {name:'Mini',         hp:8,   spd:2.0, reward:2,  color:'#f48fb1', size:0.38},
-  boss:     {name:'Raja Zombie',  hp:700, spd:0.55,reward:300,color:'#6a1b9a', size:1.1, armor:0.2, boss:true},
+  normal:   {name:'Zombie',       hp:6,   spd:1.2, reward:4,  color:'#7cb342', size:0.55, desc:'Musuh dasar'},
+  fast:     {name:'Pelari',       hp:4,   spd:2.4, reward:4,  color:'#fbc02d', size:0.45, desc:'Cepat tapi rapuh'},
+  tank:     {name:'Tank',         hp:30,  spd:0.8, reward:10, color:'#8d6e63', size:0.7, armor:0.25, desc:'Lambat, HP besar, armor 25%'},
+  hidden:   {name:'Hantu',        hp:10,  spd:1.6, reward:8,  color:'#b0bec5', size:0.5, hidden:true, desc:'Hanya bisa diserang tower dengan deteksi hidden'},
+  regen:    {name:'Penyembuh',    hp:22,  spd:1.1, reward:10, color:'#26a69a', size:0.58, regen:0.04, desc:'Memulihkan HP sendiri terus-menerus'},
+  armored:  {name:'Berzirah',     hp:45,  spd:1.0, reward:16, color:'#607d8b', size:0.65, armor:0.5, desc:'Armor 50%, gunakan tower tembus armor'},
+  splitter: {name:'Pemecah',      hp:35,  spd:1.0, reward:12, color:'#ec407a', size:0.62, split:'mini', desc:'Pecah menjadi 2 musuh kecil saat mati'},
+  mini:     {name:'Mini',         hp:8,   spd:2.0, reward:2,  color:'#f48fb1', size:0.38, desc:'Pecahan Pemecah', hide:true},
+  flyer:    {name:'Kelelawar',    hp:7,   spd:1.9, reward:6,  color:'#4a148c', size:0.48, flying:true, desc:'Terbang — kebal Demoman, Meriam & Mortir'},
+  thief:    {name:'Pencuri',      hp:12,  spd:2.1, reward:12, color:'#424242', size:0.5, thief:true, desc:'Jika lolos mencuri uang semua pemain'},
+  shielded: {name:'Kesatria Perisai', hp:28, spd:0.95, reward:14, color:'#1565c0', size:0.64, shield:0.6, desc:'Perisai menyerap damage dulu (tembus armor = 2× ke perisai)'},
+  berserk:  {name:'Pengamuk',     hp:36,  spd:1.0, reward:14, color:'#d84315', size:0.62, berserk:true, desc:'Jadi 2× lebih cepat saat HP di bawah 50%'},
+  healer:   {name:'Dukun',        hp:26,  spd:0.9, reward:16, color:'#00897b', size:0.58, healer:true, desc:'Menyembuhkan musuh di sekitarnya'},
+  stealth:  {name:'Bunglon',      hp:24,  spd:1.3, reward:14, color:'#9ccc65', size:0.55, stealth:true, desc:'Menghilang (hidden) secara berkala'},
+  bomber:   {name:'Peledak',      hp:30,  spd:1.1, reward:14, color:'#ff6f00', size:0.6, bomber:true, desc:'Meledak saat mati dan membuat tower di dekatnya pingsan'},
+  giant:    {name:'Raksasa',      hp:140, spd:0.6, reward:40, color:'#5d4037', size:0.95, armor:0.15, split:'normal', splitN:3, desc:'Sangat kuat; pecah jadi 3 zombie saat mati'},
+  necro:    {name:'Nekromancer',  hp:60,  spd:0.8, reward:30, color:'#311b92', size:0.66, necro:true, desc:'Terus memanggil kerangka'},
+  skeleton: {name:'Kerangka',     hp:9,   spd:1.6, reward:2,  color:'#eceff1', size:0.44, desc:'Panggilan Nekromancer', hide:true},
+  golem:    {name:'Golem Batu',   hp:260, spd:0.45,reward:150,color:'#78909c', size:1.0, armor:0.4, noSlow:true, miniboss:true, desc:'Mini-boss tiap wave 15, 25, 35…: armor 40%, kebal efek lambat'},
+  boss:     {name:'Raja Zombie',  hp:700, spd:0.55,reward:300,color:'#6a1b9a', size:1.1, armor:0.2, boss:true, desc:'Muncul tiap 10 wave: membuat tower pingsan & memanggil pasukan'},
 };
-const ENEMY_INTRO = { fast:3, tank:5, hidden:7, regen:9, armored:12, splitter:14 };
+const ENEMY_INTRO = { fast:3, flyer:4, tank:5, thief:6, hidden:7, shielded:8, regen:9, berserk:10, healer:11, armored:12, stealth:13, splitter:14, bomber:15, giant:17, necro:19, golem:15 };
+/* Tower yang hanya bisa mengenai musuh darat */
+const GROUND_ONLY = new Set(['demoman', 'cannon', 'mortar']);
 
 /* ---------------- PROGRESI ---------------- */
 const xpForLevel = lv => 100 * lv * lv;               // total XP untuk mencapai level lv+1
@@ -265,7 +278,7 @@ const TIPS = {
   start:   'Pilih tower di bawah (atau tekan 1) lalu klik rumput di dekat jalur.',
   placed:  'Bagus! Tekan "Mulai Wave" atau Spasi untuk memulai.',
   wave1:   'Klik tower untuk melihat statistik, upgrade (Q), atau jual (X).',
-  ability: 'Gunakan skill di kiri bawah (Z/C/V/B) saat keadaan genting! Beli stok skill di Toko.',
+  ability: 'Gunakan skill di kiri bawah (Z/C/V/B) saat keadaan genting! Ganti skill di menu Skill.',
   skip:    'Semua musuh sudah keluar? Tekan "Skip" untuk lanjut lebih cepat dan dapat bonus uang.',
   hidden:  'Wave berikutnya ada musuh Hantu! Pastikan ada tower dengan deteksi hidden (👁).',
   boss:    'Boss datang! Boss bisa membuat tower di dekatnya pingsan. Jangan biarkan dia lolos.',
@@ -319,4 +332,4 @@ ACHIEVEMENTS.push(
 );
 
 /* Hadiah pencapaian diambil dari modul bersama agar sama dengan server */
-ACHIEVEMENTS.forEach(a => { a.coins = ACH_REWARDS[a.id] || a.coins; a.gems = ACH_GEMS; });
+ACHIEVEMENTS.forEach(a => { a.coins = ACH_REWARDS[a.id] || a.coins; a.diamonds = ACH_DIAMONDS; });

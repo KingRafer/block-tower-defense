@@ -29,9 +29,10 @@ const Menu = {
   },
   currency() {
     const v = PROFILE.vault;
-    return `<span class="cur gems" title="Permata">💠 ${v.gems.toLocaleString('id-ID')}<button class="plus" data-act="shoptab:topup" title="Top up">＋</button></span>
+    return `<span class="cur dia" title="Diamond — didapat dari bermain, untuk Summon">💎 ${(v.diamonds || 0).toLocaleString('id-ID')}</span>
+      <span class="cur gems" title="Permata — dari top up, untuk Lucky Summon & skin">💠 ${v.gems.toLocaleString('id-ID')}<button class="plus" data-act="shoptab:topup" title="Top up">＋</button></span>
       <span class="cur" title="Koin">🪙 ${v.coins.toLocaleString('id-ID')}</span>
-      <span class="cur" title="Kristal Trait">💎 ${v.crystals}</span><span class="cur" title="Batu Evolusi">🔮 ${v.stones}</span>`;
+      <span class="cur hide-sm" title="Kristal Trait">✨ ${v.crystals}</span><span class="cur hide-sm" title="Batu Evolusi">🔮 ${v.stones}</span>`;
   },
   rarityTag(type) { const r = RARITY[UNIT_RARITY[type]]; return `<span class="rar" style="background:${r.color}">${r.name}</span>`; },
   unitName(u) { return u.evo ? EVOS[u.type].name : TOWERS[u.type].name; },
@@ -98,9 +99,9 @@ const Menu = {
             </div>
           </div>
           <div class="tiles">
-            ${tile('go:gacha', '🎰', 'Summon', `${GACHA.cost1} 💠 / tarikan`, 't-gold big-tile')}
+            ${tile('go:gacha', '🎰', 'Summon', `💎 ${GACHA.cost1} • 🍀 Lucky`, 't-gold big-tile')}
             ${tile('go:units', '🗼', 'Unit', `${PROFILE.vault.units.length} unit • Trait • Evo`, 't-purple')}
-            ${tile('go:shop', '🛒', 'Toko', 'Skill • Skin • Top Up', 't-pink')}
+            ${tile('go:shop', '🛒', 'Toko', 'Skin • Material • Top Up', 't-pink')}
             ${tile('go:trade', '🔁', 'Trading', u ? 'Tukar unit' : 'Perlu login', 't-teal')}
             ${tile('go:skills', '⚡', 'Skill', `${equippedSkills().length}/${SKILL_SLOTS} terpasang`, 't-orange')}
             ${tile('go:friends', '👥', 'Teman', u ? 'Undang & gabung' : 'Perlu login', 't-blue', reqBadge)}
@@ -232,7 +233,7 @@ const Menu = {
           ${d.name}<small>${MODE === 'endless' ? '∞' : d.waves} wave • ❤️ ${d.hp} • $${d.cash} • 🪙×${d.coinMul}</small></button>`).join('')}</div>
         <div class="loadout-mini">Loadout: ${loadoutUnits().map(u => `<i title="${this.unitName(u)}" style="background:${u.evo ? EVOS[u.type].color : TOWERS[u.type].color}"></i>`).join('')}
           <button class="btn purple sm" data-act="go:units">Ubah</button>
-          <span class="dim">Skill:</span> ${equippedSkills().map(id => `<span title="${skillById(id).name}">${skillById(id).icon}${skillLeft(id)}</span>`).join(' ') || '-'}
+          <span class="dim">Skill:</span> ${equippedSkills().map(id => `<span title="${skillById(id).name}">${skillById(id).icon}</span>`).join(' ') || '-'}
           <button class="btn orange sm" data-act="go:skills">Ubah</button></div>
         <button class="btn big" data-act="start">MULAI ▶</button>`;
     },
@@ -260,13 +261,10 @@ const Menu = {
     },
 
     shop() {
-      const tab = this.shopTab || 'skill', v = PROFILE.vault;
-      const tabs = [['skill', '⚡ Skill'], ['skin', '🎨 Skin'], ['material', '💎 Material'], ['topup', '💠 Top Up']];
+      const tab = this.shopTab && this.shopTab !== 'skill' ? this.shopTab : 'skin', v = PROFILE.vault;
+      const tabs = [['skin', '🎨 Skin'], ['material', '✨ Material'], ['topup', '💠 Top Up']];
       let body = '';
-      if (tab === 'skill') body = `<div class="shopgrid">${ABILITIES.map(a => { const sp = SKILL_SHOP[a.id], cur = sp.currency === 'gems' ? '💠' : '🪙';
-        return `<div class="sitem"><div class="sic" style="background:${a.color}">${a.icon}</div><div class="sinfo"><b>${a.name}</b><small>${a.desc}</small>
-          <small class="dim">Stok: <b>${v.skillUses[a.id] || 0}</b> • CD ${a.cd} dtk</small></div>
-          <button class="btn sm ${sp.currency === 'gems' ? 'purple' : 'gold'}" data-act="buyskill:${a.id}">+${sp.uses} — ${cur} ${sp.price}</button></div>`; }).join('')}</div>`;
+      if (false) body = '';
       else if (tab === 'skin') body = `<div class="shopgrid skins">${Object.entries(SKINS).filter(([k]) => k !== 'default').map(([k, sk]) => {
         const own = v.skins.includes(k);
         return `<div class="sitem skin"><canvas width="64" height="64" data-icon="scout" data-skin="${k}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Kosmetik untuk semua unit</small></div>
@@ -282,23 +280,24 @@ const Menu = {
 
     gacha() {
       const ban = this.banner || 'std', v = PROFILE.vault, feat = SHARED.featuredUnit(Date.now());
-      const rates = Object.entries(GACHA.rates).map(([r, p]) => `<span class="rate" style="--rc:${RARITY[r].color}">${RARITY[r].name} ${p}%</span>`).join('');
+      const lucky = ban === 'lucky', cfg = lucky ? LUCKY : GACHA, cur = lucky ? 'gems' : 'diamonds', icon = lucky ? '💠' : '💎', bal = v[cur] || 0;
+      const rates = Object.entries(cfg.rates).map(([r, p]) => `<span class="rate" style="--rc:${RARITY[r].color}">${RARITY[r].name} ${p}%</span>`).join('');
       const pool = RARITY_ORDER.slice().reverse().map(r => `<div class="pool"><b style="color:${RARITY[r].color}">${RARITY[r].name}</b> ${SHARED.unitsOfRarity(r).map(t => TOWERS[t].name).join(', ')}</div>`).join('');
       return `${this.header('Summon')}
-        <div class="tabs">${Object.entries(GACHA.banners).map(([k, b]) => `<button class="tab ${ban === k ? 'on' : ''}" data-act="banner:${k}">${b.name}</button>`).join('')}</div>
-        <div class="gacha box ${ban === 'feat' ? 'feat' : ''}">
+        <div class="tabs">${Object.entries(GACHA.banners).map(([k, b]) => `<button class="tab ${ban === k ? 'on' : ''} ${k === 'lucky' ? 'lucky-tab' : ''}" data-act="banner:${k}">${b.name}</button>`).join('')}</div>
+        <div class="gacha box ${ban}">
           <div class="gleft">
             <h3>${GACHA.banners[ban].name}</h3><p class="dim">${GACHA.banners[ban].desc}</p>
             ${ban === 'feat' ? `<div class="featured"><canvas width="96" height="96" data-icon="${feat}" data-skin="default" data-evo="0"></canvas><div><small>UNIT UNGGULAN HARI INI</small><b>${TOWERS[feat].name}</b>${this.rarityTag(feat)}<small>${TOWERS[feat].desc}</small></div></div>`
-              : `<div class="gacha-art">🎰</div>`}
+              : `<div class="gacha-art">${lucky ? '🍀' : '🎰'}</div>`}
             <div class="rates">${rates}</div>
-            <p class="dim">Pity: <b>${v.pity[ban] || 0}/${GACHA.pity}</b> — Legendaris dijamin di tarikan ke-${GACHA.pity}. 10× menjamin minimal 1 Epik.</p>
+            <p class="dim">Pity: <b>${v.pity[ban] || 0}/${cfg.pity}</b> — Legendaris dijamin di tarikan ke-${cfg.pity}. 10× menjamin minimal 1 ${lucky ? 'Legendaris' : 'Epik'}.</p>
           </div>
           <div class="gright">
-            <div class="gem-bal">💠 ${v.gems.toLocaleString('id-ID')}</div>
-            <button class="btn big gold" data-act="pull:1" ${v.gems < GACHA.cost1 ? 'disabled' : ''}>Summon ×1 <small>💠 ${GACHA.cost1}</small></button>
-            <button class="btn big purple" data-act="pull:10" ${v.gems < GACHA.cost10 ? 'disabled' : ''}>Summon ×10 <small>💠 ${GACHA.cost10} (hemat 10%)</small></button>
-            <button class="btn blue" data-act="shoptab:topup">💠 Top Up Permata</button>
+            <div class="gem-bal ${lucky ? '' : 'dia'}">${icon} ${bal.toLocaleString('id-ID')}</div>
+            <button class="btn big gold" data-act="pull:1" ${bal < cfg.cost1 ? 'disabled' : ''}>Summon ×1 <small>${icon} ${cfg.cost1}</small></button>
+            <button class="btn big purple" data-act="pull:10" ${bal < cfg.cost10 ? 'disabled' : ''}>Summon ×10 <small>${icon} ${cfg.cost10} (hemat 10%)</small></button>
+            ${lucky ? `<button class="btn blue" data-act="shoptab:topup">💠 Top Up Permata</button>` : `<small class="dim center">💎 Diamond didapat dari menyelesaikan wave, mengalahkan boss, menang, login harian & pencapaian.</small>`}
           </div>
         </div>
         <details class="box"><summary>Daftar unit per kelangkaan</summary>${pool}</details>
@@ -308,7 +307,7 @@ const Menu = {
     trade() {
       const nl = this.needLogin('Trading', 'trading unit dengan teman'); if (nl) return nl;
       const d = this.tradeData;
-      const side = (sd) => `${sd.units.map(x => x.missing ? '<div class="ucard empty">Hilang</div>' : this.unitCard(x, { act: 'noop', noEquip: true })).join('')}${sd.gems ? `<div class="gemchip">💠 ${sd.gems}</div>` : ''}${!sd.units.length && !sd.gems ? '<small class="dim">—</small>' : ''}`;
+      const side = (sd) => `${sd.units.map(x => x.missing ? '<div class="ucard empty">Hilang</div>' : this.unitCard(x, { act: 'noop', noEquip: true })).join('')}${sd.diamonds ? `<div class="gemchip">💎 ${sd.diamonds}</div>` : ''}${!sd.units.length && !sd.diamonds ? '<small class="dim">—</small>' : ''}`;
       const row = t => `<div class="trow box ${t.status}">
         <div class="thead"><b>${t.mine ? 'Ke' : 'Dari'} ${esc(t.other)}</b><span class="tstat">${({ pending: '⏳ Menunggu', done: '✅ Selesai', declined: '❌ Ditolak', cancelled: '🚫 Dibatalkan', failed: '⚠️ Gagal', processing: '⏳ Diproses' })[t.status] || t.status}</span></div>
         <div class="tsides"><div><small>${t.mine ? 'Kamu beri' : 'Kamu dapat'}</small><div class="tunits">${side(t.give)}</div></div><div class="tarrow">⇄</div>
@@ -319,7 +318,7 @@ const Menu = {
       const pending = d ? d.trades.filter(t => t.status === 'pending' || t.status === 'processing') : [], hist = d ? d.trades.filter(t => !pending.includes(t)) : [];
       return `${this.header('Trading')}
         <div class="row2"><button class="btn big" data-act="tnew">➕ Buat Penawaran</button><button class="btn gray" data-act="trefresh">🔄 Muat ulang</button></div>
-        <div class="box tipbox">🔁 Tukar unit (beserta trait, evolusi & mastery-nya) dan Permata dengan teman. Unit awal/impor (⛔) dan unit terkunci tidak bisa diperdagangkan.</div>
+        <div class="box tipbox">🔁 Tukar unit (beserta trait, evolusi & mastery-nya) dan 💎 Diamond dengan teman. Unit awal/impor (⛔) dan unit terkunci tidak bisa diperdagangkan.</div>
         <h3>Penawaran aktif</h3>${!d ? '<p class="dim">Memuat…</p>' : pending.map(row).join('') || '<p class="dim">Tidak ada penawaran aktif.</p>'}
         ${hist.length ? `<h3>Riwayat</h3>${hist.slice(0, 10).map(row).join('')}` : ''}`;
     },
@@ -335,9 +334,9 @@ const Menu = {
       return `${this.header('Penawaran ke ' + esc(fr ? fr.name : 'teman'))}
         <div class="tnew">
           <div class="box"><h4>Kamu beri</h4><div class="ugrid sm">${pickGrid(mine, T0.give, 'tgive')}</div>
-            <div class="inrow"><span>💠 Permata</span><input id="tGiveGems" type="number" min="0" value="${T0.giveGems}" style="max-width:120px"><small class="dim">punya ${PROFILE.vault.gems}</small></div></div>
+            <div class="inrow"><span>💎 Diamond</span><input id="tGiveGems" type="number" min="0" value="${T0.giveGems}" style="max-width:120px"><small class="dim">punya ${PROFILE.vault.diamonds || 0}</small></div></div>
           <div class="box"><h4>Kamu minta</h4><div class="ugrid sm">${T0.theirs ? pickGrid(T0.theirs, T0.want, 'twant') : '<p class="dim">Memuat unit teman…</p>'}</div>
-            <div class="inrow"><span>💠 Permata</span><input id="tWantGems" type="number" min="0" value="${T0.wantGems}" style="max-width:120px"></div></div>
+            <div class="inrow"><span>💎 Diamond</span><input id="tWantGems" type="number" min="0" value="${T0.wantGems}" style="max-width:120px"></div></div>
         </div>
         <div class="row2"><button class="btn gray" data-act="tback">← Ganti teman</button><button class="btn big" data-act="tsend">📨 Kirim Penawaran</button></div>`;
     },
@@ -372,14 +371,11 @@ const Menu = {
           <h4>🎯 Tujuan</h4><p>Zombie berjalan dari portal ungu menuju <b>BASE</b>. Pasang tower di rumput dekat jalur untuk menghentikannya. Musuh yang lolos mengurangi nyawa sebesar sisa HP-nya, sedangkan boss yang lolos langsung mengakhiri permainan. Bertahan sampai wave terakhir untuk menang.</p>
           <h4>💰 Ekonomi</h4><p>Dapatkan uang dari mengalahkan musuh, bonus akhir wave, dan tower <b>Farm</b>. Jual tower untuk mendapat kembali ${SELL_RATE * 100}% total biaya.</p>
           <h4>🧟 Musuh</h4>
-          <table>${Object.entries(ENEMIES).filter(([k]) => k !== 'mini').map(([k, e]) => `<tr><td><i class="dot" style="background:${e.color}"></i> ${e.name}</td><td>${{
-            normal: 'Musuh dasar', fast: 'Cepat tapi rapuh', tank: 'Lambat, HP besar, armor 25%', hidden: 'Hanya bisa diserang tower dengan deteksi hidden',
-            regen: 'Memulihkan HP terus-menerus', armored: 'Armor 50%, gunakan tower tembus armor', splitter: 'Pecah menjadi 2 musuh kecil saat mati',
-            boss: 'Muncul tiap 10 wave. Membuat tower di dekatnya pingsan (stun) dan memanggil pasukan' }[k]}${ENEMY_INTRO[k] ? ` <small class="dim">(mulai wave ${ENEMY_INTRO[k]})</small>` : ''}</td></tr>`).join('')}</table>
-          <h4>⚡ Skill & Skip</h4><p>Ada ${ABILITIES.length} skill. Pasang hingga ${SKILL_SLOTS} skill di menu <b>Skill</b> dan gunakan dengan <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd>. Setiap pemakaian mengurangi stok — beli stok di <b>Toko</b>. Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
+          <table>${Object.entries(ENEMIES).filter(([, e]) => !e.hide).map(([k, e]) => `<tr><td><i class="dot" style="background:${e.color}"></i> ${e.name}</td><td>${e.desc}${ENEMY_INTRO[k] ? ` <small class="dim">(mulai wave ${ENEMY_INTRO[k]})</small>` : ''}</td></tr>`).join('')}</table>
+          <h4>⚡ Skill & Skip</h4><p>Ada ${ABILITIES.length} skill. Pasang hingga ${SKILL_SLOTS} skill di menu <b>Skill</b> dan gunakan dengan <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd>. Semua skill gratis tanpa batas pemakaian, hanya ada cooldown. Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
           <h4>📅 Mode</h4><p><b>Klasik</b>: menang di wave terakhir. <b>Endless</b>: wave tanpa batas, kejar skor tertinggi. <b>Tantangan Harian</b>: map, kesulitan, dan modifier berganti tiap hari. Selesaikan untuk bonus 🪙 ${DAILY_REWARD}.</p>
-          <h4>🧬 Trait, Mastery & Evolusi</h4><p>Setiap tower punya <b>Mastery</b> (Lv 1–${UNIT_MAX_LV}, +2% damage per level) yang naik saat tower dipakai. Roll <b>Trait</b> dengan 💎 Kristal untuk bonus acak dari Biasa sampai Mitos. Setelah Mastery Lv ${EVO_REQ.level}, <b>Evolusikan</b> tower dengan 🔮 ${EVO_REQ.stones} Batu Evolusi + 🪙 ${EVO_REQ.coins} untuk bentuk baru dengan kemampuan unik.</p>
-          <h4>📈 Progres</h4><p>Setiap selesai bermain kamu mendapat <b>🪙 koin</b> dan <b>XP</b>. Dapatkan unit baru lewat <b>Summon</b> (💠 Permata), lalu pasang hingga ${LOADOUT_SIZE} unit di menu <b>Unit</b>. Unit bisa diperdagangkan dengan teman di menu <b>Trading</b>. Kesulitan dan map yang lebih sulit memberi koin lebih banyak.</p>
+          <h4>🧬 Trait, Mastery & Evolusi</h4><p>Setiap tower punya <b>Mastery</b> (Lv 1–${UNIT_MAX_LV}, +2% damage per level) yang naik saat tower dipakai. Roll <b>Trait</b> dengan ✨ Kristal untuk bonus acak dari Biasa sampai Mitos. Setelah Mastery Lv ${EVO_REQ.level}, <b>Evolusikan</b> tower dengan 🔮 ${EVO_REQ.stones} Batu Evolusi + 🪙 ${EVO_REQ.coins} untuk bentuk baru dengan kemampuan unik.</p>
+          <h4>📈 Progres</h4><p>Setiap selesai bermain kamu mendapat <b>🪙 koin</b> dan <b>XP</b>. Dapatkan unit baru lewat <b>Summon</b> (💎 Diamond dari bermain, atau 💠 Permata untuk Lucky Summon), lalu pasang hingga ${LOADOUT_SIZE} unit di menu <b>Unit</b>. Unit bisa diperdagangkan dengan teman di menu <b>Trading</b>. Kesulitan dan map yang lebih sulit memberi koin lebih banyak.</p>
           <h4>⌨️ Kontrol</h4>
           <table><tr><td><kbd>1</kbd>–<kbd>${LOADOUT_SIZE}</kbd></td><td>Pilih tower</td></tr><tr><td>Klik</td><td>Pasang / pilih tower</td></tr>
           <tr><td><kbd>Shift</kbd> + klik</td><td>Pasang berulang</td></tr><tr><td><kbd>Q</kbd> / <kbd>E</kbd></td><td>Upgrade tower terpilih</td></tr>
@@ -445,15 +441,14 @@ const Menu = {
     },
 
     skills() {
-      const eq = equippedSkills(), v = PROFILE.vault;
+      const eq = equippedSkills();
       return `${this.header('Skill')}
         <div class="box"><h4>Skill terpasang (${eq.length}/${SKILL_SLOTS}) — tombol ${SKILL_KEYS.map(k => `<kbd>${k.toUpperCase()}</kbd>`).join(' ')}</h4>
-          <div class="sk-eq">${Array.from({ length: SKILL_SLOTS }, (_, i) => { const a = skillById(eq[i]); return a ? `<div class="sk-slot" style="--c:${a.color}" data-act="skilltog:${a.id}"><span>${a.icon}</span><b>${a.name}</b><small>${SKILL_KEYS[i].toUpperCase()} • stok ${v.skillUses[a.id] || 0}</small></div>` : '<div class="sk-slot empty">Kosong</div>'; }).join('')}</div>
-          <small class="dim">Klik skill di bawah untuk memasang/melepas. Setiap pemakaian mengurangi stok — beli stok di Toko.</small></div>
-        <div class="shopgrid">${ABILITIES.map(a => { const sp = SKILL_SHOP[a.id], on = eq.includes(a.id);
-          return `<div class="sitem ${on ? 'on' : ''}"><div class="sic" style="background:${a.color}">${a.icon}</div><div class="sinfo"><b>${a.name} ${on ? '✔' : ''}</b><small>${a.desc}</small><small class="dim">Stok ${v.skillUses[a.id] || 0} • CD ${a.cd} dtk</small></div>
-            <div class="sbtns"><button class="btn sm ${on ? 'red' : 'blue'}" data-act="skilltog:${a.id}">${on ? 'Lepas' : 'Pasang'}</button>
-            <button class="btn sm ${sp.currency === 'gems' ? 'purple' : 'gold'}" data-act="buyskill:${a.id}">+${sp.uses} ${sp.currency === 'gems' ? '💠' : '🪙'}${sp.price}</button></div></div>`; }).join('')}</div>`;
+          <div class="sk-eq">${Array.from({ length: SKILL_SLOTS }, (_, i) => { const a = skillById(eq[i]); return a ? `<div class="sk-slot" style="--c:${a.color}" data-act="skilltog:${a.id}"><span>${a.icon}</span><b>${a.name}</b><small>${SKILL_KEYS[i].toUpperCase()} • CD ${a.cd} dtk</small></div>` : '<div class="sk-slot empty">Kosong</div>'; }).join('')}</div>
+          <small class="dim">Semua skill gratis & tanpa batas pemakaian — hanya ada cooldown. Klik untuk memasang/melepas (maks ${SKILL_SLOTS}).</small></div>
+        <div class="shopgrid">${ABILITIES.map(a => { const on = eq.includes(a.id);
+          return `<div class="sitem ${on ? 'on' : ''}" data-act="skilltog:${a.id}"><div class="sic" style="background:${a.color}">${a.icon}</div><div class="sinfo"><b>${a.name} ${on ? '✔' : ''}</b><small>${a.desc}</small><small class="dim">Cooldown ${a.cd} detik</small></div>
+            <button class="btn sm ${on ? 'red' : 'blue'}" data-act="skilltog:${a.id}">${on ? 'Lepas' : 'Pasang'}</button></div>`; }).join('')}</div>`;
     },
 
     pause() {
@@ -485,7 +480,7 @@ const Menu = {
           <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
           <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
           <tr><td>Durasi</td><td><b>${this.fmtTime(S.time)}</b></td></tr>
-          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.gems ? ` &nbsp; <b>💠 +${d.gems}</b>` : ''}${d.crystals ? ` &nbsp; <b>💎 +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}</td></tr></table>
+          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.diamonds ? ` &nbsp; <b>💎 +${d.diamonds}</b>` : ''}${d.crystals ? ` &nbsp; <b>✨ +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}</td></tr></table>
           ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${TOWERS[m.type].name}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
         ${isMP() ? `<div class="row2"><button class="btn big" data-act="go:mabar">🤝 Mabar Lagi</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`
@@ -598,7 +593,7 @@ const Menu = {
       case 'ulock': { const u = unitById(arg); this.eco('lock', { unitId: arg, lock: !(u && u.lock) }); break; }
       case 'scrap':
         if (this.scrapArm !== arg) { this.scrapArm = arg; this.show('units', true); break; }
-        this.scrapArm = null; this.eco('scrap', { unitIds: [arg] }, r => `♻️ Didapat: ${['coins', 'crystals', 'stones'].filter(k => r[k]).map(k => ({ coins: '🪙', crystals: '💎', stones: '🔮' })[k] + ' ' + r[k]).join(' ')}`); break;
+        this.scrapArm = null; this.eco('scrap', { unitIds: [arg] }, r => `♻️ Didapat: ${['coins', 'crystals', 'stones'].filter(k => r[k]).map(k => ({ coins: '🪙', crystals: '✨', stones: '🔮' })[k] + ' ' + r[k]).join(' ')}`); break;
       case 'roll': {
         const u = unitById(arg); if (!u) break;
         if (u.trait && RARITY[TRAITS[u.trait].rarity].rank >= 2 && this.rollArm !== arg) { this.rollArm = arg; this.show('units', true); break; }
@@ -642,7 +637,7 @@ const Menu = {
       }
       case 'tsend': {
         const t = this.tn; t.giveGems = +($('tGiveGems') || {}).value || 0; t.wantGems = +($('tWantGems') || {}).value || 0;
-        Online.api('trade.create', { to: t.friend, give: { units: t.give, gems: t.giveGems }, want: { units: t.want, gems: t.wantGems } })
+        Online.api('trade.create', { to: t.friend, give: { units: t.give, diamonds: t.giveGems }, want: { units: t.want, diamonds: t.wantGems } })
           .then(() => { UI.toast('📨 Penawaran dikirim!', 'gold'); this.tn = null; this.tradeData = null; this.go('trade'); })
           .catch(e => UI.toast('❌ ' + e.message));
         break;
@@ -708,7 +703,7 @@ const Menu = {
         <div class="box trait-box" style="${tr ? `border-color:${RARITY[tr.rarity].color}` : ''}">
           <h4>🎲 Trait</h4>
           <div class="trait-cur" id="traitCur">${tr ? `<span class="ticon">${tr.icon}</span><div><b style="color:${RARITY[tr.rarity].color}">${tr.name}</b> <span class="rar" style="background:${RARITY[tr.rarity].color}">${RARITY[tr.rarity].name}</span><small>${tr.desc}</small></div>` : '<span class="dim">Belum ada trait</span>'}</div>
-          <button class="btn purple" data-act="roll:${u.id}" ${v.crystals < 1 ? 'disabled' : ''}>${this.rollArm === u.id ? '⚠️ Yakin? Trait ini akan hilang' : '🎲 Roll Trait — 💎 1'}</button>
+          <button class="btn purple" data-act="roll:${u.id}" ${v.crystals < 1 ? 'disabled' : ''}>${this.rollArm === u.id ? '⚠️ Yakin? Trait ini akan hilang' : '🎲 Roll Trait — ✨ 1'}</button>
           <details><summary>Peluang trait</summary><div class="odds">${Object.entries(RARITY).map(([rk, r]) => {
             const list = Object.values(TRAITS).filter(t => t.rarity === rk), pct = list.reduce((a, t) => a + t.w, 0);
             return `<div><b style="color:${r.color}">${r.name} ${pct}%</b><small>${list.map(t => `${t.icon} ${t.name}: ${t.desc}`).join('<br>')}</small></div>`; }).join('')}</div></details>

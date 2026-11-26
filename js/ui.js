@@ -29,11 +29,14 @@ const UI = {
     $('hudEnemies').textContent = S.enemies.length + S.spawnQ.length;
     const sb = $('startBtn');
     sb.disabled = S.state !== 'ready';
-    sb.textContent = S.state === 'wave' ? '⚔️ Wave berjalan' : '▶ Mulai Wave';
+    const lbl = (ic, t) => `<span class="bi">${ic}</span><span class="bl">${t}</span>`;
+    const sbt = S.state === 'wave' ? lbl('⚔️', 'Wave berjalan') : lbl('▶', 'Mulai Wave');
+    if (sb.dataset.v !== sbt) { sb.innerHTML = sbt; sb.dataset.v = sbt; }
     const sk = $('skipWaveBtn'), can = canSkip();
     sk.style.display = can ? '' : 'none';
-    if (can) { sk.textContent = `⏭ Skip +$${skipBonusAmt()}`; tip('skip'); }
-    $('skipBtn').textContent = 'Auto: ' + (S.autoSkip ? 'ON' : 'OFF');
+    if (can) { const t = lbl('⏭', `Skip +$${skipBonusAmt()}`); if (sk.dataset.v !== t) { sk.innerHTML = t; sk.dataset.v = t; } tip('skip'); }
+    const at = lbl('🔁', 'Auto: ' + (S.autoSkip ? 'ON' : 'OFF'));
+    if ($('skipBtn').dataset.v !== at) { $('skipBtn').innerHTML = at; $('skipBtn').dataset.v = at; }
     $('skipBtn').classList.toggle('on', S.autoSkip);
     $('speedBtn').textContent = '⏩ ' + S.speed + 'x';
     $('skipBtn').style.display = isMP() ? 'none' : '';
@@ -175,9 +178,9 @@ const UI = {
     const list = equippedSkills();
     $('abilities').innerHTML = list.map((id, i) => {
       const a = skillById(id), left = skillLeft(id);
-      return `<button class="abil ${left <= 0 ? 'locked' : ''} ${S.targeting === a.id ? 'sel' : ''}" data-ab="${a.id}" style="--c:${a.color}"
-        title="${a.name} (${SKILL_KEYS[i].toUpperCase()}) — ${a.desc} • Sisa ${left}">
-        <span class="ai">${a.icon}</span><span class="ak">${SKILL_KEYS[i].toUpperCase()}</span><span class="aq">${left}</span><span class="acd"></span></button>`;
+      return `<button class="abil ${S.targeting === a.id ? 'sel' : ''}" data-ab="${a.id}" style="--c:${a.color}"
+        title="${a.name} (${SKILL_KEYS[i].toUpperCase()}) — ${a.desc}">
+        <span class="ai">${a.icon}</span><span class="ak">${SKILL_KEYS[i].toUpperCase()}</span><span class="acd"></span></button>`;
     }).join('') || '<small class="dim" style="align-self:center">Pasang skill di menu Skill</small>';
     $('abilities').querySelectorAll('.abil').forEach(b => b.onclick = () => useAbility(b.dataset.ab));
     this.updateAbilities();
@@ -185,7 +188,7 @@ const UI = {
   updateAbilities() {
     $('abilities').querySelectorAll('.abil').forEach(b => {
       const a = skillById(b.dataset.ab), cd = S.abilityCd[a.id] || 0, left = skillLeft(a.id);
-      const q = b.querySelector('.aq'); if (q && q.textContent !== String(left)) { q.textContent = left; b.classList.toggle('locked', left <= 0); }
+
       b.querySelector('.acd').textContent = cd > 0 ? Math.ceil(cd) : '';
       b.style.setProperty('--p', cd > 0 ? (cd / a.cd * 100) + '%' : '0%');
       b.classList.toggle('cooling', cd > 0);

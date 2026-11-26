@@ -556,3 +556,139 @@ input:focus { border-color: var(--cyan); }
   .sk-eq { grid-template-columns: repeat(2, 1fr); }
 }
 .foot a { color: var(--dim); }
+
+/* =========================================================
+ * v4.1 — RESPONSIF & HP
+ * ========================================================= */
+html { -webkit-text-size-adjust: 100%; }
+body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+button { touch-action: manipulation; }
+.cur.dia { color: #b3e5fc; }
+.gem-bal.dia { color: #b3e5fc; }
+.gacha.lucky { background: linear-gradient(135deg, rgba(0,230,118,.28), rgba(24,31,56,.9)); border-color: rgba(105,240,174,.5); }
+.tab.lucky-tab { background: linear-gradient(90deg, #1b5e20, #00c853); }
+.tab.lucky-tab.on { background: linear-gradient(90deg, #00e676, #b2ff59); color: #002; }
+.sitem[data-act] { cursor: pointer; }
+
+/* arena selalu muat di layar (tanpa scroll) */
+#stage { display: flex; justify-content: center; }
+canvas#game { width: auto; max-width: 100%; max-height: calc(100dvh - 205px); aspect-ratio: 960 / 576; height: auto; }
+@supports not (height: 100dvh) { canvas#game { max-height: calc(100vh - 205px); } }
+#hud .btn .bi { margin-right: 4px; }
+#rotateHint { display: none; }
+
+/* ---------- tablet ---------- */
+@media (max-width: 1024px) {
+  .slot { width: 84px; }
+  #hud { gap: 6px; }
+}
+
+/* ---------- HP (lebar kecil) ---------- */
+@media (max-width: 760px) {
+  #wrap { padding: 4px; }
+  #hud { padding: 4px; border-radius: 12px; gap: 4px; }
+  .stat { padding: 3px 7px; min-height: 32px; font-size: 13px; gap: 4px; border-radius: 9px; }
+  .stat .ic { font-size: 14px; }
+  .stat .sv { min-width: 46px; }
+  #hud .btn { padding: 5px 9px; font-size: 13px; border-bottom-width: 4px; }
+  #hud .btn .bl { display: none; }
+  #hud .btn .bi { margin: 0; }
+  #hud .spacer { display: none; }
+  #preview { font-size: 11px; min-height: 0; gap: 4px; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  #preview::-webkit-scrollbar { display: none; }
+  canvas#game { border-width: 2px; border-radius: 10px; }
+  #bottom { padding: 5px; gap: 6px; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+  #bottom::-webkit-scrollbar { display: none; }
+  #bar { flex-wrap: nowrap; }
+  .slot { width: 64px; flex-shrink: 0; padding: 4px 2px; border-bottom-width: 4px; }
+  .slot .ico { width: 26px; height: 26px; }
+  .slot .nm { font-size: 9px; } .slot .pr { font-size: 11px; } .slot .cnt { display: none; }
+  .abil { width: 46px; height: 46px; flex-shrink: 0; border-bottom-width: 4px; } .abil .ai { font-size: 19px; } .abil .acd { font-size: 16px; }
+  /* panel tower menjadi bottom sheet */
+  #panel, #panel.left, #panel.bottom { position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 58dvh; overflow-y: auto;
+    border-radius: 18px 18px 0 0; z-index: 9; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); box-shadow: 0 -10px 30px rgba(0,0,0,.5); }
+  #panel .btn { padding: 10px; font-size: 15px; }
+  #mpPlayers { left: 6px; top: 6px; } .mpp { font-size: 11px; padding: 2px 7px; }
+  #chat { width: 58%; left: 6px; bottom: 6px; } #chatLog { max-height: 90px; font-size: 11px; }
+  #banner { font-size: 22px; }
+  #toasts { top: 8px; width: 94vw; } .toast { max-width: 94vw; font-size: 13px; padding: 7px 10px; }
+  .invite { width: 94vw; }
+  /* menu */
+  #overlay { padding: 10px 8px calc(10px + env(safe-area-inset-bottom)); }
+  .screen { gap: 10px; }
+  .screen h1 { font-size: 28px; } .screen h2, .mhead h2 { font-size: 20px; }
+  .mhead { gap: 6px; padding: 6px; }
+  .mhead .btn { padding: 5px 10px; font-size: 13px; }
+  .pbar { gap: 4px; padding: 4px 6px; font-size: 12px; } .pbar .xp { width: 80px; }
+  .cur { padding: 3px 7px; font-size: 12px; } .hide-sm { display: none; }
+  .home-top { gap: 8px; } .pcard { padding: 6px 10px 6px 6px; } .pinfo b { font-size: 15px; } .xpbar { width: 80px; }
+  .logo3d span { font-size: 42px; } .logo3d h1 { font-size: 32px; } .hero .sub { font-size: 13px; }
+  .play-btn { padding: 10px 12px; border-radius: 14px; } .play-btn b { font-size: 18px; } .play-btn span { font-size: 24px; width: 40px; height: 40px; }
+  .tiles { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tile { padding: 8px 9px; border-radius: 12px; } .tile .ti { font-size: 20px; } .tile b { font-size: 13px; } .tile small { font-size: 10px; }
+  .btn.big { min-width: 0; width: 100%; font-size: 16px; padding: 9px 14px; }
+  .mcol { width: 100%; }
+  .box { padding: 10px 12px; border-radius: 12px; font-size: 13px; }
+  .box table { font-size: 12px; } .box td, .box th { padding: 3px 4px; }
+  .cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .card small { min-height: 0; font-size: 11px; }
+  .diffs .btn { min-width: 0; flex: 1 1 45%; }
+  .ugrid { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); max-height: 46dvh; }
+  .ucard canvas { width: 46px; height: 46px; }
+  .lo-row { flex-direction: column; align-items: stretch; padding: 6px; }
+  .lo-slots { grid-template-columns: repeat(6, 1fr); gap: 4px; } .lo-slots .ucard b { font-size: 9px; }
+  .shopgrid { grid-template-columns: 1fr; }
+  .gacha { gap: 10px; } .gacha-art { font-size: 60px; }
+  .pcardx { width: 86px; height: 120px; } .pcardx canvas { width: 56px; height: 56px; } .pcardx .front b { font-size: 11px; }
+  .tsides { grid-template-columns: 1fr; } .tarrow { transform: rotate(90deg); text-align: center; }
+  .slots { grid-template-columns: repeat(2, 1fr); }
+  .roomcode code { font-size: 28px; letter-spacing: 5px; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .tabs::-webkit-scrollbar { display: none; } .tab { flex-shrink: 0; }
+}
+
+/* ---------- HP landscape (tinggi kecil): maksimalkan arena ---------- */
+@media (max-height: 520px) and (orientation: landscape) {
+  #wrap { max-width: none; padding: 2px 6px; }
+  #hud { padding: 3px; gap: 4px; margin-bottom: 3px; }
+  .stat { min-height: 28px; padding: 2px 6px; font-size: 12px; }
+  #hud .btn { padding: 3px 8px; font-size: 12px; }
+  #hud .btn .bl { display: none; } #hud .btn .bi { margin: 0; }
+  #preview { display: none; }
+  canvas#game { max-height: calc(100dvh - 112px); border-width: 2px; }
+  #bottom { margin-top: 3px; padding: 3px; }
+  .slot { width: 58px; padding: 2px; } .slot .ico { width: 22px; height: 22px; margin-bottom: 1px; } .slot .key, .slot .cnt { display: none; }
+  .abil { width: 40px; height: 40px; } .abil .ai { font-size: 17px; }
+  #panel, #panel.left, #panel.bottom { position: fixed; top: 4px; bottom: 4px; right: 4px; left: auto; width: 250px; max-height: none; overflow-y: auto; border-radius: 14px; z-index: 9; }
+}
+
+/* ---------- saran putar layar (HP portrait saat bermain) ---------- */
+@media (max-width: 600px) and (orientation: portrait) {
+  body.ingame:not(.no-rotate-hint) #rotateHint { display: flex; }
+  canvas#game { max-height: none; width: 100%; }
+}
+#rotateHint { position: fixed; left: 8px; right: 8px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 7; align-items: center; gap: 10px;
+  background: rgba(24,31,56,.95); border: 1px solid #3a4670; border-radius: 14px; padding: 8px 12px; font-size: 13px; animation: slide .3s; }
+#rotateHint > span { font-size: 26px; } #rotateHint small { display: block; color: var(--dim); }
+#rotateHint button { margin-left: auto; background: none; border: 0; color: var(--dim); font-size: 18px; }
+@media (hover: none) { #tooltip { display: none !important; } .slot:hover, .tile:hover, .card:hover, .ucard:hover { transform: none; } }
+@media (max-width: 760px) {
+  #toasts { top: auto; bottom: calc(84px + env(safe-area-inset-bottom)); }
+  #toasts .toast:nth-last-child(n+3) { display: none; }
+  .udetail table, .tdetail table { display: block; overflow-x: auto; white-space: nowrap; }
+  .udetail .row2 { flex-wrap: wrap; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  #toasts { top: 40px; bottom: auto; left: auto; right: 8px; transform: none; width: 280px; align-items: flex-end; }
+  #toasts .toast { font-size: 12px; padding: 5px 9px; }
+  #toasts .toast:nth-last-child(n+3) { display: none; }
+}
+.unitwrap > *, .udetail, .udetail .box, .inv, .lobby > *, .fgrid > *, .acc > *, .tnew > *, .gacha > * { min-width: 0; }
+@media (max-width: 760px) {
+  #toasts { top: 96px; bottom: auto; }
+  .screen { max-width: 100%; }
+  .row2 { gap: 6px; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  #toasts { left: 8px; right: auto; align-items: flex-start; top: 44px; }
+  #panel, #panel.left, #panel.bottom { top: 40px; }
+}

@@ -57,7 +57,7 @@
 
   /* ---------------- MATERIAL, SKIN, SKILL, TOP UP ---------------- */
   const MATERIALS = {
-    crystals: { name: 'Kristal Trait', icon: '💎', price: 200, desc: 'Dipakai untuk roll trait unit.' },
+    crystals: { name: 'Kristal Trait', icon: '✨', price: 200, desc: 'Dipakai untuk roll trait unit.' },
     stones:   { name: 'Batu Evolusi',  icon: '🔮', price: 900, desc: 'Dipakai untuk evolusi unit.' },
   };
   /* Skin kosmetik untuk unit (dibeli dengan Permata) */
@@ -73,7 +73,14 @@
     robot:   { name: 'Robot',     price: 400, icon: '🤖', body: '#90a4ae', head: '#cfd8dc', gun: '#37474f', acc: 'antenna', eyes: '#00e676' },
     rainbow: { name: 'Pelangi',   price: 600, icon: '🌈', rainbow: true, acc: 'halo', glow: '#ffffff' },
   };
-  /* Paket penggunaan skill. currency: 'coins' atau 'gems' */
+  /* Mata uang:
+   *  diamonds 💎 — gratis dari bermain (Summon biasa, skill premium, trading)
+   *  gems 💠     — hanya dari top up (Lucky Summon, skin) */
+  const CURRENCY = {
+    diamonds: { name: 'Diamond', icon: '💎' }, gems: { name: 'Permata', icon: '💠' },
+    coins: { name: 'Koin', icon: '🪙' }, crystals: { name: 'Kristal Trait', icon: '✨' }, stones: { name: 'Batu Evolusi', icon: '🔮' },
+  };
+  /* Paket penggunaan skill. currency: 'coins' atau 'diamonds' */
   const SKILL_SHOP = {
     airstrike: { uses: 3, price: 300, currency: 'coins' },
     freeze:    { uses: 3, price: 300, currency: 'coins' },
@@ -82,9 +89,9 @@
     radar:     { uses: 3, price: 350, currency: 'coins' },
     overclock: { uses: 3, price: 500, currency: 'coins' },
     shield:    { uses: 3, price: 600, currency: 'coins' },
-    meteor:    { uses: 3, price: 40,  currency: 'gems' },
-    rewind:    { uses: 3, price: 40,  currency: 'gems' },
-    storm:     { uses: 3, price: 60,  currency: 'gems' },
+    meteor:    { uses: 3, price: 40,  currency: 'diamonds' },
+    rewind:    { uses: 3, price: 40,  currency: 'diamonds' },
+    storm:     { uses: 3, price: 60,  currency: 'diamonds' },
   };
   const STARTER_SKILLS = { airstrike: 2, freeze: 2, repair: 1 };
   /* Paket top up Permata (harga dalam Rupiah) */
@@ -101,10 +108,13 @@
     cost1: 50, cost10: 450, pity: 60,
     rates: { common: 55, rare: 30, epic: 11, legendary: 3.5, mythic: 0.5 },
     banners: {
-      std:  { name: 'Banner Standar', desc: 'Semua unit tersedia.' },
-      feat: { name: 'Banner Unggulan', desc: 'Peluang 50% unit unggulan saat dapat Legendaris/Mitos. Berganti setiap hari.' },
+      std:   { name: 'Banner Standar', currency: 'diamonds', desc: 'Semua unit tersedia. Pakai 💎 Diamond yang didapat dari bermain.' },
+      feat:  { name: 'Banner Unggulan', currency: 'diamonds', desc: 'Peluang 50% unit unggulan saat dapat Legendaris/Mitos. Berganti setiap hari.' },
+      lucky: { name: '🍀 Lucky Summon', currency: 'gems', desc: 'Pakai 💠 Permata (top up). Peluang Legendaris & Mitos jauh lebih tinggi, pity lebih cepat, 10× menjamin Legendaris.' },
     },
   };
+  /* Lucky Summon (Permata hasil top up) */
+  const LUCKY = { cost1: 10, cost10: 90, pity: 30, rates: { common: 25, rare: 37, epic: 27, legendary: 9, mythic: 2 } };
   const unitsOfRarity = r => UNIT_TYPES.filter(t => UNIT_RARITY[t] === r);
   function dayStr(now) { const d = new Date(now + 7 * 3600e3); return d.toISOString().slice(0, 10); } // zona WIB
   function featuredUnit(now) {
@@ -123,14 +133,20 @@
     towers_100: 200, perfect: 500, hard_win: 1000, all_maps: 800, collector: 300, rich: 300, endless_40: 800, daily_1: 300,
     skills_25: 200, skipper: 150, trait_1: 50, trait_leg: 400, evo_1: 300, mastery_20: 500, gacha_10: 150, trade_1: 200,
   };
-  const ACH_GEMS = 20;
-  const DAILY_LOGIN = [20, 20, 30, 30, 40, 50, 100];   // Permata hari ke-1..7 (berulang)
+  const ACH_DIAMONDS = 30;
+  const DAILY_LOGIN = [40, 40, 60, 60, 80, 100, 200];   // Diamond hari ke-1..7 (berulang)
 
   /* ---------------- VAULT ---------------- */
   function newVault(now, rng) {
-    const v = { coins: 0, gems: 300, crystals: 3, stones: 0, units: [], skins: ['default'], skillUses: { ...STARTER_SKILLS },
-      pity: { std: 0, feat: 0 }, achClaimed: [], daily: { day: '', streak: 0 }, dailyWon: '', lastClaimAt: 0, pulls: 0 };
+    const v = { coins: 0, gems: 0, diamonds: 300, crystals: 3, stones: 0, units: [], skins: ['default'], skillUses: { ...STARTER_SKILLS },
+      pity: { std: 0, feat: 0, lucky: 0 }, achClaimed: [], daily: { day: '', streak: 0 }, dailyWon: '', lastClaimAt: 0, pulls: 0 };
     STARTER_UNITS.forEach(t => v.units.push(makeUnit(t, rng, now, { tradable: false })));
+    return v;
+  }
+  /** Lengkapi vault lama (sebelum ada Diamond / Lucky) */
+  function fixVault(v) {
+    if (v.diamonds == null) v.diamonds = 300;
+    v.pity = { std: 0, feat: 0, lucky: 0, ...(v.pity || {}) };
     return v;
   }
   function makeUnit(type, rng, now, extra) {
@@ -140,7 +156,7 @@
   const err = (msg, status = 400) => Object.assign(new Error(msg), { status });
   const findUnit = (v, id) => { const u = v.units.find(x => x.id === id); if (!u) throw err('Unit tidak ditemukan', 404); return u; };
   function pay(v, currency, amount) {
-    if ((v[currency] || 0) < amount) throw err(currency === 'gems' ? 'Permata tidak cukup' : currency === 'coins' ? 'Koin tidak cukup' : 'Material tidak cukup');
+    if ((v[currency] || 0) < amount) throw err((CURRENCY[currency] ? CURRENCY[currency].name : 'Material') + ' tidak cukup');
     v[currency] -= amount;
   }
   function weighted(rng, table) {
@@ -156,7 +172,7 @@
       coins: Math.round((c * 12 + (won ? 250 : 0) + boss * 40) * D.coinMul * (1 + stars * 0.1)) + (res.dailyFirstWin ? DAILY_REWARD : 0),
       crystals: boss + Math.floor(c / 10) + (won ? 2 : 0) + (res.daily && won ? 3 : 0),
       stones: (won && res.diff === 'hard' ? 1 : 0) + (res.daily && won ? 1 : 0) + (res.mode === 'endless' && c >= 30 ? 1 : 0) + (boss >= 3 ? 1 : 0),
-      gems: (won ? 10 : 0) + Math.floor(c / 10) * 2,
+      diamonds: c * 3 + boss * 15 + (won ? 60 : 0) + (res.daily && won ? 50 : 0),
     };
   }
 
@@ -164,14 +180,16 @@
   /* Setiap aksi: (vault, payload, ctx{rng, now, server}) → hasil. Vault diubah langsung. */
   const actions = {
     summon(v, p, ctx) {
-      const banner = p.banner === 'feat' ? 'feat' : 'std', n = p.count === 10 ? 10 : 1;
-      pay(v, 'gems', n === 10 ? GACHA.cost10 : GACHA.cost1);
+      const banner = GACHA.banners[p.banner] ? p.banner : 'std', n = p.count === 10 ? 10 : 1;
+      const lucky = banner === 'lucky', cfg = lucky ? LUCKY : GACHA;
+      pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
       const featured = featuredUnit(ctx.now), out = [];
       for (let i = 0; i < n; i++) {
         v.pity[banner] = (v.pity[banner] || 0) + 1;
-        let r = weighted(ctx.rng, GACHA.rates);
-        if (v.pity[banner] >= GACHA.pity && RARITY[r].rank < 3) r = 'legendary';
-        if (n === 10 && i === 9 && !out.some(u => RARITY[UNIT_RARITY[u.type]].rank >= 2) && RARITY[r].rank < 2) r = 'epic';
+        let r = weighted(ctx.rng, cfg.rates);
+        if (v.pity[banner] >= cfg.pity && RARITY[r].rank < 3) r = 'legendary';
+        const minLast = lucky ? 3 : 2;   // 10×: Lucky menjamin Legendaris, biasa menjamin Epik
+        if (n === 10 && i === 9 && !out.some(u => RARITY[UNIT_RARITY[u.type]].rank >= minLast) && RARITY[r].rank < minLast) { r = lucky ? 'legendary' : 'epic'; if (lucky) v.pity[banner] = 0; }
         if (RARITY[r].rank >= 3) v.pity[banner] = 0;
         let pool = unitsOfRarity(r), type = pool[Math.floor(ctx.rng() * pool.length)];
         if (banner === 'feat' && RARITY[r].rank >= 3 && ctx.rng() < 0.5) type = featured;
@@ -274,22 +292,24 @@
       const yest = dayStr(ctx.now - 864e5);
       v.daily.streak = v.daily.day === yest ? v.daily.streak + 1 : 1;
       v.daily.day = today;
-      const gems = DAILY_LOGIN[(v.daily.streak - 1) % DAILY_LOGIN.length];
-      v.gems += gems;
-      return { gems, streak: v.daily.streak };
+      const diamonds = DAILY_LOGIN[(v.daily.streak - 1) % DAILY_LOGIN.length];
+      v.diamonds = (v.diamonds || 0) + diamonds;
+      return { diamonds, streak: v.daily.streak };
     },
     achClaim(v, p) {
       if (!(p.id in ACH_REWARDS)) throw err('Pencapaian tidak dikenal');
       if (v.achClaimed.includes(p.id)) return { already: true };
-      v.achClaimed.push(p.id); v.coins += ACH_REWARDS[p.id]; v.gems += ACH_GEMS;
-      return { coins: ACH_REWARDS[p.id], gems: ACH_GEMS };
+      v.achClaimed.push(p.id); v.coins += ACH_REWARDS[p.id]; v.diamonds = (v.diamonds || 0) + ACH_DIAMONDS;
+      return { coins: ACH_REWARDS[p.id], diamonds: ACH_DIAMONDS };
     },
   };
 
+  for (const k of Object.keys(actions)) { const fn = actions[k]; actions[k] = (v, p, ctx) => fn(fixVault(v), p, ctx); }
+
   return {
     RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
-    TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, STARTER_SKILLS, TOPUP, GACHA, unitsOfRarity, featuredUnit, dayStr, SCRAP,
-    MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_GEMS, DAILY_LOGIN, rewardsFor,
-    newVault, makeUnit, actions,
+    TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, STARTER_SKILLS, TOPUP, GACHA, LUCKY, CURRENCY, unitsOfRarity, featuredUnit, dayStr, SCRAP,
+    MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
+    newVault, makeUnit, fixVault, actions,
   };
 });

@@ -126,7 +126,7 @@ const Online = {
     PROFILE.vaultOwner = this.user.id;
     Eco.apply(r.vault);
     if (r.created && guestData) UI.toast('📦 Unit & item dari perangkat ini dipindahkan ke akunmu', 'gold', 4000);
-    Eco.act('dailyLogin', {}).then(d => { if (d && d.gems) UI.toast(`🎁 Hadiah login hari ke-${d.streak}: +${d.gems} 💠`, 'gold', 4000); }).catch(() => {});
+    Eco.act('dailyLogin', {}).then(d => { if (d && d.diamonds) UI.toast(`🎁 Hadiah login hari ke-${d.streak}: +${d.diamonds} 💎`, 'gold', 4000); }).catch(() => {});
   },
   async refreshVault() { if (!this.vaultReady) return; try { const r = await this.api('eco.state', null, 'GET'); Eco.apply(r.vault); } catch (e) {} },
   queueSave() {
@@ -443,7 +443,7 @@ const MP = {
       tm: r1(S.time), fz: r1(S.freezeT), oc: r1(S.overclockT), sh: r1(S.shieldT), rd: r1(S.radarT), sq: S.spawnQ.length, k: S.kills, bk: S.bossKills, sp: S.speed, pl,
       tw: S.towers.map(t => [t.id, t.type, t.c, t.r, t.level, r1(t.angle), t.owner, t.evo ? 1 : 0, t.trait || 0, S.time < t.stunUntil ? 1 : 0, t.target, t.buff > 0 ? 1 : 0, Math.round(t.dmg), t.kills, t.spent, t.recoil > 0.5 ? 1 : 0, t.skin || 'default']),
       en: S.enemies.map(e => [e.id, e.type, Math.round(e.x), Math.round(e.y), Math.ceil(e.hp), Math.ceil(e.maxHp),
-        (S.time < e.slowUntil ? 1 : 0) | (e.dot && S.time < e.dot.until ? (e.dot.col === 'poison' ? 16 : 2) : 0) | (e.frozenUntil > S.time ? 4 : 0) | (e.hitT > 0 ? 8 : 0)]),
+        (S.time < e.slowUntil ? 1 : 0) | (e.dot && S.time < e.dot.until ? (e.dot.col === 'poison' ? 16 : 2) : 0) | (e.frozenUntil > S.time ? 4 : 0) | (e.hitT > 0 ? 8 : 0) | (e.hidden ? 32 : 0), e.maxShield ? Math.round(e.shieldHp / e.maxShield * 100) : 0]),
       pr: S.projectiles.map(p => [Math.round(p.x), Math.round(p.y), r1(p.a || 0), p.big ? 1 : 0]),
       sk: S.strikes.map(s => [Math.round(s.x), Math.round(s.y), r1(s.t), s.max, s.r || 1.4, s.big ? 1 : 0]),
       pk: S.projectiles.map(p => p.kind || ''),
@@ -485,11 +485,12 @@ const MP = {
     if (S.selected && !S.towers.includes(S.selected)) { S.selected = S.towers.find(t => t.id === S.selected.id) || null; if (!S.selected) UI.hidePanel(); }
     // musuh
     const oldE = Object.fromEntries(S.enemies.map(e => [e.id, e]));
-    S.enemies = m.en.map(([id, type, x, y, hp, maxHp, f]) => {
+    S.enemies = m.en.map(([id, type, x, y, hp, maxHp, f, sh]) => {
       let e = oldE[id];
       if (!e) e = { ...ENEMIES[type], id, type, x, y, wob: Math.random() * 6, hitT: 0 };
       Object.assign(e, { tx: x, ty: y, hp, maxHp, slowUntil: f & 1 ? S.time + 0.4 : 0, dot: f & 18 ? { until: S.time + 0.4, col: f & 16 ? 'poison' : 'burn' } : null, frozenUntil: f & 4 ? S.time + 0.4 : 0 });
       if (f & 8) e.hitT = 0.1;
+      e.hidden = !!(f & 32); e.maxShield = sh ? 100 : 0; e.shieldHp = sh || 0;
       return e;
     });
     for (const id in oldE) if (!S.enemies.some(e => e.id === +id)) puff(oldE[id].x, oldE[id].y, oldE[id].color, oldE[id].boss ? 20 : 6);

@@ -9,7 +9,7 @@
 const crypto = require('crypto');
 const SHARED = require('../../js/shared.js');
 
-const VAULT_KEYS = ['coins', 'gems', 'crystals', 'stones', 'skins', 'skillUses', 'pity', 'achClaimed', 'daily', 'dailyWon', 'lastClaimAt', 'pulls'];
+const VAULT_KEYS = ['coins', 'gems', 'diamonds', 'crystals', 'stones', 'skins', 'skillUses', 'pity', 'achClaimed', 'daily', 'dailyWon', 'lastClaimAt', 'pulls'];
 const err = (status, message) => Object.assign(new Error(message), { status });
 const rng = () => crypto.randomBytes(4).readUInt32BE(0) / 4294967296;
 const unitDoc = (u, owner) => ({ _id: u.id, owner, type: u.type, trait: u.trait || null, evo: !!u.evo, xp: u.xp | 0, skin: u.skin || 'default', lock: !!u.lock, tradable: u.tradable !== false, at: u.at || Date.now() });
@@ -27,14 +27,14 @@ async function loadVault(d, user, importData) {
     user = await d.collection('users').findOne({ _id: user._id });
   }
   const units = await d.collection('units').find({ owner: user._id }).toArray();
-  return { vault: { ...user.vault, units: units.map(docUnit) }, version: user.vaultV || 1 };
+  return { vault: SHARED.fixVault({ ...user.vault, units: units.map(docUnit) }), version: user.vaultV || 1 };
 }
 
 /** Impor progres tamu (sekali, dengan batas) — unit impor tidak bisa diperdagangkan */
 function applyImport(v, im, now) {
   const cap = (x, max) => Math.max(0, Math.min(max, Math.floor(+x || 0)));
   v.coins = cap(im.coins, 50000); v.crystals = Math.max(v.crystals, cap(im.crystals, 100)); v.stones = cap(im.stones, 20);
-  v.gems = Math.max(v.gems, cap(im.gems, 1000));
+  v.diamonds = Math.max(v.diamonds, cap(im.diamonds != null ? im.diamonds : im.gems, 2000));
   if (Array.isArray(im.skins)) v.skins = [...new Set(['default', ...im.skins.filter(s => SHARED.SKINS[s])])];
   if (im.skillUses && typeof im.skillUses === 'object')
     for (const k of Object.keys(SHARED.SKILL_SHOP)) v.skillUses[k] = Math.max(v.skillUses[k] || 0, cap(im.skillUses[k], 30));
@@ -84,8 +84,8 @@ async function areFriends(d, x, y) { const f = await d.collection('friendships')
 function cleanSide(s) {
   s = s || {};
   const units = Array.isArray(s.units) ? [...new Set(s.units.map(String))].slice(0, 8) : [];
-  const gems = Math.max(0, Math.min(100000, Math.floor(+s.gems || 0)));
-  return { units, gems };
+  const diamonds = Math.max(0, Math.min(100000, Math.floor(+(s.diamonds != null ? s.diamonds : s.gems) || 0)));
+  return { units, diamonds };
 }
 async function checkUnits(d, ids, owner) {
   if (!ids.length) return [];
@@ -100,12 +100,12 @@ async function tradeCreate(d, me, b) {
   const to = String(b.to || '');
   if (!(await areFriends(d, me._id, to))) throw err(403, 'Hanya bisa trading dengan teman');
   const give = cleanSide(b.give), want = cleanSide(b.want);
-  if (!give.units.length && !give.gems && !want.units.length && !want.gems) throw err(400, 'Penawaran kosong');
+  if (!give.units.length && !give.diamonds && !want.units.length && !want.diamonds) throw err(400, 'Penawaran kosong');
   if ((await d.collection('trades').countDocuments({ from: me._id, status: 'pending' })) >= 10) throw err(429, 'Maksimal 10 penawaran aktif');
   await checkUnits(d, give.units, me._id);
   await checkUnits(d, want.units, to);
   const meV = await loadVault(d, me);
-  if (meV.vault.gems < give.gems) throw err(400, 'Permata tidak cukup');
+  if ((meV.vault.diamonds || 0) < give.diamonds) throw err(400, 'Diamond tidak cukup');
   const doc = { _id: 't_' + crypto.randomBytes(8).toString('hex'), from: me._id, fromName: me.name, to, give, want, status: 'pending', createdAt: Date.now() };
   await d.collection('trades').insertOne(doc);
   return { trade: doc };
@@ -119,16 +119,17 @@ async function moveUnits(d, ids, from, to, tag) {
 async function revertUnits(d, ids, from, to, tag) {
   if (ids.length) await d.collection('units').updateMany({ _id: { $in: ids }, owner: to, moveTag: tag }, { $set: { owner: from } });
 }
-async function adjustGems(d, userId, delta) {
+async function adjustCurrency(d, userId, key, delta) {
   for (let i = 0; i < 4; i++) {
     const u = await d.collection('users').findOne({ _id: userId });
     const { vault, version } = await loadVault(d, u);
-    if (vault.gems + delta < 0) throw err(409, 'Permata tidak cukup');
-    const r = await d.collection('users').updateOne({ _id: userId, vaultV: version }, { $set: { 'vault': { ...pick(vault, VAULT_KEYS), gems: vault.gems + delta }, vaultV: version + 1 } });
+    if ((vault[key] || 0) + delta < 0) throw err(409, (SHARED.CURRENCY[key] || {}).name + ' tidak cukup');
+    const r = await d.collection('users').updateOne({ _id: userId, vaultV: version }, { $set: { 'vault': { ...pick(vault, VAULT_KEYS), [key]: (vault[key] || 0) + delta }, vaultV: version + 1 } });
     if (r.matchedCount) return true;
   }
-  throw err(409, 'Gagal memperbarui Permata, coba lagi');
+  throw err(409, 'Gagal memperbarui saldo, coba lagi');
 }
+const adjustGems = (d, userId, delta) => adjustCurrency(d, userId, 'gems', delta);
 
 async function tradeAccept(d, me, id) {
   const t = await d.collection('trades').findOne({ _id: id, to: me._id, status: 'pending' });
@@ -143,11 +144,11 @@ async function tradeAccept(d, me, id) {
     await revertUnits(d, t.give.units, t.from, t.to, tag); await revertUnits(d, t.want.units, t.to, t.from, tag);
     return fail(err(409, 'Unit kamu sudah berubah'));
   }
-  // 2. pindahkan Permata (net)
-  const net = t.give.gems - t.want.gems;   // positif: pengirim memberi Permata ke penerima
+  // 2. pindahkan Diamond (net)
+  const net = (t.give.diamonds || 0) - (t.want.diamonds || 0);   // positif: pengirim memberi Diamond ke penerima
   try {
-    if (net > 0) { await adjustGems(d, t.from, -net); await adjustGems(d, t.to, net); }
-    else if (net < 0) { await adjustGems(d, t.to, net); await adjustGems(d, t.from, -net); }
+    if (net > 0) { await adjustCurrency(d, t.from, 'diamonds', -net); await adjustCurrency(d, t.to, 'diamonds', net); }
+    else if (net < 0) { await adjustCurrency(d, t.to, 'diamonds', net); await adjustCurrency(d, t.from, 'diamonds', -net); }
   } catch (e) {
     await revertUnits(d, t.give.units, t.from, t.to, tag); await revertUnits(d, t.want.units, t.to, t.from, tag);
     return fail(e);
@@ -166,8 +167,8 @@ async function tradeList(d, me) {
   const names = Object.fromEntries(users.map(u => [u._id, u.name]));
   return {
     trades: rows.map(t => ({ id: t._id, mine: t.from === me._id, other: names[t.from === me._id ? t.to : t.from] || 'Pemain', otherId: t.from === me._id ? t.to : t.from,
-      give: { gems: t.give.gems, units: t.give.units.map(i => byId[i] || { id: i, missing: true }) },
-      want: { gems: t.want.gems, units: t.want.units.map(i => byId[i] || { id: i, missing: true }) },
+      give: { diamonds: t.give.diamonds || 0, units: t.give.units.map(i => byId[i] || { id: i, missing: true }) },
+      want: { diamonds: t.want.diamonds || 0, units: t.want.units.map(i => byId[i] || { id: i, missing: true }) },
       status: t.status, reason: t.reason || null, createdAt: t.createdAt })),
   };
 }

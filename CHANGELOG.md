@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.1.0] — 2026-11-26
+### Ditambahkan
+- **💎 Diamond**: mata uang gratis dari bermain (wave, boss, menang, Tantangan Harian), login harian & pencapaian — untuk Summon biasa dan trading.
+- **🍀 Lucky Summon** memakai 💠 Permata (top up): peluang Legendaris 9% & Mitos 2%, pity 30, 10× menjamin Legendaris.
+- **10 musuh baru**: Kelelawar (terbang, kebal Demoman/Meriam/Mortir), Pencuri (mencuri uang), Kesatria Perisai, Pengamuk, Dukun (menyembuhkan), Bunglon (menghilang berkala), Peledak (stun tower saat mati), Raksasa, Nekromancer (memanggil kerangka), dan mini-boss **Golem Batu** (wave 15, 25, 35…).
+- **Dukungan HP**: layout responsif portrait & landscape, ketuk dua kali untuk memasang tower/skill, panel tower model bottom sheet, tombol layar penuh (mengunci landscape), saran memutar layar, arena selalu muat di layar.
+- Halaman Kebijakan Privasi & Syarat Ketentuan.
+
+### Diubah
+- **Skill tidak terbatas** — semua 10 skill gratis, hanya ada cooldown; pilih 4 di menu Skill.
+- Trading memakai 💎 Diamond (Permata tidak bisa diperdagangkan).
+- Ikon Kristal Trait menjadi ✨.
+
 ## [4.0.0] — 2026-11-26
 ### Ditambahkan
 - **11 unit baru** (total 19): Gunslinger, Meriam, Pembakar, Mortir, Tesla, Laser, Racun, Railgun, Penjaga Waktu, Nuklir, Naga Api — dengan mekanik petir berantai, sinar yang memanas, racun, tembus garis, aura, jarak minimum, dan evolusi masing-masing.

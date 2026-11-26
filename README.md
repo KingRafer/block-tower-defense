@@ -20,9 +20,10 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 ## ✨ Fitur
 | Kategori | Isi |
 |---|---|
-| 🎰 Gacha | Semua unit didapat lewat **Summon** (💠 Permata): Banner Standar & Banner Unggulan harian, pity 60, peluang ditampilkan |
-| 🔁 Trading | Tukar unit (lengkap dengan trait/evolusi/mastery) dan Permata dengan teman, divalidasi server |
-| 💠 Top Up | Beli Permata lewat **Midtrans** (QRIS, e-wallet, transfer, kartu) |
+| 🎰 Gacha | Summon dengan **💎 Diamond** (gratis dari bermain): Banner Standar & Unggulan harian, pity 60. **🍀 Lucky Summon** dengan 💠 Permata (top up): peluang lebih tinggi, pity 30 |
+| 🔁 Trading | Tukar unit (lengkap dengan trait/evolusi/mastery) dan 💎 Diamond dengan teman, divalidasi server |
+| 💠 Top Up | Beli Permata lewat **Midtrans** (QRIS, e-wallet, transfer, kartu) untuk Lucky Summon & skin |
+| 📱 HP | Responsif portrait/landscape, ketuk dua kali untuk memasang, layar penuh |
 | 🎨 Skin | 9 skin kosmetik (Emas, Neon, Bayangan, Es, Lava, Santa, Ninja, Robot, Pelangi) |
 | 🤝 Mabar | Co-op 2–4 pemain: lobby dengan kode room, chat, undang teman, koneksi P2P WebRTC + relay server |
 | 👥 Teman | Tambah teman dengan kode, terima/tolak permintaan, status online, gabung ke room teman |
@@ -33,7 +34,7 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | 📊 Mastery | Level tower 1–20 yang naik saat dipakai (+2% damage per level) |
 | 🛒 Material | 💎 Kristal Trait & 🔮 Batu Evolusi dari hadiah game atau toko |
 | 🎮 Mode | **Klasik**, **Endless** (wave tanpa batas), dan **Tantangan Harian** dengan modifier acak |
-| ⚡ Skill pemain | 10 skill, pasang 4 sekaligus, stok pemakaian dibeli di Toko |
+| ⚡ Skill pemain | 10 skill gratis tanpa batas (hanya cooldown), pasang 4 sekaligus |
 | ⏭️ Skip wave | Mulai wave berikutnya lebih cepat dan dapat bonus uang |
 | 💾 Simpan & lanjutkan | Progres tersimpan otomatis tiap akhir wave |
 | 🏆 Papan skor | 15 skor terbaik dengan sistem poin |
@@ -41,7 +42,7 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | 🗺️ Map | 4 map dengan tema berbeda: Padang Rumput, Gurun Pasir, Kutub Salju, Gunung Lava |
 | ⚔️ Kesulitan | Mudah (20 wave), Normal (30 wave), Sulit (40 wave) |
 | 🗼 Unit | 19 unit (Biasa → Mitos) dengan mekanik unik: petir berantai, laser, racun, railgun, aura waktu, nuklir, naga |
-| 🧟 Musuh | 8 jenis musuh: hidden, armor, regenerasi, pemecah, dan boss |
+| 🧟 Musuh | 18 jenis musuh: terbang, pencuri, perisai, penyembuh, bunglon, nekromancer, mini-boss Golem, boss, dll |
 | 👑 Boss | Muncul tiap 10 wave, bisa **stun** tower dan **memanggil pasukan** |
 | 📈 Progres | Koin, XP, dan level pemain yang tersimpan antar sesi |
 | 🛒 Toko & Loadout | Buka tower baru dengan koin, bawa maksimal 6 tower per game |
@@ -57,15 +58,15 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 </p>
 
 ## 🗼 Unit (didapat dari Summon)
-| Kelangkaan | Peluang | Unit |
-|---|---|---|
-| Biasa | 55% | Scout, Sniper, Farm, Gunslinger |
-| Langka | 30% | Demoman, Freezer, Meriam, Pembakar, Mortir |
-| Epik | 11% | Minigunner, Commander, Tesla, Laser, Racun |
-| Legendaris | 3,5% | Rocketeer, Railgun, Penjaga Waktu |
-| Mitos | 0,5% | Nuklir, Naga Api |
+| Kelangkaan | Summon 💎 | Lucky 🍀 | Unit |
+|---|---|---|---|
+| Biasa | 55% | 25% | Scout, Sniper, Farm, Gunslinger |
+| Langka | 30% | 37% | Demoman, Freezer, Meriam, Pembakar, Mortir |
+| Epik | 11% | 27% | Minigunner, Commander, Tesla, Laser, Racun |
+| Legendaris | 3,5% | 9% | Rocketeer, Railgun, Penjaga Waktu |
+| Mitos | 0,5% | 2% | Nuklir, Naga Api |
 
-Pemain baru mendapat Scout, Sniper, Demoman, Farm dan 300 💠. Setiap unit bisa diberi **trait**, **dievolusikan**, diberi **skin**, dikunci, dihancurkan untuk material, atau diperdagangkan.
+Pemain baru mendapat Scout, Sniper, Demoman, Farm dan 300 💎. Setiap unit bisa diberi **trait**, **dievolusikan**, diberi **skin**, dikunci, dihancurkan untuk material, atau diperdagangkan.
 
 ## 🧟 Musuh
 | Musuh | Ciri | Mulai |
@@ -77,6 +78,16 @@ Pemain baru mendapat Scout, Sniper, Demoman, Farm dan 300 💠. Setiap unit bisa
 | Penyembuh | Memulihkan HP terus-menerus | Wave 9 |
 | Berzirah | Armor 50% | Wave 12 |
 | Pemecah | Pecah menjadi 2 musuh kecil saat mati | Wave 14 |
+| Kelelawar | Terbang — kebal Demoman, Meriam & Mortir | Wave 4 |
+| Pencuri | Mencuri uang semua pemain jika lolos | Wave 6 |
+| Kesatria Perisai | Perisai menyerap damage (tembus armor 2×) | Wave 8 |
+| Pengamuk | 2× lebih cepat saat HP < 50% | Wave 10 |
+| Dukun | Menyembuhkan musuh di sekitarnya | Wave 11 |
+| Bunglon | Menghilang (hidden) berkala | Wave 13 |
+| Peledak | Meledak & membuat tower pingsan saat mati | Wave 15 |
+| Raksasa | HP sangat besar, pecah jadi 3 zombie | Wave 17 |
+| Nekromancer | Terus memanggil kerangka | Wave 19 |
+| Golem Batu (mini-boss) | Armor 40%, kebal efek lambat | Wave 15, 25, 35… |
 | Raja Zombie (boss) | Stun tower & memanggil pasukan | Tiap 10 wave |
 
 ## ⌨️ Kontrol
@@ -92,6 +103,7 @@ Pemain baru mendapat Scout, Sniper, Demoman, Farm dan 300 💠. Setiap unit bisa
 | `Z` `C` `V` `B` | 4 skill yang terpasang |
 | `F` | Ganti kecepatan 1x/2x/3x |
 | `Esc` / klik kanan | Batal / pause |
+| 📱 Ketuk 2× | Di HP: ketuk sekali untuk pratinjau, ketuk lagi di tempat yang sama untuk memasang tower / skill |
 
 ## 🎲 Trait
 | Kelangkaan | Peluang | Contoh |
@@ -117,20 +129,7 @@ Syarat: **Mastery Lv 10 + 🔮 3 Batu Evolusi + 🪙 1.000**. Tower yang sudah b
 | Rocketeer | Warlord | Menembak 2 misil sekaligus |
 
 ## ⚡ Skill Pemain
-Pasang hingga 4 skill (tombol `Z` `C` `V` `B`). Setiap pemakaian mengurangi stok yang dibeli di Toko.
-
-| Skill | Efek | Harga (3×) |
-|---|---|---|
-| ✈️ Serangan Udara | 3 bom di lokasi pilihan | 🪙 300 |
-| 🧊 Badai Es | Semua musuh melambat 80% | 🪙 300 |
-| 🔧 Perbaikan Base | Pulihkan 30% nyawa | 🪙 400 |
-| 💰 Dana Darurat | +$300 + $40/wave | 🪙 250 |
-| 📡 Radar | Semua tower melihat hidden 15 dtk | 🪙 350 |
-| ⚡ Overclock | Semua tower 2× lebih cepat 8 dtk | 🪙 500 |
-| 🛡️ Perisai Base | Base kebal 8 dtk | 🪙 600 |
-| ☄️ Meteor | Damage area sangat besar | 💠 40 |
-| 🌀 Putar Waktu | Musuh mundur 3 petak | 💠 40 |
-| ⛈️ Badai Petir | 12 sambaran petir acak | 💠 60 |
+10 skill gratis tanpa batas pemakaian (hanya cooldown). Pasang hingga 4 skill (tombol `Z` `C` `V` `B`): Serangan Udara, Badai Es, Perbaikan Base, Dana Darurat, Radar, Overclock, Perisai Base, Meteor, Putar Waktu, Badai Petir.
 
 ## 📅 Tantangan Harian
 Setiap hari map, kesulitan, dan 2 modifier dipilih secara acak (sama untuk semua pemain di hari yang sama). Contoh modifier: *Musuh Gesit*, *Kulit Baja*, *Tanpa Farm*, *Base Rapuh*, *Malam Berkabut*. Selesaikan 20 wave untuk mendapat 🪙 500.

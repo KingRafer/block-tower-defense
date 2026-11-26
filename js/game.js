@@ -158,6 +158,16 @@ function buildWave(n) {
   if (n >= ENEMY_INTRO.regen)    add('regen', Math.floor(1 + (n - 8) * 0.4), 1.0);
   if (n >= ENEMY_INTRO.armored)  add('armored', Math.floor(1 + (n - 11) * 0.5), 1.2);
   if (n >= ENEMY_INTRO.splitter) add('splitter', Math.floor(1 + (n - 13) * 0.4), 1.3);
+  if (n >= ENEMY_INTRO.flyer)    add('flyer', Math.floor(2 + (n - 3) * 0.6), 0.55);
+  if (n >= ENEMY_INTRO.thief && n % 2 === 0) add('thief', Math.floor(1 + (n - 5) * 0.3), 0.9);
+  if (n >= ENEMY_INTRO.shielded) add('shielded', Math.floor(1 + (n - 7) * 0.4), 1.1);
+  if (n >= ENEMY_INTRO.berserk)  add('berserk', Math.floor(1 + (n - 9) * 0.35), 1.0);
+  if (n >= ENEMY_INTRO.healer)   add('healer', Math.floor(1 + (n - 10) * 0.2), 1.6);
+  if (n >= ENEMY_INTRO.stealth)  add('stealth', Math.floor(1 + (n - 12) * 0.35), 1.0);
+  if (n >= ENEMY_INTRO.bomber)   add('bomber', Math.floor(1 + (n - 14) * 0.3), 1.2);
+  if (n >= ENEMY_INTRO.giant)    add('giant', Math.floor(1 + (n - 16) * 0.2), 2.5);
+  if (n >= ENEMY_INTRO.necro && n % 3 !== 0) add('necro', Math.floor(1 + (n - 18) * 0.15), 3);
+  if (n >= 15 && n % 10 === 5) add('golem', Math.max(1, Math.floor((n - 5) / 10)), 4);
   if (n >= 18) add('fast', Math.min(n, 60), 0.25);
   if (n > 40) add('armored', Math.floor((n - 40) * 0.8), 0.6);
   if (n % 10 === 0) add('boss', Math.max(1, Math.floor(n / 10)), 4);
@@ -224,13 +234,12 @@ function skipWave() {
 const playerLevel = () => levelFromXp(PROFILE.xp);
 const skillById = id => ABILITIES.find(a => a.id === id);
 /** Sisa pemakaian skill untuk pemain ini (stok dikurangi yang sudah dipakai di game ini) */
-const skillLeft = id => Math.max(0, (PROFILE.vault.skillUses[id] || 0) - ((S && S.skillsUsed[id]) || 0));
+const skillLeft = () => Infinity;   // skill tidak terbatas, hanya cooldown
 const equippedSkills = () => (PROFILE.skillLoadout || []).filter(skillById).slice(0, SKILL_SLOTS);
 
 function useAbility(id) {
   const a = skillById(id);
   if (!a || !S || S.state === 'win' || S.state === 'lose' || (Menu.open && !isMP())) return;
-  if (skillLeft(id) <= 0) { sfx('error'); UI.toast(`🛒 Stok ${a.name} habis — beli di Toko`); return; }
   if (S.abilityCd[id] > 0) { sfx('error'); return; }
   if (a.target) {
     S.targeting = S.targeting === id ? null : id; S.placing = null; S.selected = null;
@@ -339,11 +348,13 @@ function spawn(type, from) {
   const d = ENEMIES[type], w = Math.max(1, S.wave);
   let hp = d.hp * (1 + w * 0.13 + Math.pow(w, 1.6) * 0.01);
   if (d.boss) hp = d.hp * Math.pow(w / 10, 2.1) * (1 + w * 0.05);
+  if (d.miniboss) hp = d.hp * Math.pow(w / 10, 1.9) * (1 + w * 0.06);
   hp *= DIFFS[S.diff].hpMul * S.M.hpMul;
   const e = {
     id: S.nextId++, type, ...d, spd: d.spd * S.M.spdMul, reward: Math.max(1, Math.round(d.reward * DIFFS[S.diff].reward * S.M.rewardMul)),
     maxHp: hp, hp, x: pathPx[0].x, y: pathPx[0].y, wp: 1, dist: 0,
     slowUntil: 0, slowF: 0, wob: Math.random() * 6, stunT: 6, summonT: 10, hitT: 0,
+    shieldHp: d.shield ? hp * d.shield : 0, maxShield: d.shield ? hp * d.shield : 0, healT: 2, necroT: 3, stealthT: Math.random() * 3,
   };
   if (from) {
     e.x = from.x + (Math.random() - 0.5) * 14; e.y = from.y + (Math.random() - 0.5) * 14;
@@ -356,7 +367,13 @@ function spawn(type, from) {
 function damage(e, amt, L, src, quiet) {
   if (e.dead) return;
   let a = amt;
-  if (e.boss && L.bossMul) a *= L.bossMul;
+  if ((e.boss || e.miniboss) && L.bossMul) a *= L.bossMul;
+  if (e.shieldHp > 0) {     // perisai menyerap damage lebih dulu
+    const sd = a * (L.pierceArmor ? 2 : 1), used = Math.min(e.shieldHp, sd);
+    e.shieldHp -= used; a -= used / (L.pierceArmor ? 2 : 1); e.hitT = 0.1;
+    if (e.shieldHp <= 0) { puff(e.x, e.y, '#64b5f6', 10); addText(e.x, e.y - 30, 'PERISAI PECAH', '#64b5f6', 0.8); }
+    if (a <= 0) return;
+  }
   if (e.armor && !L.pierceArmor) a *= (1 - e.armor);
   a = Math.min(a, e.hp);
   e.hp -= a; e.hitT = 0.1;
@@ -371,7 +388,13 @@ function kill(e, src) {
   if (src) { src.kills++; addUxp(src.owner, src.type, 1); }
   puff(e.x, e.y, e.color, e.boss ? 30 : 8);
   if (e.boss) { S.bossKills++; PROFILE.stats.bossKills++; S.shake = SET.shake ? 10 : 0; sfx('boom'); UI.toast('👑 Boss dikalahkan! +$' + e.reward); fxEmit(['k']); checkAchievements(summary()); }
-  if (e.split) for (let i = 0; i < 2; i++) spawn(e.split, e);
+  if (e.split) for (let i = 0; i < (e.splitN || 2); i++) spawn(e.split, e);
+  if (e.bomber) {      // ledakan yang membuat tower di dekatnya pingsan
+    const R = 1.7 * T;
+    for (const t of S.towers) if (Math.hypot(t.x - e.x, t.y - e.y) <= R) t.stunUntil = Math.max(t.stunUntil, S.time + 1.5);
+    S.effects.push({ kind: 'boom', x: e.x, y: e.y, r: R, life: 0.4, max: 0.4 }); fxEmit(['b', e.x | 0, e.y | 0, R | 0, 0.4]);
+    sfx('stun');
+  }
 }
 
 /* ---------------- STATISTIK UNIT (mastery + trait + evolusi) ---------------- */
@@ -498,7 +521,7 @@ function pickTarget(t, L) {
   const R = L.range * T, seeHidden = canSeeHidden(t);
   let best = null, bv = -Infinity;
   for (const e of S.enemies) {
-    if (e.dead || (e.hidden && !seeHidden)) continue;
+    if (e.dead || (e.hidden && !seeHidden) || (e.flying && GROUND_ONLY.has(t.type))) continue;
     const d = Math.hypot(e.x - t.x, e.y - t.y);
     if (d > R || (L.minRange && d < L.minRange * T)) continue;
     const v = t.target === 'first' ? e.dist : t.target === 'last' ? -e.dist : t.target === 'strong' ? e.hp : -d;
@@ -564,6 +587,7 @@ function tracer(x1, y1, x2, y2, col, w, life, type) {
   fxEmit(['t', x1 | 0, y1 | 0, x2 | 0, y2 | 0, col, w, life, type]);
 }
 function applySlow(e, slow) {
+  if (e.noSlow) return;
   const f = e.boss ? slow / 2 : slow;
   e.slowF = Math.max(S.time < e.slowUntil ? e.slowF : 0, f); e.slowUntil = S.time + 2;
 }
@@ -613,11 +637,37 @@ function explode(p) {
   if (p.kind === 'nuke') { S.effects.push({ kind: 'shock', x: p.tx, y: p.ty, r: R * 1.4, life: 0.8, max: 0.8, col: '#ffeb3b' }); fxEmit(['s', p.tx | 0, p.ty | 0, (R * 1.4) | 0, '#ffeb3b', 0.8]); if (SET.shake) S.shake = 14; }
   sfx('boom');
   for (const e of S.enemies) {
-    if (e.dead || (e.hidden && !canSeeHidden(p.src) && e !== p.target)) continue;
+    if (e.dead || (e.hidden && !canSeeHidden(p.src) && e !== p.target) || (e.flying && GROUND_ONLY.has(p.src.type))) continue;
     if (Math.hypot(e.x - p.tx, e.y - p.ty) <= R) {
       damage(e, p.L.dmg, p.L, p.src);
       if (p.L.perk === 'burn' && !e.dead) e.dot = { dps: p.L.dmg * 0.3, until: S.time + 3, src: p.src, col: 'burn' };
       if (p.L.dot && !e.dead) applyDot(e, p.L, p.src);
+    }
+  }
+}
+
+/* ---------------- KEMAMPUAN MUSUH ---------------- */
+function enemyAbilities(e, dt) {
+  if (e.healer) {
+    e.healT -= dt;
+    if (e.healT <= 0) {
+      e.healT = 2; let any = false;
+      for (const o of S.enemies) {
+        if (o === e || o.dead || o.boss || o.hp >= o.maxHp || Math.hypot(o.x - e.x, o.y - e.y) > 2 * T) continue;
+        o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.08); any = true;
+      }
+      if (any) { S.effects.push({ kind: 'shock', x: e.x, y: e.y, r: 2 * T, life: 0.5, max: 0.5, col: '#69f0ae' }); fxEmit(['s', e.x | 0, e.y | 0, (2 * T) | 0, '#69f0ae', 0.5]); }
+    }
+  }
+  if (e.stealth) {      // siklus terlihat 3 dtk / tersembunyi 2,5 dtk
+    e.stealthT -= dt;
+    if (e.stealthT <= 0) { e.hidden = !e.hidden; e.stealthT = e.hidden ? 2.5 : 3; }
+  }
+  if (e.necro) {
+    e.necroT -= dt;
+    if (e.necroT <= 0) {
+      e.necroT = 4;
+      if (S.enemies.length < 90) { for (let i = 0; i < 2; i++) spawn('skeleton', e); S.effects.push({ kind: 'shock', x: e.x, y: e.y, r: T, life: 0.4, max: 0.4, col: '#b388ff' }); }
     }
   }
 }
@@ -655,9 +705,10 @@ function update(dt) {
     if (e.regen && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.regen * dt);
     if (e.boss) bossAbilities(e, dt);
     e.hitT = Math.max(0, e.hitT - dt);
+    enemyAbilities(e, dt);
     if (e.dot && S.time < e.dot.until) { damage(e, e.dot.dps * dt, e.dot.src.L || {}, e.dot.src, true); if (e.dead) continue; }
     if (e.frozenUntil && S.time < e.frozenUntil) continue;
-    let move = e.spd * T * (S.time < e.slowUntil ? (1 - e.slowF) : 1) * dt;
+    let move = e.spd * T * (S.time < e.slowUntil && !e.noSlow ? (1 - e.slowF) : 1) * (e.berserk && e.hp < e.maxHp * 0.5 ? 2 : 1) * dt;
     while (move > 0 && e.wp < pathPx.length) {
       const p = pathPx[e.wp], dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy);
       if (d <= move) { e.x = p.x; e.y = p.y; move -= d; e.dist += d; e.wp++; }
@@ -665,7 +716,13 @@ function update(dt) {
     }
     if (e.wp >= pathPx.length) {
       e.dead = true; S.leaked = true;
-      const dmg = S.shieldT > 0 ? 0 : e.boss ? 9999 : Math.ceil(e.hp);
+      let dmg = S.shieldT > 0 ? 0 : e.boss ? 9999 : Math.ceil(e.hp);
+      if (e.thief) {
+        const steal = 60 + Math.min(S.wave, 80) * 15;
+        addCash(S.me, -Math.min(S.cash, steal)); for (const id in S.players) if (id !== S.me) addCash(id, -Math.min(S.players[id].cash, steal));
+        addText(W - 80, (exitRow() - 1) * T, `-$${steal} dicuri!`, '#ff8a80', 1.5); fxEmit(['x', W - 80, (exitRow() - 1) * T, `-$${steal} dicuri!`, '#ff8a80', 1.5]);
+        dmg = Math.ceil(dmg * 0.3);
+      }
       S.hp -= dmg; sfx(dmg ? 'leak' : 'freeze'); if (SET.shake && dmg) S.shake = 8;
       addText(W - 60, (exitRow() + 0.5) * T, '-' + dmg, '#ef5350', 1.2);
     }
@@ -739,7 +796,7 @@ function checkAchievements(g) {
   }
   if (got.length) saveProfile();
   got.forEach((a, i) => setTimeout(() => {
-    Eco.act('achClaim', { id: a.id }).then(r => { if (!r.already) { sfx('achieve'); UI.toast(`🏅 ${a.name} — +${r.coins} 🪙 +${r.gems} 💠`, 'gold'); } }).catch(() => {});
+    Eco.act('achClaim', { id: a.id }).then(r => { if (!r.already) { sfx('achieve'); UI.toast(`🏅 ${a.name} — +${r.coins} 🪙 +${r.diamonds} 💎`, 'gold'); } }).catch(() => {});
   }, i * 700));
   return got;
 }
@@ -754,13 +811,11 @@ function claimPayload(won, abandoned) {
   const uxp = {};
   for (const [type, gain] of Object.entries(S.uxp)) { const u = unitOf(type); if (u.id) uxp[u.id] = Math.round(gain); }
   return { result: { cleared, won, diff: S.diff, map: MAP.id, mode: S.mode, daily: !!S.daily, bossKills: S.bossKills,
-    duration: Math.round(S.time), uxp, skillsUsed: { ...S.skillsUsed }, abandoned: !!abandoned } };
+    duration: Math.round(S.time), uxp, abandoned: !!abandoned } };
 }
 /** Saat keluar di tengah permainan: hanya kurangi stok skill yang terpakai */
 function abandonGame() {
-  if (!S || S.recorded || !Object.keys(S.skillsUsed).length) return;
-  S.recorded = true;
-  Eco.act('claim', claimPayload(false, true)).catch(() => {});
+  /* skill tidak terbatas — tidak ada yang perlu dikurangi saat keluar */
 }
 async function finishGame(won) {
   if (S.recorded) return; S.recorded = true;
@@ -806,7 +861,7 @@ async function finishGame(won) {
   const ach = checkAchievements(summary());
 
   sfx(won ? 'win' : 'lose');
-  Menu.endData = { won, record, coins: rw.coins || 0, xp, gems: rw.gems || 0, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank,
+  Menu.endData = { won, record, coins: rw.coins || 0, xp, diamonds: rw.diamonds || 0, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank,
     dailyReward: rw.dailyReward || 0, crystals: rw.crystals || 0, stones: rw.stones || 0, mastery, used: rw.used || {} };
   setTimeout(() => Menu.show('end'), 600);
 }

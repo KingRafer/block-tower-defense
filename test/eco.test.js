@@ -30,9 +30,9 @@ const act = (token, action, payload) => call('eco.act', { token, body: { action,
 (async () => {
   const A = (await call('auth.dev', { body: { name: 'Ana' } })).body, B = (await call('auth.dev', { body: { name: 'Budi' } })).body;
   // vault awal + impor
-  const initA = (await call('eco.init', { token: A.token, body: { import: { coins: 999999, gems: 50, units: [{ type: 'nuke', trait: 'dewa', evo: true, xp: 5000 }], skins: ['gold', 'xxx'] } } })).body;
+  const initA = (await call('eco.init', { token: A.token, body: { import: { coins: 999999, diamonds: 50, units: [{ type: 'nuke', trait: 'dewa', evo: true, xp: 5000 }], skins: ['gold', 'xxx'] } } })).body;
   assert.strictEqual(initA.vault.coins, 50000, 'impor koin dibatasi');
-  assert.strictEqual(initA.vault.gems, 300, 'permata minimal awal');
+  assert.strictEqual(initA.vault.diamonds, 300, 'diamond minimal awal'); assert.strictEqual(initA.vault.gems, 0, 'permata hanya dari top up');
   assert.strictEqual(initA.vault.units[0].type, 'nuke'); assert.strictEqual(initA.vault.units[0].tradable, false, 'unit impor tidak bisa diperdagangkan');
   assert.deepStrictEqual(initA.vault.skins, ['default', 'gold']);
   const initA2 = (await call('eco.init', { token: A.token, body: { import: { coins: 5 } } })).body;
@@ -42,16 +42,17 @@ const act = (token, action, payload) => call('eco.act', { token, body: { action,
 
   // gacha
   let r = await act(B.token, 'summon', { banner: 'std', count: 1 });
-  assert.strictEqual(r.body.result.units.length, 1); assert.strictEqual(r.body.vault.gems, 250);
+  assert.strictEqual(r.body.result.units.length, 1); assert.strictEqual(r.body.vault.diamonds, 250);
+  assert.strictEqual((await act(B.token, 'summon', { banner: 'lucky', count: 1 })).status, 400, 'lucky butuh permata');
   r = await act(B.token, 'summon', { banner: 'feat', count: 10 });
-  assert.strictEqual(r.status, 400, 'permata kurang untuk 10x');
+  assert.strictEqual(r.status, 400, 'diamond kurang untuk 10x');
   // pity: 60 tarikan menjamin legendaris+
-  const v = SHARED.newVault(Date.now(), Math.random); v.gems = 1e6;
+  const v = SHARED.newVault(Date.now(), Math.random); v.diamonds = 1e6;
   let gotLeg = 0; const ctx = { rng: () => 0.001, now: Date.now() };   // rng rendah = selalu common
   for (let i = 0; i < 60; i++) { const out = SHARED.actions.summon(v, { banner: 'std', count: 1 }, ctx); if (SHARED.RARITY[SHARED.UNIT_RARITY[out.units[0].type]].rank >= 3) gotLeg++; }
   assert.strictEqual(gotLeg, 1, 'pity bekerja');
   // distribusi kasar
-  const cnt = {}; const v2 = SHARED.newVault(0, Math.random); v2.gems = 1e9;
+  const cnt = {}; const v2 = SHARED.newVault(0, Math.random); v2.diamonds = 1e9;
   for (let i = 0; i < 2000; i++) { const u = SHARED.actions.summon(v2, { banner: 'std', count: 10 }, { rng: Math.random, now: i }).units; u.forEach(x => cnt[SHARED.UNIT_RARITY[x.type]] = (cnt[SHARED.UNIT_RARITY[x.type]] || 0) + 1); }
   assert(cnt.common > cnt.rare && cnt.rare > cnt.epic && cnt.epic > cnt.legendary && cnt.legendary > cnt.mythic, 'urutan peluang');
 
@@ -60,9 +61,13 @@ const act = (token, action, payload) => call('eco.act', { token, body: { action,
   r = await act(B.token, 'rollTrait', { unitId: unitB });
   assert(SHARED.TRAITS[r.body.result.trait]); assert.strictEqual(r.body.vault.crystals, 2);
   assert.strictEqual((await act(B.token, 'evolve', { unitId: unitB })).status, 400, 'evolusi butuh mastery');
+  assert.strictEqual((await act(B.token, 'buySkin', { skin: 'ice' })).status, 400, 'skin butuh permata');
+  await call('pay.create', { token: B.token, body: { pack: 'p330' } }).then(async rr => { const o = rr.body.orderId; global.__o = o; });
+  { const o = global.__o; const n = { order_id: o, status_code: '200', gross_amount: '75000.00', transaction_status: 'settlement' }; n.signature_key = crypto.createHash('sha512').update(o + '200' + '75000.00' + process.env.MIDTRANS_SERVER_KEY).digest('hex'); await call('pay.notify', { body: n }); }
   assert.strictEqual((await act(B.token, 'buySkin', { skin: 'ice' })).status, 200);
+  { const lv = SHARED.newVault(0, Math.random); lv.gems = 90; const lr = SHARED.actions.summon(lv, { banner: 'lucky', count: 10 }, { rng: () => 0.001, now: 0 }); assert(lr.units.some(u => SHARED.RARITY[SHARED.UNIT_RARITY[u.type]].rank >= 3), 'lucky 10x menjamin legendaris'); }
   assert.strictEqual((await act(B.token, 'setSkin', { unitId: unitB, skin: 'ice' })).body.vault.units.find(u => u.id === unitB).skin, 'ice');
-  assert.strictEqual((await act(B.token, 'buySkill', { skill: 'storm', packs: 1 })).status, 400, 'permata kurang untuk skill premium');
+
   // klaim hadiah
   r = await act(B.token, 'claim', { result: { cleared: 30, won: true, diff: 'normal', map: 'grass', mode: 'classic', bossKills: 3, duration: 900, uxp: { [unitB]: 99999 }, skillsUsed: { airstrike: 5 } } });
   assert.strictEqual(r.status, 200); assert(r.body.result.coins > 0); assert.strictEqual(r.body.result.used.airstrike, 2, 'pemakaian skill dibatasi stok');
@@ -72,7 +77,7 @@ const act = (token, action, payload) => call('eco.act', { token, body: { action,
   r = await act(B.token, 'evolve', { unitId: unitB });
   assert.strictEqual(r.status, 400, 'batu evolusi kurang');
   // daily login & pencapaian
-  r = await act(B.token, 'dailyLogin', {}); assert.strictEqual(r.body.result.gems, 20);
+  r = await act(B.token, 'dailyLogin', {}); assert.strictEqual(r.body.result.diamonds, 40);
   r = await act(B.token, 'dailyLogin', {}); assert.strictEqual(r.body.result.already, true);
   r = await act(B.token, 'achClaim', { id: 'first_game' }); assert.strictEqual(r.body.result.coins, 50);
   r = await act(B.token, 'achClaim', { id: 'first_game' }); assert.strictEqual(r.body.result.already, true);
@@ -84,7 +89,7 @@ const act = (token, action, payload) => call('eco.act', { token, body: { action,
   await call('friends.add', { token: A.token, body: { code: B.user.friendCode } });
   await call('friends.respond', { token: B.token, body: { id: A.user.id, accept: true } });
   assert.strictEqual((await call('trade.create', { token: A.token, body: { to: B.user.id, give: { units: [initA.vault.units[0].id] } } })).status, 409, 'unit impor ditolak');
-  const tr = (await call('trade.create', { token: A.token, body: { to: B.user.id, give: { gems: 100 }, want: { units: [bGacha.id] } } })).body.trade;
+  const tr = (await call('trade.create', { token: A.token, body: { to: B.user.id, give: { diamonds: 100 }, want: { units: [bGacha.id] } } })).body.trade;
   assert(tr && tr.id === undefined && tr._id);
   const list = (await call('trade.list', { method: 'GET', token: B.token })).body.trades;
   assert.strictEqual(list[0].want.units[0].id, bGacha.id);
@@ -92,7 +97,7 @@ const act = (token, action, payload) => call('eco.act', { token, body: { action,
   assert.strictEqual(r.status, 200, 'trade diterima');
   const vA2 = (await call('eco.state', { method: 'GET', token: A.token })).body.vault, vB2 = (await call('eco.state', { method: 'GET', token: B.token })).body.vault;
   assert(vA2.units.some(u => u.id === bGacha.id), 'unit pindah ke A'); assert(!vB2.units.some(u => u.id === bGacha.id), 'unit hilang dari B');
-  assert.strictEqual(vA2.gems, initA.vault.gems - 100 + 20 * 0, 'permata A berkurang'); assert.strictEqual(vB2.gems, vB.gems + 100, 'permata B bertambah');
+  assert.strictEqual(vA2.diamonds, initA.vault.diamonds - 100, 'diamond A berkurang'); assert.strictEqual(vB2.diamonds, vB.diamonds + 100, 'diamond B bertambah');
   r = await call('trade.respond', { token: B.token, body: { id: tr._id, accept: true } });
   assert.strictEqual(r.status, 404, 'trade tidak bisa diulang');
   // trade gagal jika unit sudah tidak dimiliki

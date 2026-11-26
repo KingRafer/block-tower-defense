@@ -2,7 +2,9 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="description" content="Block Tower Defense — game tower defense bergaya Roblox yang bisa dimainkan langsung di browser.">
   <meta name="theme-color" content="#151a26">
   <meta property="og:title" content="Block Tower Defense">
@@ -28,6 +30,7 @@
       <button class="btn gold" id="skipWaveBtn" style="display:none" title="Mulai wave berikutnya sekarang">⏭ Skip</button>
       <button class="btn gray" id="skipBtn" title="Mulai wave berikutnya otomatis">Auto: OFF</button>
       <button class="btn blue" id="speedBtn" title="Kecepatan (F)">⏩ 1x</button>
+      <button class="btn gray" id="fsBtn" title="Layar penuh">⛶</button>
       <button class="btn gray" id="pauseBtn" title="Pause (Esc)">⏸</button>
     </header>
     <div id="preview"></div>
@@ -41,6 +44,7 @@
     <div id="bottom"><div id="abilities"></div><nav id="bar"></nav></div>
     <div id="tooltip"></div>
   </div>
+  <div id="rotateHint"><span>📱↻</span><div><b>Putar HP ke mode landscape</b><small>Agar arena lebih besar & mudah dimainkan</small></div><button id="rotateClose">✕</button></div>
   <div id="overlay"></div>
   <div id="toasts"></div>
 
