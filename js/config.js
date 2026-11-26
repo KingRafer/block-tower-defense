@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
 const SELL_RATE = 0.6;
 const LOADOUT_SIZE = 6;
@@ -137,3 +137,53 @@ const ACHIEVEMENTS = [
   { id:'collector',   name:'Kolektor',         desc:'Buka semua tower',               coins:300, test:(p)=>TOWER_ORDER.every(k=>p.unlocked.includes(k)) },
   { id:'rich',        name:'Sultan',           desc:'Dapatkan $50.000 dalam satu game', coins:300, test:(p,g)=>g && g.earned>=50000 },
 ];
+
+/* ---------------- MODE ---------------- */
+const MODES = {
+  classic: { name:'Klasik',  desc:'Bertahan sampai wave terakhir untuk menang.' },
+  endless: { name:'Endless', desc:'Wave tanpa batas. Seberapa lama kamu bisa bertahan?' },
+};
+
+/* ---------------- SKILL PEMAIN ----------------
+ * Terbuka berdasarkan level pemain. Dipakai saat bermain dengan tombol Z / C / V.
+ */
+const ABILITIES = [
+  { id:'airstrike', name:'Serangan Udara', icon:'✈️', key:'z', cd:45, level:1, color:'#ef6c00',
+    desc:'Klik lokasi di peta untuk menjatuhkan 3 bom. Tembus armor & mengenai hidden.' },
+  { id:'freeze',    name:'Badai Es',       icon:'🧊', key:'c', cd:60, level:3, color:'#0288d1',
+    desc:'Memperlambat semua musuh 80% selama 4 detik (boss 40%).' },
+  { id:'repair',    name:'Perbaikan Base', icon:'🔧', key:'v', cd:90, level:5, color:'#2e7d32',
+    desc:'Memulihkan 30% nyawa base.' },
+];
+
+/* ---------------- MODIFIER (Tantangan Harian) ---------------- */
+const MODIFIERS = {
+  fast:    { name:'Musuh Gesit',    icon:'💨', desc:'Musuh 30% lebih cepat',          spdMul:1.3 },
+  tanky:   { name:'Kulit Baja',     icon:'🛡️', desc:'HP musuh +40%',                  hpMul:1.4 },
+  rich:    { name:'Modal Besar',    icon:'💰', desc:'Uang awal 2×',                   cashMul:2 },
+  poor:    { name:'Krisis',         icon:'📉', desc:'Hadiah kill −30%',               rewardMul:0.7 },
+  nofarm:  { name:'Tanpa Farm',     icon:'🚫', desc:'Farm tidak bisa dipasang',        ban:['farm'] },
+  nosnipe: { name:'Jarak Dekat',    icon:'🔭', desc:'Sniper & Rocketeer dilarang',     ban:['sniper','rocketeer'] },
+  fragile: { name:'Base Rapuh',     icon:'💔', desc:'Nyawa base setengah',             hpBaseMul:0.5 },
+  ghosts:  { name:'Malam Berkabut', icon:'👻', desc:'Musuh hantu muncul sejak wave 2', earlyHidden:true },
+};
+const DAILY_WAVES = 20, DAILY_REWARD = 500;
+
+/* ---------------- TIPS TUTORIAL ---------------- */
+const TIPS = {
+  start:   'Pilih tower di bawah (atau tekan 1) lalu klik rumput di dekat jalur.',
+  placed:  'Bagus! Tekan "Mulai Wave" atau Spasi untuk memulai.',
+  wave1:   'Klik tower untuk melihat statistik, upgrade (Q), atau jual (X).',
+  ability: 'Gunakan skill di kiri bawah (Z) saat keadaan genting!',
+  skip:    'Semua musuh sudah keluar? Tekan "Skip" untuk lanjut lebih cepat dan dapat bonus uang.',
+  hidden:  'Wave berikutnya ada musuh Hantu! Pastikan ada tower dengan deteksi hidden (👁).',
+  boss:    'Boss datang! Boss bisa membuat tower di dekatnya pingsan. Jangan biarkan dia lolos.',
+};
+
+/* ---------------- PENCAPAIAN TAMBAHAN ---------------- */
+ACHIEVEMENTS.push(
+  { id:'endless_40', name:'Tak Terbatas',    desc:'Capai wave 40 di mode Endless', coins:800, test:(p,g)=>g && g.mode==='endless' && g.wave>=40 },
+  { id:'daily_1',    name:'Penantang',       desc:'Selesaikan Tantangan Harian',   coins:300, test:(p)=>p.stats.dailyWins>=1 },
+  { id:'skills_25',  name:'Komandan Taktis', desc:'Gunakan skill 25 kali',         coins:200, test:(p)=>p.stats.abilities>=25 },
+  { id:'skipper',    name:'Tak Sabaran',     desc:'Skip 20 wave',                  coins:150, test:(p)=>p.stats.skips>=20 },
+);

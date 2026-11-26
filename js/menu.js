@@ -36,11 +36,15 @@ const Menu = {
       return `${this.profileBar()}
         <div class="logo"><span>🧱</span><h1>BLOCK<br>TOWER DEFENSE</h1><div class="sub">Pertahankan base dari gelombang zombie kotak!</div></div>
         <div class="mcol">
+          ${this.saveButton()}
           <button class="btn big" data-act="go:play">▶ MAIN</button>
+          <button class="btn red big" data-act="go:daily">📅 Tantangan Harian ${dailyState().won ? '✅' : ''}</button>
           <button class="btn purple big" data-act="go:towers">🗼 Tower & Loadout</button>
           <div class="mgrid">
             <button class="btn gold" data-act="go:achievements">🏅 Pencapaian <small>${achN}/${ACHIEVEMENTS.length}</small></button>
             <button class="btn gray" data-act="go:stats">📊 Statistik</button>
+            <button class="btn purple" data-act="go:scores">🏆 Papan Skor</button>
+            <button class="btn gray" data-act="go:skills">⚡ Skill</button>
             <button class="btn blue" data-act="go:howto">📖 Cara Main</button>
             <button class="btn gray" data-act="settings:main">⚙️ Pengaturan</button>
           </div>
@@ -51,16 +55,19 @@ const Menu = {
     play() {
       return `${this.header('Pilih Map')}
         <div class="cards">${MAPS.map((m, i) => {
-          const b = PROFILE.best[m.id + '_' + DIFF] || 0, won = b >= DIFFS[DIFF].waves;
+          const b = PROFILE.best[bestKey(m.id, DIFF, MODE)] || 0, won = MODE === 'classic' && b >= DIFFS[DIFF].waves;
           return `<div class="card ${MAP === m ? 'sel' : ''}" data-act="map:${i}">
             <canvas width="200" height="120" data-map="${i}"></canvas>
             <div class="nm">${m.name} ${won ? '🏆' : ''}</div>
             <div class="stars">${'★'.repeat(m.stars)}${'☆'.repeat(4 - m.stars)}</div>
             <small>${m.desc}</small><div class="best">Rekor: wave ${b}</div></div>`;
         }).join('')}</div>
+        <h3>Mode</h3>
+        <div class="diffs">${Object.entries(MODES).map(([k, m]) => `<button class="btn blue ${MODE === k ? 'sel' : ''}" data-act="mode:${k}">
+          ${k === 'endless' ? '♾️' : '🏁'} ${m.name}<small>${m.desc}</small></button>`).join('')}</div>
         <h3>Kesulitan</h3>
         <div class="diffs">${Object.entries(DIFFS).map(([k, d]) => `<button class="btn ${DIFF === k ? 'sel' : ''}" style="background:${d.color}" data-act="diff:${k}">
-          ${d.name}<small>${d.waves} wave • ❤️ ${d.hp} • $${d.cash} • 🪙×${d.coinMul}</small></button>`).join('')}</div>
+          ${d.name}<small>${MODE === 'endless' ? '∞' : d.waves} wave • ❤️ ${d.hp} • $${d.cash} • 🪙×${d.coinMul}</small></button>`).join('')}</div>
         <div class="loadout-mini">Loadout: ${PROFILE.loadout.map(k => `<i title="${TOWERS[k].name}" style="background:${TOWERS[k].color}"></i>`).join('')}
           <button class="btn purple sm" data-act="go:towers">Ubah</button></div>
         <button class="btn big" data-act="start">MULAI ▶</button>`;
@@ -116,10 +123,10 @@ const Menu = {
              ['⭐', 'Tower level maks', s.maxed], ['💰', 'Total uang', '$' + s.cashEarned.toLocaleString('id-ID')], ['⏱️', 'Waktu bermain', this.fmtTime(s.playTime)]]
             .map(([i, l, v]) => `<div class="stat-card"><span>${i}</span><b>${v}</b><small>${l}</small></div>`).join('')}
         </div>
-        <div class="box"><b>Rekor wave tertinggi</b>
+        <div class="box"><b>Rekor wave tertinggi (Klasik)</b>
           <table><tr><th>Map</th>${Object.values(DIFFS).map(d => `<th>${d.name}</th>`).join('')}</tr>
           ${MAPS.map(m => `<tr><td>${m.name}</td>${Object.entries(DIFFS).map(([k, d]) => {
-            const b = PROFILE.best[m.id + '_' + k] || 0; return `<td>${b >= d.waves ? '🏆 ' : ''}${b}</td>`; }).join('')}</tr>`).join('')}</table></div>`;
+            const b = PROFILE.best[bestKey(m.id, k)] || 0; return `<td>${b >= d.waves ? '🏆 ' : ''}${b}</td>`; }).join('')}</tr>`).join('')}</table></div>`;
     },
 
     howto() {
@@ -132,12 +139,14 @@ const Menu = {
             normal: 'Musuh dasar', fast: 'Cepat tapi rapuh', tank: 'Lambat, HP besar, armor 25%', hidden: 'Hanya bisa diserang tower dengan deteksi hidden',
             regen: 'Memulihkan HP terus-menerus', armored: 'Armor 50%, gunakan tower tembus armor', splitter: 'Pecah menjadi 2 musuh kecil saat mati',
             boss: 'Muncul tiap 10 wave. Membuat tower di dekatnya pingsan (stun) dan memanggil pasukan' }[k]}${ENEMY_INTRO[k] ? ` <small class="dim">(mulai wave ${ENEMY_INTRO[k]})</small>` : ''}</td></tr>`).join('')}</table>
+          <h4>⚡ Skill & Skip</h4><p>Skill pemain (Serangan Udara, Badai Es, Perbaikan Base) terbuka saat level naik. Gunakan dengan tombol di kiri hotbar atau <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd>. Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
+          <h4>📅 Mode</h4><p><b>Klasik</b>: menang di wave terakhir. <b>Endless</b>: wave tanpa batas, kejar skor tertinggi. <b>Tantangan Harian</b>: map, kesulitan, dan modifier berganti tiap hari. Selesaikan untuk bonus 🪙 ${DAILY_REWARD}.</p>
           <h4>📈 Progres</h4><p>Setiap selesai bermain kamu mendapat <b>🪙 koin</b> dan <b>XP</b>. Gunakan koin untuk membuka tower baru di menu <b>Tower & Loadout</b>, lalu pilih hingga ${LOADOUT_SIZE} tower untuk dibawa ke pertandingan. Kesulitan dan map yang lebih sulit memberi koin lebih banyak.</p>
           <h4>⌨️ Kontrol</h4>
           <table><tr><td><kbd>1</kbd>–<kbd>${LOADOUT_SIZE}</kbd></td><td>Pilih tower</td></tr><tr><td>Klik</td><td>Pasang / pilih tower</td></tr>
           <tr><td><kbd>Shift</kbd> + klik</td><td>Pasang berulang</td></tr><tr><td><kbd>Q</kbd> / <kbd>E</kbd></td><td>Upgrade tower terpilih</td></tr>
           <tr><td><kbd>X</kbd> / <kbd>Del</kbd></td><td>Jual tower terpilih</td></tr><tr><td><kbd>T</kbd></td><td>Ganti mode target</td></tr>
-          <tr><td><kbd>Spasi</kbd></td><td>Mulai wave</td></tr><tr><td><kbd>F</kbd></td><td>Ganti kecepatan</td></tr>
+          <tr><td><kbd>Spasi</kbd></td><td>Mulai / skip wave</td></tr><tr><td><kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd></td><td>Skill pemain</td></tr><tr><td><kbd>F</kbd></td><td>Ganti kecepatan</td></tr>
           <tr><td><kbd>Esc</kbd> / klik kanan</td><td>Batal / pause</td></tr></table>
         </div>`;
     },
@@ -156,35 +165,76 @@ const Menu = {
         </div>`;
     },
 
+    daily() {
+      const d = dailyChallenge(), ds = dailyState(), m = MAPS[d.map];
+      return `${this.header('Tantangan Harian')}
+        <div class="box daily">
+          <div class="dhead"><canvas width="240" height="144" data-map="${d.map}"></canvas>
+            <div><h3>📅 ${d.date}</h3><p><b>${m.name}</b> • ${DIFFS[d.diff].name} • ${DAILY_WAVES} wave</p>
+            <p>Status: ${ds.won ? '✅ <b>Selesai</b>' : '⏳ Belum selesai'} • Terbaik hari ini: wave ${ds.best}</p>
+            <p>Hadiah: <b class="gold">🪙 ${DAILY_REWARD}</b> (sekali per hari) + skor ×1.2</p></div></div>
+          <h4>Modifier hari ini</h4>
+          <div class="mods">${d.mods.map(k => `<div class="modc"><span>${MODIFIERS[k].icon}</span><div><b>${MODIFIERS[k].name}</b><small>${MODIFIERS[k].desc}</small></div></div>`).join('')}</div>
+          <small class="dim">Tantangan baru setiap tengah malam. Semua pemain mendapat tantangan yang sama di hari yang sama.</small>
+        </div>
+        <button class="btn red big" data-act="daily">MULAI TANTANGAN ▶</button>`;
+    },
+
+    scores() {
+      const runs = PROFILE.runs, medal = i => ['🥇', '🥈', '🥉'][i] || '#' + (i + 1);
+      return `${this.header('Papan Skor')}
+        <div class="box">${runs.length ? `<table><tr><th>#</th><th>Skor</th><th>Map</th><th>Mode</th><th>Wave</th><th>Hasil</th><th>Tanggal</th></tr>
+          ${runs.map((r, i) => `<tr><td>${medal(i)}</td><td><b>${r.score.toLocaleString('id-ID')}</b></td>
+            <td>${(MAPS.find(m => m.id === r.map) || {}).name || r.map}</td>
+            <td>${r.daily ? '📅 Harian' : MODES[r.mode].name} • ${DIFFS[r.diff].name}</td><td>${r.wave}</td>
+            <td>${r.won ? '🏆' : '💀'}</td><td class="dim">${r.date}</td></tr>`).join('')}</table>`
+          : '<p class="dim" style="text-align:center">Belum ada permainan. Ayo main!</p>'}</div>
+        <small class="dim">Skor = wave × 500 + kill × 5 + nyawa × 10 + boss × 1000 + bonus menang, dikali kesulitan & map.</small>`;
+    },
+
+    skills() {
+      const lv = playerLevel();
+      return `${this.header('Skill Pemain')}
+        <div class="achs">${ABILITIES.map(a => `<div class="ach ${lv >= a.level ? 'got' : ''}">
+          <div class="medal">${lv >= a.level ? a.icon : '🔒'}</div>
+          <div><b>${a.name}</b> <kbd>${a.key.toUpperCase()}</kbd><small>${a.desc}</small><small>Cooldown ${a.cd} detik</small></div>
+          <div class="rw">Lv ${a.level}</div></div>`).join('')}</div>
+        <small class="dim">Naikkan level dengan bermain. XP didapat dari wave yang diselesaikan dan musuh yang dikalahkan.</small>`;
+    },
+
     pause() {
-      return `<h1>⏸ PAUSE</h1><div class="sub">${MAP.name} • ${DIFFS[S.diff].name} • Wave ${S.wave}/${S.maxWave}</div>
+      return `<h1>⏸ PAUSE</h1><div class="sub">${MAP.name} • ${DIFFS[S.diff].name} • ${S.daily ? 'Harian' : MODES[S.mode].name} • Wave ${S.wave}${S.maxWave === Infinity ? '' : '/' + S.maxWave}</div>
         <div class="mcol">
           <button class="btn big" data-act="resume">▶ Lanjutkan</button>
-          <button class="btn blue big" data-act="start">🔄 Ulangi</button>
+          <button class="btn blue big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Ulangi</button>
           <button class="btn gray big" data-act="settings:pause">⚙️ Pengaturan</button>
-          <button class="btn red big" data-act="quit">🏠 Keluar ke Menu</button>
-        </div><small class="dim">Keluar sekarang tidak memberi koin.</small>`;
+          <button class="btn red big" data-act="quit">🏠 ${S.wave > 0 ? 'Simpan & Keluar' : 'Keluar ke Menu'}</button>
+        </div><small class="dim">${S.wave > 0 ? `Progres tersimpan di awal wave ${S.state === 'ready' ? S.wave + 1 : S.wave}. Lanjutkan dari menu utama.` : ''}</small>`;
     },
 
     end() {
       const d = this.endData;
       return `<h1 class="${d.won ? 'win' : 'lose'}">${d.won ? '🏆 MENANG!' : '💀 GAME OVER'}</h1>
-        ${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}
+        <div class="score">${d.score.toLocaleString('id-ID')} <small>poin • peringkat #${d.rank}</small></div>
+        ${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
+        ${d.unlockedSkill ? `<span class="badge purple">⚡ Skill baru: ${d.unlockedSkill.icon} ${d.unlockedSkill.name}</span>` : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}
         <div class="box endbox"><table>
           <tr><td>Map</td><td><b>${MAP.name}</b> (${DIFFS[S.diff].name})</td></tr>
-          <tr><td>Wave</td><td><b>${S.wave}/${S.maxWave}</b></td></tr>
+          <tr><td>Mode</td><td><b>${S.daily ? '📅 Tantangan Harian' : MODES[S.mode].name}</b></td></tr>
+          <tr><td>Wave</td><td><b>${S.wave}${S.maxWave === Infinity ? '' : '/' + S.maxWave}</b></td></tr>
           <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
           <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
           <tr><td>Durasi</td><td><b>${this.fmtTime(S.time)}</b></td></tr>
           <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b></td></tr></table>
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
-        <div class="row2"><button class="btn big" data-act="start">🔄 Main Lagi</button>
+        <div class="row2"><button class="btn big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
           <button class="btn blue" data-act="go:play">🗺️ Pilih Map</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`;
     },
   },
 
   after: {
     play() { document.querySelectorAll('canvas[data-map]').forEach(c => drawPreview(c, MAPS[+c.dataset.map])); },
+    daily() { this.after.play(); },
     settings() {
       document.querySelectorAll('[data-vol]').forEach(r => {
         r.oninput = () => { SET[r.dataset.vol] = +r.value; saveSettings(); Sound.applyVolume(); };
@@ -202,6 +252,10 @@ const Menu = {
       case 'settings': this.back = arg; this.go('settings'); break;
       case 'map': MAP = MAPS[+arg]; loadMap(MAP); this.go('play'); break;
       case 'diff': DIFF = arg; this.go('play'); break;
+      case 'mode': MODE = arg; this.go('play'); break;
+      case 'daily': startGame({ daily: dailyChallenge() }); break;
+      case 'continue': sfx('click'); if (loadSavedGame()) { this.close(); UI.banner(`Lanjut: Wave ${S.wave + 1}`, '#fff', 1400); } break;
+      case 'discard': SaveGame.clear(); this.go('main'); break;
       case 'start': startGame(); break;
       case 'resume': sfx('click'); this.close(); break;
       case 'quit': newGame(); this.go('main'); break;
@@ -223,13 +277,21 @@ const Menu = {
         this.resetArm = false; resetAllData(); UI.toast('Semua data dihapus'); newGame(); this.go('settings'); break;
     }
   },
+  saveButton() {
+    const g = SaveGame.get(); if (!g) return '';
+    const m = MAPS.find(x => x.id === g.map) || MAPS[0];
+    return `<div class="controw"><button class="btn gold big" data-act="continue">⏯ Lanjutkan <small>${m.name} • ${g.daily ? 'Harian' : MODES[g.mode].name} • Wave ${g.wave + 1} • $${Math.floor(g.cash)}</small></button>
+      <button class="btn gray sm" data-act="discard" title="Hapus simpanan">✕</button></div>`;
+  },
   sortLoadout() { PROFILE.loadout.sort((a, b) => TOWER_ORDER.indexOf(a) - TOWER_ORDER.indexOf(b)); },
 };
 
-function startGame() {
+function startGame(opts = {}) {
   sfx('click');
-  newGame();
+  SaveGame.clear();
+  newGame(opts);
   PROFILE.stats.games++; saveProfile(); checkAchievements(null);
   Menu.close();
-  UI.banner(`${MAP.name} • ${DIFFS[DIFF].name}`, '#fff', 1400);
+  UI.banner(opts.daily ? `📅 Tantangan Harian` : `${MAP.name} • ${DIFFS[DIFF].name}`, '#fff', 1400);
+  tip('start');
 }

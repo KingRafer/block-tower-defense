@@ -9,7 +9,7 @@ function canvasPos(ev) {
   return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height };
 }
 function cancelAction() {
-  if (S.placing || S.selected) { S.placing = null; S.selected = null; UI.hidePanel(); UI.renderBar(); return true; }
+  if (S.placing || S.selected || S.targeting) { S.placing = null; S.selected = null; S.targeting = null; UI.hidePanel(); UI.renderBar(); UI.renderAbilities(); return true; }
   return false;
 }
 cv.addEventListener('pointermove', ev => { S.mouse = { ...canvasPos(ev), in: true }; });
@@ -18,6 +18,7 @@ cv.addEventListener('pointerdown', ev => {
   if (ev.button === 2 || Menu.open) return;
   const p = canvasPos(ev); S.mouse = { ...p, in: true };
   const c = Math.floor(p.x / T), r = Math.floor(p.y / T);
+  if (S.targeting === 'airstrike') { airstrikeAt(p.x, p.y); return; }
   if (S.placing) {
     const t = placeTower(S.placing, c, r);
     if (t && !ev.shiftKey) { S.placing = null; UI.renderBar(); }
@@ -44,12 +45,14 @@ addEventListener('keydown', ev => {
   else if ((k === 'q' || k === 'e') && S.selected) upgradeTower(S.selected);
   else if ((k === 'x' || k === 'delete') && S.selected) sellTower(S.selected);
   else if (k === 't' && S.selected && $('tgtBtn')) $('tgtBtn').click();
-  else if (k === ' ') { ev.preventDefault(); startWave(); }
+  else if (k === ' ') { ev.preventDefault(); if (canSkip()) skipWave(); else startWave(); }
+  else if (ABILITIES.some(a => a.key === k)) useAbility(ABILITIES.find(a => a.key === k).id);
   else if (k === 'f') $('speedBtn').click();
 });
 
 /* ---------------- TOMBOL HUD ---------------- */
 $('startBtn').onclick = () => startWave();
+$('skipWaveBtn').onclick = () => skipWave();
 $('skipBtn').onclick = () => { S.autoSkip = !S.autoSkip; S.autoTimer = 3; sfx('click'); UI.updateHud(); };
 $('speedBtn').onclick = () => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 3 : 1; sfx('click'); UI.updateHud(); };
 $('pauseBtn').onclick = () => { if (!Menu.open && S.state !== 'win' && S.state !== 'lose') Menu.show('pause'); };

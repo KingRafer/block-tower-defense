@@ -213,6 +213,19 @@ function draw(dt) {
     if (why) outlinedText(why, (c + 0.5) * T, r * T - 8, 13, '#ff8a80');
   }
 
+  // Skill: penanda serangan udara & bidikan
+  for (const st of S.strikes) {
+    const k = 1 - st.t / st.max;
+    ctx.strokeStyle = 'rgba(255,82,82,.9)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(st.x, st.y, 1.4 * T * (1 - k * 0.6), 0, 7); ctx.stroke();
+    ctx.fillStyle = `rgba(255,82,82,${0.15 + k * 0.25})`; ctx.fill();
+  }
+  if (S.targeting === 'airstrike' && S.mouse.in) {
+    ring(S.mouse.x, S.mouse.y, 1.4 * T + 34, 'rgba(255,82,82,.18)', 'rgba(255,82,82,.9)');
+    outlinedText('✈️ Klik untuk menjatuhkan bom', S.mouse.x, S.mouse.y - 1.4 * T - 44, 13, '#ff8a80');
+  }
+  if (S.freezeT > 0) { ctx.fillStyle = `rgba(129,212,250,${Math.min(0.18, S.freezeT * 0.06)})`; ctx.fillRect(0, 0, W, H); }
+
   for (const x of S.texts) { ctx.globalAlpha = Math.min(1, x.life / x.max * 2); outlinedText(x.txt, x.x, x.y, 15, x.col); }
   ctx.globalAlpha = 1;
   drawBossBar();

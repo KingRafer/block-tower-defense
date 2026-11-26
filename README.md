@@ -19,6 +19,12 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 ## ✨ Fitur
 | Kategori | Isi |
 |---|---|
+| 🎮 Mode | **Klasik**, **Endless** (wave tanpa batas), dan **Tantangan Harian** dengan modifier acak |
+| ⚡ Skill pemain | Serangan Udara, Badai Es, Perbaikan Base, terbuka sesuai level |
+| ⏭️ Skip wave | Mulai wave berikutnya lebih cepat dan dapat bonus uang |
+| 💾 Simpan & lanjutkan | Progres tersimpan otomatis tiap akhir wave |
+| 🏆 Papan skor | 15 skor terbaik dengan sistem poin |
+| 💡 Tutorial | Tips muncul otomatis untuk pemain baru |
 | 🗺️ Map | 4 map dengan tema berbeda: Padang Rumput, Gurun Pasir, Kutub Salju, Gunung Lava |
 | ⚔️ Kesulitan | Mudah (20 wave), Normal (30 wave), Sulit (40 wave) |
 | 🗼 Tower | 8 tower, masing-masing 4–5 level upgrade dengan nama unik |
@@ -26,7 +32,7 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | 👑 Boss | Muncul tiap 10 wave, bisa **stun** tower dan **memanggil pasukan** |
 | 📈 Progres | Koin, XP, dan level pemain yang tersimpan antar sesi |
 | 🛒 Toko & Loadout | Buka tower baru dengan koin, bawa maksimal 6 tower per game |
-| 🏅 Pencapaian | 14 pencapaian dengan hadiah koin |
+| 🏅 Pencapaian | 18 pencapaian dengan hadiah koin |
 | 📊 Statistik | Statistik lengkap dan tabel rekor per map/kesulitan |
 | 🔊 Audio | Efek suara dan musik latar yang dibuat langsung oleh browser (WebAudio) |
 | ⚙️ Pengaturan | Volume, angka damage, getaran layar, grid, FPS, kualitas partikel, auto-pause |
@@ -70,9 +76,20 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | `Q` / `E` | Upgrade tower terpilih |
 | `X` / `Del` | Jual tower terpilih (kembali 60%) |
 | `T` | Ganti mode target (Pertama/Terakhir/Terkuat/Terdekat) |
-| `Spasi` | Mulai wave |
+| `Spasi` | Mulai / skip wave |
+| `Z` `C` `V` | Skill: Serangan Udara, Badai Es, Perbaikan Base |
 | `F` | Ganti kecepatan 1x/2x/3x |
 | `Esc` / klik kanan | Batal / pause |
+
+## ⚡ Skill Pemain
+| Skill | Tombol | Level | Cooldown | Efek |
+|---|---|---|---|---|
+| ✈️ Serangan Udara | `Z` | 1 | 45 dtk | 3 bom di lokasi pilihan, tembus armor & kena hidden |
+| 🧊 Badai Es | `C` | 3 | 60 dtk | Semua musuh melambat 80% selama 4 dtk |
+| 🔧 Perbaikan Base | `V` | 5 | 90 dtk | Pulihkan 30% nyawa base |
+
+## 📅 Tantangan Harian
+Setiap hari map, kesulitan, dan 2 modifier dipilih secara acak (sama untuk semua pemain di hari yang sama). Contoh modifier: *Musuh Gesit*, *Kulit Baja*, *Tanpa Farm*, *Base Rapuh*, *Malam Berkabut*. Selesaikan 20 wave untuk mendapat 🪙 500.
 
 ## 🗂️ Struktur Proyek
 ```
@@ -80,10 +97,10 @@ block-tower-defense/
 ├── index.html          # Halaman utama & layout HUD
 ├── css/style.css       # Semua styling (tema, menu, responsif)
 ├── js/
-│   ├── config.js       # Data balancing: map, tower, musuh, kesulitan, pencapaian
-│   ├── storage.js      # Simpan/muat pengaturan & profil (localStorage)
+│   ├── config.js       # Data: map, tower, musuh, kesulitan, mode, skill, modifier, pencapaian
+│   ├── storage.js      # Simpan/muat pengaturan, profil & game berjalan (localStorage)
 │   ├── audio.js        # Efek suara & musik prosedural (WebAudio)
-│   ├── game.js         # Logika inti: wave, tower, musuh, boss, progres
+│   ├── game.js         # Logika inti: wave, tower, musuh, boss, skill, harian, skor
 │   ├── render.js       # Menggambar peta, unit, dan efek ke canvas
 │   ├── ui.js           # HUD, hotbar, panel tower, tooltip, toast
 │   ├── menu.js         # Semua layar menu

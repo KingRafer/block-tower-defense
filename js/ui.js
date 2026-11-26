@@ -13,13 +13,15 @@ const UI = {
     this.updateHud();
     this.renderBar();
     this.renderPreview();
+    this.renderAbilities();
     if (S.selected) this.showPanel(S.selected); else this.hidePanel();
   },
 
   updateHud() {
     $('hudCash').textContent = '$' + Math.floor(S.cash).toLocaleString('id-ID');
-    $('hudWave').textContent = `${S.wave}/${S.maxWave}`;
-    $('hudWaveBar').style.width = (S.wave / S.maxWave * 100) + '%';
+    const endless = S.maxWave === Infinity;
+    $('hudWave').textContent = endless ? `${S.wave} ∞` : `${S.wave}/${S.maxWave}`;
+    $('hudWaveBar').style.width = endless ? '100%' : (S.wave / S.maxWave * 100) + '%';
     const hpPct = Math.max(0, S.hp / S.maxHp * 100);
     $('hudHp').textContent = Math.max(0, Math.ceil(S.hp));
     $('hudHpBar').style.width = hpPct + '%';
@@ -28,6 +30,9 @@ const UI = {
     const sb = $('startBtn');
     sb.disabled = S.state !== 'ready';
     sb.textContent = S.state === 'wave' ? '⚔️ Wave berjalan' : '▶ Mulai Wave';
+    const sk = $('skipWaveBtn'), can = canSkip();
+    sk.style.display = can ? '' : 'none';
+    if (can) { sk.textContent = `⏭ Skip +$${skipBonusAmt()}`; tip('skip'); }
     $('skipBtn').textContent = 'Auto: ' + (S.autoSkip ? 'ON' : 'OFF');
     $('skipBtn').classList.toggle('on', S.autoSkip);
     $('speedBtn').textContent = '⏩ ' + S.speed + 'x';
@@ -54,14 +59,16 @@ const UI = {
   updateBar() {
     $('bar').querySelectorAll('.slot').forEach(el => {
       const k = el.dataset.k, d = TOWERS[k];
-      el.classList.toggle('poor', S.cash < d.levels[0].cost || countType(k) >= d.limit);
+      const banned = S.M.ban.includes(k);
+      el.classList.toggle('poor', banned || S.cash < d.levels[0].cost || countType(k) >= d.limit);
+      el.classList.toggle('banned', banned);
     });
   },
   selectPlace(k) {
     if (!k || !S || Menu.open) return;
     sfx('click');
-    S.placing = S.placing === k ? null : k; S.selected = null;
-    this.hidePanel(); this.renderBar();
+    S.placing = S.placing === k ? null : k; S.selected = null; S.targeting = null;
+    this.hidePanel(); this.renderBar(); this.renderAbilities();
   },
 
   tooltip(el, k) {
@@ -82,9 +89,11 @@ const UI = {
   /** Pratinjau komposisi wave berikutnya */
   renderPreview() {
     const el = $('preview');
-    if (S.state !== 'ready' || S.wave >= S.maxWave) { el.innerHTML = ''; return; }
+    const mods = S.mods.map(m => `<span class="chip mod" title="${MODIFIERS[m].desc}">${MODIFIERS[m].icon} ${MODIFIERS[m].name}</span>`).join('');
+    if (S.state !== 'ready' || S.wave >= S.maxWave) { el.innerHTML = mods; el.dataset.ready = ''; return; }
+    el.dataset.ready = '1';
     const n = S.wave + 1, counts = wavePreview(n);
-    el.innerHTML = `<span class="plabel">Wave ${n}${n % 10 === 0 ? ' 👑' : ''}:</span>` +
+    el.innerHTML = mods + `<span class="plabel">Wave ${n}${n % 10 === 0 ? ' 👑' : ''}:</span>` +
       Object.entries(counts).map(([k, c]) => `<span class="chip" title="${ENEMIES[k].name}"><i style="background:${ENEMIES[k].color}"></i>${ENEMIES[k].name} ×${c}</span>`).join('');
   },
 
@@ -140,12 +149,34 @@ const UI = {
     clearTimeout(this._bt); this._bt = setTimeout(() => m.classList.remove('show'), ms);
   },
   /** Notifikasi kecil di pojok */
-  toast(txt, type = '') {
+  toast(txt, type = '', ms = 2800) {
     const el = document.createElement('div');
     el.className = 'toast ' + type; el.textContent = txt;
     $('toasts').appendChild(el);
-    setTimeout(() => el.classList.add('out'), 2800);
-    setTimeout(() => el.remove(), 3300);
+    while ($('toasts').children.length > 4) $('toasts').firstChild.remove();
+    setTimeout(() => el.classList.add('out'), ms);
+    setTimeout(() => el.remove(), ms + 500);
+  },
+
+  /** Tombol skill pemain */
+  renderAbilities() {
+    const lv = playerLevel();
+    $('abilities').innerHTML = ABILITIES.map(a => {
+      const locked = lv < a.level;
+      return `<button class="abil ${locked ? 'locked' : ''} ${S.targeting === a.id ? 'sel' : ''}" data-ab="${a.id}" style="--c:${a.color}"
+        title="${a.name} (${a.key.toUpperCase()}) — ${locked ? 'Terbuka di level ' + a.level : a.desc}">
+        <span class="ai">${locked ? '🔒' : a.icon}</span><span class="ak">${a.key.toUpperCase()}</span><span class="acd"></span></button>`;
+    }).join('');
+    $('abilities').querySelectorAll('.abil').forEach(b => b.onclick = () => useAbility(b.dataset.ab));
+    this.updateAbilities();
+  },
+  updateAbilities() {
+    $('abilities').querySelectorAll('.abil').forEach(b => {
+      const a = ABILITIES.find(x => x.id === b.dataset.ab), cd = S.abilityCd[a.id] || 0;
+      b.querySelector('.acd').textContent = cd > 0 ? Math.ceil(cd) : '';
+      b.style.setProperty('--p', cd > 0 ? (cd / a.cd * 100) + '%' : '0%');
+      b.classList.toggle('cooling', cd > 0);
+    });
   },
 
   /** Update ringan tiap ~150 ms */
@@ -153,6 +184,7 @@ const UI = {
     if (!S) return;
     this.updateHud(); this.updateBar(); this.updatePanel();
     const pv = $('preview');
-    if ((S.state === 'ready') !== (pv.innerHTML !== '')) this.renderPreview();
+    if ((S.state === 'ready') !== (pv.dataset.ready === '1')) this.renderPreview();
+    this.updateAbilities();
   },
 };

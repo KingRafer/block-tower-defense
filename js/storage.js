@@ -25,9 +25,16 @@ const defaultSettings = () => ({
 const defaultProfile = () => ({
   coins:0, xp:0,
   unlocked:[...DEFAULT_LOADOUT], loadout:[...DEFAULT_LOADOUT],
-  achievements:[], best:{}, mapsPlayed:{},
-  stats:{ games:0, wins:0, kills:0, bossKills:0, towersPlaced:0, cashEarned:0, maxed:0, playTime:0 },
+  achievements:[], best:{}, mapsPlayed:{}, runs:[], tips:[], daily:{ date:'', won:false, best:0 },
+  stats:{ games:0, wins:0, kills:0, bossKills:0, towersPlaced:0, cashEarned:0, maxed:0, playTime:0, abilities:0, skips:0, dailyWins:0 },
 });
+
+// Simpanan game yang sedang berjalan (lanjutkan nanti)
+const SaveGame = {
+  get() { try { return JSON.parse(localStorage.getItem('btd_save') || 'null'); } catch (e) { return null; } },
+  set(v) { Storage.save('btd_save', v); },
+  clear() { try { localStorage.removeItem('btd_save'); } catch (e) {} },
+};
 
 const SET = Storage.load('btd_settings', defaultSettings());
 const PROFILE = Storage.load('btd_profile', defaultProfile());
@@ -36,5 +43,5 @@ const saveProfile = () => Storage.save('btd_profile', PROFILE);
 
 function resetAllData() {
   Object.assign(PROFILE, defaultProfile());
-  saveProfile();
+  saveProfile(); SaveGame.clear();
 }

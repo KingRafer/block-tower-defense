@@ -4,7 +4,7 @@
 'use strict';
 
 let S = null;                 // state game aktif
-let MAP = MAPS[0], DIFF = 'normal';
+let MAP = MAPS[0], DIFF = 'normal', MODE = 'classic';
 let pathPx = [], pathTiles = new Set(), deco = [];
 
 /* ---------------- MAP ---------------- */
@@ -36,18 +36,86 @@ function loadMap(m) {
 const exitRow = () => MAP.path[MAP.path.length - 1][1];
 
 /* ---------------- GAME ---------------- */
-function newGame() {
-  const D = DIFFS[DIFF];
+/** Gabungkan efek beberapa modifier menjadi satu objek */
+function modsAgg(ids) {
+  const M = { spdMul:1, hpMul:1, cashMul:1, rewardMul:1, hpBaseMul:1, ban:[], earlyHidden:false };
+  for (const id of ids) {
+    const m = MODIFIERS[id]; if (!m) continue;
+    for (const k of ['spdMul','hpMul','cashMul','rewardMul','hpBaseMul']) if (m[k]) M[k] *= m[k];
+    if (m.ban) M.ban.push(...m.ban);
+    if (m.earlyHidden) M.earlyHidden = true;
+  }
+  return M;
+}
+function newGame(opts = {}) {
+  const daily = opts.daily || null;
+  if (daily) { MAP = MAPS[daily.map]; DIFF = daily.diff; }
+  const D = DIFFS[DIFF], mods = daily ? daily.mods : [], M = modsAgg(mods);
+  const mode = daily ? 'classic' : MODE;
   loadMap(MAP);
+  const hp = Math.round(D.hp * M.hpBaseMul);
   S = {
-    diff: DIFF, cash: D.cash, hp: D.hp, maxHp: D.hp, wave: 0, maxWave: D.waves,
+    diff: DIFF, mode, daily, mods, M,
+    cash: Math.round(D.cash * M.cashMul), hp, maxHp: hp, wave: 0,
+    maxWave: daily ? DAILY_WAVES : mode === 'endless' ? Infinity : D.waves,
     state: 'ready', speed: 1, autoSkip: S ? S.autoSkip : false,
-    towers: [], enemies: [], projectiles: [], effects: [], texts: [], spawnQ: [],
+    towers: [], enemies: [], projectiles: [], effects: [], texts: [], spawnQ: [], strikes: [],
     waveTime: 0, waveTotal: 0, earned: 0, kills: 0, bossKills: 0, leaked: false,
-    placing: null, selected: null, mouse: { x: -99, y: -99, in: false },
-    time: 0, autoTimer: 0, recorded: false, nextId: 1, shake: 0,
+    placing: null, selected: null, targeting: null, mouse: { x: -99, y: -99, in: false },
+    time: 0, autoTimer: 0, recorded: false, nextId: 1, shake: 0, abilityCd: {}, freezeT: 0,
   };
   UI.refreshAll();
+}
+
+/* ---------------- SIMPAN & LANJUTKAN ---------------- */
+function saveGameState() {
+  if (!S || S.state !== 'ready' || S.wave === 0) return;
+  SaveGame.set({
+    v: 2, map: MAP.id, diff: S.diff, mode: S.mode, daily: S.daily, cash: S.cash, hp: S.hp, wave: S.wave,
+    kills: S.kills, earned: S.earned, bossKills: S.bossKills, time: S.time, leaked: S.leaked,
+    abilityCd: S.abilityCd, autoSkip: S.autoSkip, saved: Date.now(),
+    towers: S.towers.map(t => ({ type: t.type, c: t.c, r: t.r, level: t.level, spent: t.spent, target: t.target, dmg: t.dmg, kills: t.kills })),
+  });
+}
+function loadSavedGame() {
+  const g = SaveGame.get(); if (!g) return false;
+  MAP = MAPS.find(m => m.id === g.map) || MAPS[0]; DIFF = g.diff; MODE = g.mode;
+  newGame({ daily: g.daily });
+  Object.assign(S, { cash: g.cash, hp: g.hp, wave: g.wave, kills: g.kills, earned: g.earned, bossKills: g.bossKills,
+                     time: g.time, leaked: g.leaked, abilityCd: g.abilityCd || {}, autoSkip: !!g.autoSkip });
+  S.towers = g.towers.map(o => Object.assign(makeTower(o.type, o.c, o.r), o));
+  UI.refreshAll();
+  return true;
+}
+
+/* ---------------- TANTANGAN HARIAN ---------------- */
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function dailyChallenge() {
+  const date = todayStr();
+  let seed = [...date].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 2147483647, 7) || 1;
+  const rnd = () => ((seed = seed * 16807 % 2147483647) / 2147483647);
+  for (let i = 0; i < 3; i++) rnd();
+  const map = Math.floor(rnd() * MAPS.length), diff = rnd() < 0.6 ? 'normal' : 'hard';
+  const keys = Object.keys(MODIFIERS), mods = [];
+  while (mods.length < 2) {
+    const k = keys[Math.floor(rnd() * keys.length)];
+    if (!mods.includes(k) && !(k === 'rich' && mods.includes('poor')) && !(k === 'poor' && mods.includes('rich'))) mods.push(k);
+  }
+  return { date, map, diff, mods };
+}
+function dailyState() {
+  if (PROFILE.daily.date !== todayStr()) PROFILE.daily = { date: todayStr(), won: false, best: 0 };
+  return PROFILE.daily;
+}
+
+/* ---------------- TIPS ---------------- */
+function tip(id) {
+  if (!TIPS[id] || PROFILE.tips.includes(id)) return;
+  PROFILE.tips.push(id); saveProfile();
+  UI.toast('💡 ' + TIPS[id], 'tip', 7000);
 }
 
 /* ---------------- WAVE ---------------- */
@@ -55,13 +123,15 @@ function buildWave(n) {
   const q = []; let t = 0;
   const add = (type, count, gap) => { for (let i = 0; i < count; i++) { q.push({ type, t }); t += gap; } t += 0.8; };
   add('normal', Math.floor(4 + n * 1.4), Math.max(0.35, 1.0 - n * 0.02));
+  if (S && S.M && S.M.earlyHidden && n >= 2 && n < ENEMY_INTRO.hidden) add('hidden', Math.floor(1 + n * 0.5), 0.8);
   if (n >= ENEMY_INTRO.fast)     add('fast', Math.floor(2 + n * 0.8), 0.45);
   if (n >= ENEMY_INTRO.tank)     add('tank', Math.floor(1 + n * 0.35), 1.1);
   if (n >= ENEMY_INTRO.hidden)   add('hidden', Math.floor(2 + (n - 6) * 0.6), 0.7);
   if (n >= ENEMY_INTRO.regen)    add('regen', Math.floor(1 + (n - 8) * 0.4), 1.0);
   if (n >= ENEMY_INTRO.armored)  add('armored', Math.floor(1 + (n - 11) * 0.5), 1.2);
   if (n >= ENEMY_INTRO.splitter) add('splitter', Math.floor(1 + (n - 13) * 0.4), 1.3);
-  if (n >= 18) add('fast', n, 0.25);
+  if (n >= 18) add('fast', Math.min(n, 60), 0.25);
+  if (n > 40) add('armored', Math.floor((n - 40) * 0.8), 0.6);
   if (n % 10 === 0) add('boss', Math.max(1, Math.floor(n / 10)), 4);
   return q;
 }
@@ -77,18 +147,89 @@ function startWave() {
   UI.banner(S.wave % 10 === 0 ? `⚠️ BOSS WAVE ${S.wave}` : `WAVE ${S.wave}`, S.wave % 10 === 0 ? '#e040fb' : '#fff');
   UI.refreshAll();
 }
-function endWave() {
-  const bonus = 100 + S.wave * 30; let farm = 0;
+/** Bayar bonus akhir wave + pendapatan farm */
+function payWave(skipBonus = 0) {
+  const bonus = 100 + Math.min(S.wave, 60) * 30; let farm = 0;
   S.towers.filter(t => t.type === 'farm').forEach(t => {
     const inc = lvl(t).income; farm += inc; addText(t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2);
   });
-  S.cash += bonus + farm; S.earned += bonus + farm;
-  if (farm) sfx('coin');
+  const total = bonus + farm + skipBonus;
+  S.cash += total; S.earned += total;
+  if (farm || skipBonus) sfx('coin');
+  return total;
+}
+function endWave() {
+  const total = payWave();
   checkAchievements(summary());
   if (S.wave >= S.maxWave) { S.state = 'win'; finishGame(true); return; }
   S.state = 'ready'; S.autoTimer = 3;
-  UI.banner(`Wave selesai! +$${bonus + farm}`, '#ffd54f', 1200);
+  UI.banner(`Wave selesai! +$${total}`, '#ffd54f', 1200);
+  saveGameState();
+  if (S.wave === 1) tip('wave1');
+  if (S.wave === 2 && levelFromXp(PROFILE.xp) >= ABILITIES[0].level) tip('ability');
+  const next = wavePreview(S.wave + 1);
+  if (next.hidden && S.wave + 1 <= ENEMY_INTRO.hidden + 1) tip('hidden');
+  if (next.boss) tip('boss');
   UI.refreshAll();
+}
+/** Skip: mulai wave berikutnya saat semua musuh wave ini sudah keluar */
+const canSkip = () => S && S.state === 'wave' && !S.spawnQ.length && S.enemies.length > 0 && S.wave < S.maxWave;
+const skipBonusAmt = () => 25 + Math.min(S.wave, 60) * 10;
+function skipWave() {
+  if (!canSkip()) return;
+  const b = skipBonusAmt(), total = payWave(b);
+  PROFILE.stats.skips++;
+  addText(W / 2, 60, `SKIP! +$${total}`, '#ffd54f', 1.2);
+  S.state = 'ready'; startWave();
+  checkAchievements(summary());
+}
+
+/* ---------------- SKILL PEMAIN ---------------- */
+const playerLevel = () => levelFromXp(PROFILE.xp);
+function useAbility(id) {
+  const a = ABILITIES.find(x => x.id === id);
+  if (!a || !S || Menu.open || S.state === 'win' || S.state === 'lose') return;
+  if (playerLevel() < a.level) { sfx('error'); UI.toast(`🔒 ${a.name} terbuka di level ${a.level}`); return; }
+  if (S.abilityCd[id] > 0) { sfx('error'); return; }
+  if (id === 'airstrike') {
+    S.targeting = S.targeting ? null : 'airstrike'; S.placing = null; S.selected = null;
+    sfx('click'); UI.hidePanel(); UI.renderBar(); UI.renderAbilities(); return;
+  }
+  if (id === 'freeze') {
+    S.freezeT = 4;
+    S.enemies.forEach(e => { e.slowUntil = S.time + 4; e.slowF = e.boss ? 0.4 : 0.8; });
+    sfx('freeze'); UI.banner('🧊 BADAI ES', '#81d4fa', 1000);
+  }
+  if (id === 'repair') {
+    const h = Math.round(S.maxHp * 0.3), before = S.hp;
+    S.hp = Math.min(S.maxHp, S.hp + h);
+    addText(W - 60, (exitRow() - 1) * T, '+' + Math.round(S.hp - before) + ' ❤️', '#69f0ae', 1.5);
+    puff(19.5 * T, exitRow() * T, '#69f0ae', 16); sfx('upgrade');
+  }
+  commitAbility(a);
+}
+function airstrikeAt(x, y) {
+  S.targeting = null;
+  for (let i = 0; i < 3; i++) S.strikes.push({ x: x + (i - 1) * 34, y: y + (i % 2 ? -18 : 18), t: 0.6 + i * 0.25, max: 0.6 + i * 0.25 });
+  sfx('rocket'); commitAbility(ABILITIES[0]);
+}
+function commitAbility(a) {
+  S.abilityCd[a.id] = a.cd; PROFILE.stats.abilities++;
+  checkAchievements(summary()); UI.renderAbilities();
+}
+function updateStrikes(dt) {
+  for (const k in S.abilityCd) if (S.abilityCd[k] > 0) S.abilityCd[k] = Math.max(0, S.abilityCd[k] - dt);
+  S.freezeT = Math.max(0, S.freezeT - dt);
+  for (const st of S.strikes) {
+    st.t -= dt;
+    if (st.t > 0) continue;
+    st.done = true;
+    const R = 1.4 * T, dmg = 40 + Math.min(S.wave, 80) * 18;
+    S.effects.push({ kind: 'boom', x: st.x, y: st.y, r: R, life: 0.45, max: 0.45 });
+    if (SET.shake) S.shake = 6; sfx('boom');
+    for (const e of S.enemies) if (!e.dead && Math.hypot(e.x - st.x, e.y - st.y) <= R) damage(e, dmg, { pierceArmor: true }, null);
+  }
+  S.strikes = S.strikes.filter(st => !st.done);
 }
 
 /* ---------------- MUSUH ---------------- */
@@ -96,9 +237,9 @@ function spawn(type, from) {
   const d = ENEMIES[type], w = Math.max(1, S.wave);
   let hp = d.hp * (1 + w * 0.13 + Math.pow(w, 1.6) * 0.01);
   if (d.boss) hp = d.hp * Math.pow(w / 10, 2.1) * (1 + w * 0.05);
-  hp *= DIFFS[S.diff].hpMul;
+  hp *= DIFFS[S.diff].hpMul * S.M.hpMul;
   const e = {
-    id: S.nextId++, type, ...d, reward: Math.max(1, Math.round(d.reward * DIFFS[S.diff].reward)),
+    id: S.nextId++, type, ...d, spd: d.spd * S.M.spdMul, reward: Math.max(1, Math.round(d.reward * DIFFS[S.diff].reward * S.M.rewardMul)),
     maxHp: hp, hp, x: pathPx[0].x, y: pathPx[0].y, wp: 1, dist: 0,
     slowUntil: 0, slowF: 0, wob: Math.random() * 6, stunT: 6, summonT: 10, hitT: 0,
   };
@@ -106,6 +247,7 @@ function spawn(type, from) {
     e.x = from.x + (Math.random() - 0.5) * 14; e.y = from.y + (Math.random() - 0.5) * 14;
     e.wp = from.wp; e.dist = from.dist - Math.random() * 10;
   }
+  if (S.freezeT > 0) { e.slowUntil = S.time + S.freezeT; e.slowF = e.boss ? 0.4 : 0.8; }
   S.enemies.push(e);
   return e;
 }
@@ -138,20 +280,25 @@ function placeReason(type, c, r) {
   if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return 'Di luar peta';
   if (pathTiles.has(c + ',' + r)) return 'Tidak bisa di jalur';
   if (c >= 19 && Math.abs(r - exitRow()) <= 1) return 'Area base';
+  if (S.M.ban.includes(type)) return 'Dilarang oleh modifier';
   if (S.towers.some(t => t.c === c && t.r === r)) return 'Sudah ada tower';
   if (deco.some(d => d.c === c && d.r === r)) return 'Terhalang';
   if (countType(type) >= def.limit) return `Batas ${def.name} (${def.limit})`;
   if (S.cash < def.levels[0].cost) return 'Uang tidak cukup';
   return null;
 }
+function makeTower(type, c, r) {
+  return { id: S.nextId++, type, c, r, x: (c + 0.5) * T, y: (r + 0.5) * T, level: 0, cd: 0, angle: -Math.PI / 2,
+           spent: TOWERS[type].levels[0].cost, target: 'first', recoil: 0, dmg: 0, kills: 0, stunUntil: 0, buff: 0, gh: false };
+}
 function placeTower(type, c, r) {
   const why = placeReason(type, c, r);
   if (why) { sfx('error'); return null; }
   const cost = TOWERS[type].levels[0].cost;
   S.cash -= cost;
-  const t = { id: S.nextId++, type, c, r, x: (c + 0.5) * T, y: (r + 0.5) * T, level: 0, cd: 0, angle: -Math.PI / 2,
-              spent: cost, target: 'first', recoil: 0, dmg: 0, kills: 0, stunUntil: 0, buff: 0, gh: false };
+  const t = makeTower(type, c, r);
   S.towers.push(t);
+  tip('placed');
   PROFILE.stats.towersPlaced++;
   sfx('place'); puff(t.x, t.y, '#fff');
   UI.refreshAll();
@@ -248,6 +395,7 @@ function bossAbilities(e, dt) {
 /* ---------------- UPDATE ---------------- */
 function update(dt) {
   S.time += dt;
+  updateStrikes(dt);
   if (S.state === 'ready' && S.autoSkip && S.wave > 0) { S.autoTimer -= dt; if (S.autoTimer <= 0) startWave(); }
   if (S.state === 'wave') {
     S.waveTime += dt;
@@ -328,7 +476,7 @@ function fmtNum(n) {
 
 /* ---------------- PROGRESI ---------------- */
 function summary() {
-  return { wave: S.wave, won: S.state === 'win', hp: S.hp, maxHp: S.maxHp, diff: S.diff, earned: S.earned };
+  return { wave: S.wave, won: S.state === 'win', hp: S.hp, maxHp: S.maxHp, diff: S.diff, earned: S.earned, mode: S.mode, daily: !!S.daily };
 }
 function checkAchievements(g) {
   const got = [];
@@ -340,18 +488,42 @@ function checkAchievements(g) {
   if (got.length) saveProfile();
   return got;
 }
+function bestKey(mapId, diff, mode) { return mapId + '_' + diff + (mode === 'endless' ? '_endless' : ''); }
+function calcScore(cleared, won) {
+  const mul = DIFFS[S.diff].coinMul * (1 + MAP.stars * 0.1) * (S.daily ? 1.2 : 1);
+  return Math.round((cleared * 500 + S.kills * 5 + Math.max(0, S.hp) * 10 + S.bossKills * 1000 + (won ? 5000 : 0)) * mul);
+}
 function finishGame(won) {
   if (S.recorded) return; S.recorded = true;
-  const D = DIFFS[S.diff], key = MAP.id + '_' + S.diff;
+  SaveGame.clear();
+  const D = DIFFS[S.diff];
   const cleared = won ? S.wave : Math.max(0, S.wave - 1);
-  const record = cleared > (PROFILE.best[key] || 0);
-  if (record) PROFILE.best[key] = cleared;
+  let record = false;
+  if (!S.daily) {
+    const key = bestKey(MAP.id, S.diff, S.mode);
+    record = cleared > (PROFILE.best[key] || 0);
+    if (record) PROFILE.best[key] = cleared;
+  }
 
-  const coins = Math.round((cleared * 12 + (won ? 250 : 0) + S.bossKills * 40) * D.coinMul * (1 + MAP.stars * 0.1));
+  let coins = Math.round((cleared * 12 + (won ? 250 : 0) + S.bossKills * 40) * D.coinMul * (1 + MAP.stars * 0.1));
+  let dailyReward = 0;
+  if (S.daily) {
+    const ds = dailyState();
+    ds.best = Math.max(ds.best, cleared);
+    if (won && !ds.won) { ds.won = true; dailyReward = DAILY_REWARD; coins += dailyReward; PROFILE.stats.dailyWins++; }
+  }
   const xp = Math.round(cleared * 20 * D.coinMul + S.kills * 0.5 + (won ? 300 : 0));
   const lvBefore = levelFromXp(PROFILE.xp);
   PROFILE.coins += coins; PROFILE.xp += xp;
   const lvAfter = levelFromXp(PROFILE.xp);
+
+  // Papan skor lokal (15 terbaik)
+  const score = calcScore(cleared, won);
+  const run = { score, map: MAP.id, diff: S.diff, mode: S.mode, daily: !!S.daily, wave: S.wave, won, kills: S.kills, date: todayStr(), id: Date.now() };
+  PROFILE.runs.push(run);
+  PROFILE.runs.sort((a, b) => b.score - a.score);
+  PROFILE.runs = PROFILE.runs.slice(0, 15);
+  const rank = PROFILE.runs.findIndex(r => r.id === run.id) + 1;
 
   const st = PROFILE.stats;
   if (won) st.wins++;
@@ -361,6 +533,7 @@ function finishGame(won) {
   const ach = checkAchievements(summary());
 
   sfx(won ? 'win' : 'lose');
-  Menu.endData = { won, record, coins, xp, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach };
+  const unlockedSkill = ABILITIES.find(a => a.level > lvBefore && a.level <= lvAfter);
+  Menu.endData = { won, record, coins, xp, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank, dailyReward, unlockedSkill };
   setTimeout(() => Menu.show('end'), 900);
 }
