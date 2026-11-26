@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.0.0] — 2026-11-26
+### Ditambahkan
+- **11 unit baru** (total 19): Gunslinger, Meriam, Pembakar, Mortir, Tesla, Laser, Racun, Railgun, Penjaga Waktu, Nuklir, Naga Api — dengan mekanik petir berantai, sinar yang memanas, racun, tembus garis, aura, jarak minimum, dan evolusi masing-masing.
+- **Sistem Gacha**: semua unit didapat lewat Summon (💠 Permata), Banner Standar & Unggulan harian, pity 60, jaminan Epik di 10×, animasi kartu.
+- **Inventaris unit**: setiap unit adalah item tersendiri (trait, evolusi, mastery, skin, kunci, hancurkan untuk material).
+- **Trading** unit & Permata antar teman, divalidasi server (anti duplikasi, unit awal/impor tidak bisa ditukar).
+- **Top up Permata** lewat Midtrans Snap (verifikasi signature, kredit sekali, cek status).
+- **9 skin** kosmetik dengan aksesori.
+- **10 skill** (7 baru: Dana Darurat, Radar, Overclock, Perisai Base, Meteor, Putar Waktu, Badai Petir); 4 slot, stok terbatas dibeli di Toko.
+- **Toko** (Skill, Skin, Material, Top Up), hadiah login harian (Permata), Permata dari pencapaian & permainan.
+- Ekonomi akun disimpan di server (`users.vault` + collection `units`, `trades`, `payments`); logika bersama di `js/shared.js`.
+- Uji `test/eco.test.js` (gacha, pity, trait, klaim, trading, top up).
+
+### Diubah
+- Pemain tamu: ekonomi lokal; saat login pertama, progres tamu diimpor sekali (dengan batas).
+- Profil versi lama otomatis dimigrasikan ke inventaris unit.
+
 ## [3.0.0] — 2026-11-26
 ### Ditambahkan
 - **Backend Vercel** (`api/index.js`, satu fungsi serverless) + **MongoDB Atlas** (database `block_tower_defense`: users, friendships, rooms, relay, invites, runs).

@@ -83,9 +83,10 @@ const Online = {
   logout() {
     clearInterval(this.presenceT); this.presenceT = null;
     if (this.user) this.pushProfile();
-    this.setToken(null); this.user = null;
+    this.setToken(null); this.user = null; this.vaultReady = false;
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
-    UI.toast('Kamu sudah keluar. Progres tetap tersimpan di perangkat ini.');
+    replaceProfile(defaultProfile()); Storage.save('btd_profile', PROFILE);
+    UI.toast('Kamu sudah keluar. Progres aman tersimpan di akunmu.');
     this.refreshUi(); Menu.show('main');
   },
   async rename(name) {
@@ -112,10 +113,22 @@ const Online = {
       PROFILE.ownerId = this.user.id;
       Storage.save('btd_profile', PROFILE);
       if (!useCloud) await this.pushProfile();
+      await this.loadVault();
       this.lastSync = Date.now();
     } catch (e) { UI.toast('⚠️ Sinkronisasi gagal: ' + e.message); }
     this.syncing = false;
   },
+  /** Muat ekonomi dari server; progres tamu diimpor sekali saat akun baru dibuat */
+  async loadVault() {
+    const guestData = PROFILE.vaultOwner !== this.user.id ? PROFILE.vault : null;
+    const r = await this.api('eco.init', { import: guestData });
+    this.vaultReady = true;
+    PROFILE.vaultOwner = this.user.id;
+    Eco.apply(r.vault);
+    if (r.created && guestData) UI.toast('📦 Unit & item dari perangkat ini dipindahkan ke akunmu', 'gold', 4000);
+    Eco.act('dailyLogin', {}).then(d => { if (d && d.gems) UI.toast(`🎁 Hadiah login hari ke-${d.streak}: +${d.gems} 💠`, 'gold', 4000); }).catch(() => {});
+  },
+  async refreshVault() { if (!this.vaultReady) return; try { const r = await this.api('eco.state', null, 'GET'); Eco.apply(r.vault); } catch (e) {} },
   queueSave() {
     if (!this.user) return;
     clearTimeout(this.saveT);
@@ -152,7 +165,9 @@ const Online = {
 
 /** Ganti seluruh isi PROFILE (objek tetap sama agar referensi lain aman) */
 function replaceProfile(obj) {
-  const fresh = deepMerge(defaultProfile(), JSON.parse(JSON.stringify(obj || {})));
+  const src = JSON.parse(JSON.stringify(obj || {})), base = defaultProfile();
+  if (!src.vault) delete base.vault;
+  const fresh = migrateProfile(deepMerge(base, src));
   for (const k of Object.keys(PROFILE)) delete PROFILE[k];
   Object.assign(PROFILE, fresh);
 }
@@ -338,7 +353,7 @@ const MP = {
     const role = room.host === me ? 'host' : 'guest';
     newGame({ mp: { role, me, room: room.code, hostId: room.host } });
     room.players.forEach((p, i) => {
-      S.players[p.id] = { name: p.name, cash: S.cash, earned: 0, units: p.id === me ? PROFILE.units : null,
+      S.players[p.id] = { name: p.name, cash: S.cash, earned: 0, units: p.id === me ? myUnitsMap() : null,
         color: PLAYER_COLORS[i % PLAYER_COLORS.length], abilityCd: p.id === me ? S.abilityCd : {}, online: p.id === me, level: p.level };
     });
     Net.open(room.code, me, (from, msg) => this.onMessage(from, msg));
@@ -349,7 +364,7 @@ const MP = {
     UI.banner(`🤝 Mabar • ${MAP.name}`, '#fff', 1600);
     this.sysChat(`Room ${room.code} • ${room.players.length} pemain`);
   },
-  sayHello() { Net.send(S.mp.hostId, { t: 'hello', units: PROFILE.units, name: Online.user.name, level: levelFromXp(PROFILE.xp) }); },
+  sayHello() { Net.send(S.mp.hostId, { t: 'hello', units: myUnitsMap(), name: Online.user.name, level: levelFromXp(PROFILE.xp) }); },
   act(a) { if (isGuest()) Net.send(S.mp.hostId, { t: 'act', ...a }); },
   guests() { return Object.keys(S.players).filter(id => id !== S.me); },
 
@@ -366,7 +381,7 @@ const MP = {
         p.units = m.units || {}; p.level = m.level; p.online = true;
         S.towers.filter(t => t.owner === from).forEach(t => { t.L = computeL(t.type, t.level, unitFor(t.type, from)); });
         const meta = {};
-        for (const [id, q] of Object.entries(S.players)) meta[id] = { name: q.name, color: q.color, units: id === S.me ? PROFILE.units : q.units, level: q.level };
+        for (const [id, q] of Object.entries(S.players)) meta[id] = { name: q.name, color: q.color, units: id === S.me ? myUnitsMap() : q.units, level: q.level };
         for (const id of this.guests()) Net.send(id, { t: 'init', players: meta, map: MAPS.indexOf(MAP), diff: S.diff, mode: S.mode });
         return;
       }
@@ -376,7 +391,7 @@ const MP = {
         this.gotInit = true;
         for (const [id, q] of Object.entries(m.players)) {
           const cur = S.players[id] || (S.players[id] = { cash: S.cash, earned: 0, abilityCd: {} });
-          Object.assign(cur, { name: q.name, color: q.color, level: q.level, units: id === S.me ? PROFILE.units : q.units });
+          Object.assign(cur, { name: q.name, color: q.color, level: q.level, units: id === S.me ? myUnitsMap() : q.units });
         }
         return;
       }
@@ -425,12 +440,13 @@ const MP = {
     const r1 = v => Math.round(v * 10) / 10;
     return {
       t: 'snap', q: ++this.lastQ, w: S.wave, mw: S.maxWave === Infinity ? -1 : S.maxWave, st: S.state, hp: Math.ceil(S.hp), mhp: S.maxHp,
-      tm: r1(S.time), fz: r1(S.freezeT), sq: S.spawnQ.length, k: S.kills, bk: S.bossKills, sp: S.speed, pl,
-      tw: S.towers.map(t => [t.id, t.type, t.c, t.r, t.level, r1(t.angle), t.owner, t.evo ? 1 : 0, t.trait || 0, S.time < t.stunUntil ? 1 : 0, t.target, t.buff > 0 ? 1 : 0, Math.round(t.dmg), t.kills, t.spent, t.recoil > 0.5 ? 1 : 0]),
+      tm: r1(S.time), fz: r1(S.freezeT), oc: r1(S.overclockT), sh: r1(S.shieldT), rd: r1(S.radarT), sq: S.spawnQ.length, k: S.kills, bk: S.bossKills, sp: S.speed, pl,
+      tw: S.towers.map(t => [t.id, t.type, t.c, t.r, t.level, r1(t.angle), t.owner, t.evo ? 1 : 0, t.trait || 0, S.time < t.stunUntil ? 1 : 0, t.target, t.buff > 0 ? 1 : 0, Math.round(t.dmg), t.kills, t.spent, t.recoil > 0.5 ? 1 : 0, t.skin || 'default']),
       en: S.enemies.map(e => [e.id, e.type, Math.round(e.x), Math.round(e.y), Math.ceil(e.hp), Math.ceil(e.maxHp),
-        (S.time < e.slowUntil ? 1 : 0) | (e.burn && S.time < e.burn.until ? 2 : 0) | (e.frozenUntil > S.time ? 4 : 0) | (e.hitT > 0 ? 8 : 0)]),
+        (S.time < e.slowUntil ? 1 : 0) | (e.dot && S.time < e.dot.until ? (e.dot.col === 'poison' ? 16 : 2) : 0) | (e.frozenUntil > S.time ? 4 : 0) | (e.hitT > 0 ? 8 : 0)]),
       pr: S.projectiles.map(p => [Math.round(p.x), Math.round(p.y), r1(p.a || 0), p.big ? 1 : 0]),
-      sk: S.strikes.map(s => [Math.round(s.x), Math.round(s.y), r1(s.t), s.max]),
+      sk: S.strikes.map(s => [Math.round(s.x), Math.round(s.y), r1(s.t), s.max, s.r || 1.4, s.big ? 1 : 0]),
+      pk: S.projectiles.map(p => p.kind || ''),
     };
   },
   broadcastEnd(won) {
@@ -448,7 +464,7 @@ const MP = {
     if (m.q <= this.lastQ) { this.applyFx(m.fx || []); return; }
     this.lastQ = m.q; this.lastSnapAt = performance.now(); this.warned = false;
     if (S.state !== 'win' && S.state !== 'lose') S.state = m.st === 'win' || m.st === 'lose' ? S.state : m.st;
-    Object.assign(S, { wave: m.w, maxWave: m.mw < 0 ? Infinity : m.mw, hp: m.hp, maxHp: m.mhp, time: m.tm, freezeT: m.fz, kills: m.k, bossKills: m.bk, speed: m.sp });
+    Object.assign(S, { wave: m.w, maxWave: m.mw < 0 ? Infinity : m.mw, hp: m.hp, maxHp: m.mhp, time: m.tm, freezeT: m.fz, overclockT: m.oc || 0, shieldT: m.sh || 0, radarT: m.rd || 0, kills: m.k, bossKills: m.bk, speed: m.sp });
     S.spawnQ = new Array(m.sq);
     for (const [id, q] of Object.entries(m.pl)) {
       if (id === S.me) { S.cash = q.c; S.earned = q.e; S.abilityCd = q.cd || {}; }
@@ -458,11 +474,11 @@ const MP = {
     // tower
     const old = Object.fromEntries(S.towers.map(t => [t.id, t]));
     S.towers = m.tw.map(a => {
-      const [id, type, c, r, level, angle, owner, evo, trait, stun, target, buff, dmg, kills, spent, shot] = a;
+      const [id, type, c, r, level, angle, owner, evo, trait, stun, target, buff, dmg, kills, spent, shot, skin] = a;
       let t = old[id];
       if (!t) t = { id, type, c, r, x: (c + 0.5) * T, y: (r + 0.5) * T, recoil: 0, cd: 0, shots: 0, ramp: 0 };
       if (t.level !== level || t.owner !== owner || !t.L) t.L = computeL(type, level, unitFor(type, owner));
-      Object.assign(t, { level, angle, owner, evo: !!evo, trait: trait || null, stunUntil: stun ? S.time + 0.3 : 0, target, buff: buff ? 0.1 : 0, dmg, kills, spent });
+      Object.assign(t, { level, angle, owner, evo: !!evo, skin: skin || 'default', trait: trait || null, stunUntil: stun ? S.time + 0.3 : 0, target, buff: buff ? 0.1 : 0, dmg, kills, spent });
       if (shot) t.recoil = 1;
       return t;
     });
@@ -472,13 +488,13 @@ const MP = {
     S.enemies = m.en.map(([id, type, x, y, hp, maxHp, f]) => {
       let e = oldE[id];
       if (!e) e = { ...ENEMIES[type], id, type, x, y, wob: Math.random() * 6, hitT: 0 };
-      Object.assign(e, { tx: x, ty: y, hp, maxHp, slowUntil: f & 1 ? S.time + 0.4 : 0, burn: f & 2 ? { until: S.time + 0.4 } : null, frozenUntil: f & 4 ? S.time + 0.4 : 0 });
+      Object.assign(e, { tx: x, ty: y, hp, maxHp, slowUntil: f & 1 ? S.time + 0.4 : 0, dot: f & 18 ? { until: S.time + 0.4, col: f & 16 ? 'poison' : 'burn' } : null, frozenUntil: f & 4 ? S.time + 0.4 : 0 });
       if (f & 8) e.hitT = 0.1;
       return e;
     });
     for (const id in oldE) if (!S.enemies.some(e => e.id === +id)) puff(oldE[id].x, oldE[id].y, oldE[id].color, oldE[id].boss ? 20 : 6);
-    S.projectiles = m.pr.map(([x, y, a, big]) => ({ x, y, a, big: !!big }));
-    S.strikes = m.sk.map(([x, y, t, max]) => ({ x, y, t, max }));
+    S.projectiles = m.pr.map(([x, y, a, big], i) => ({ x, y, a, big: !!big, kind: (m.pk || [])[i] || '' }));
+    S.strikes = m.sk.map(([x, y, t, max, r, big]) => ({ x, y, t, max, r, big: !!big }));
     this.applyFx(m.fx || []);
   },
   applyFx(list) {

@@ -25,8 +25,23 @@ const Menu = {
     const pct = Math.min(100, (PROFILE.xp - lo) / (hi - lo) * 100);
     return `<div class="pbar"><div class="lvl">Lv ${lv}</div>
       <div class="xp"><div style="width:${pct}%"></div><span>${PROFILE.xp - lo} / ${hi - lo} XP</span></div>
-      <div class="coins">🪙 ${PROFILE.coins.toLocaleString('id-ID')}</div>
-      <div class="mat" title="Kristal Trait">💎 ${PROFILE.crystals}</div><div class="mat" title="Batu Evolusi">🔮 ${PROFILE.stones}</div></div>`;
+      ${this.currency()}</div>`;
+  },
+  currency() {
+    const v = PROFILE.vault;
+    return `<span class="cur gems" title="Permata">💠 ${v.gems.toLocaleString('id-ID')}<button class="plus" data-act="shoptab:topup" title="Top up">＋</button></span>
+      <span class="cur" title="Koin">🪙 ${v.coins.toLocaleString('id-ID')}</span>
+      <span class="cur" title="Kristal Trait">💎 ${v.crystals}</span><span class="cur" title="Batu Evolusi">🔮 ${v.stones}</span>`;
+  },
+  rarityTag(type) { const r = RARITY[UNIT_RARITY[type]]; return `<span class="rar" style="background:${r.color}">${r.name}</span>`; },
+  unitName(u) { return u.evo ? EVOS[u.type].name : TOWERS[u.type].name; },
+  unitCard(u, opts = {}) {
+    const r = UNIT_RARITY[u.type], tr = u.trait && TRAITS[u.trait], inLo = PROFILE.loadout.includes(u.id);
+    return `<div class="ucard r-${r} ${opts.sel ? 'sel' : ''} ${opts.cls || ''}" data-act="${opts.act || 'unit:' + u.id}">
+      <canvas width="64" height="64" data-icon="${u.type}" data-skin="${u.skin || 'default'}" data-evo="${u.evo ? 1 : 0}"></canvas>
+      <b>${this.unitName(u)}</b><small>M${unitLevel(u.xp)}${u.evo ? ' ★' : ''}</small>
+      ${tr ? `<i class="utr" style="background:${RARITY[tr.rarity].color}" title="${tr.name}">${tr.icon}</i>` : ''}
+      ${inLo && !opts.noEquip ? '<i class="ueq">✔</i>' : ''}${u.lock ? '<i class="ulock">🔒</i>' : ''}${u.tradable === false && opts.showTrade ? '<i class="unt" title="Tidak bisa diperdagangkan">⛔</i>' : ''}</div>`;
   },
   avatar(u, size = 44) {
     const name = (u && u.name) || 'Tamu';
@@ -66,9 +81,7 @@ const Menu = {
                 <small>${u ? '☁️ Tersinkron' : Online.available ? '🔑 Masuk dengan Google' : '💾 Mode offline'}</small></div>
             </button>
             <div class="chips">
-              <span class="chip-c" title="Koin">🪙 ${PROFILE.coins.toLocaleString('id-ID')}</span>
-              <span class="chip-c" title="Kristal Trait">💎 ${PROFILE.crystals}</span>
-              <span class="chip-c" title="Batu Evolusi">🔮 ${PROFILE.stones}</span>
+              ${this.currency()}
               <button class="icon-btn" data-act="settings:main" title="Pengaturan">⚙️</button>
             </div>
           </div>
@@ -85,14 +98,16 @@ const Menu = {
             </div>
           </div>
           <div class="tiles">
-            ${tile('go:towers', '🗼', 'Tower', 'Loadout • Trait • Evolusi', 't-purple')}
+            ${tile('go:gacha', '🎰', 'Summon', `${GACHA.cost1} 💠 / tarikan`, 't-gold big-tile')}
+            ${tile('go:units', '🗼', 'Unit', `${PROFILE.vault.units.length} unit • Trait • Evo`, 't-purple')}
+            ${tile('go:shop', '🛒', 'Toko', 'Skill • Skin • Top Up', 't-pink')}
+            ${tile('go:trade', '🔁', 'Trading', u ? 'Tukar unit' : 'Perlu login', 't-teal')}
+            ${tile('go:skills', '⚡', 'Skill', `${equippedSkills().length}/${SKILL_SLOTS} terpasang`, 't-orange')}
             ${tile('go:friends', '👥', 'Teman', u ? 'Undang & gabung' : 'Perlu login', 't-blue', reqBadge)}
             ${tile('go:scores', '🏆', 'Papan Skor', 'Lokal & global', 't-gold')}
-            ${tile('go:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`, 't-orange')}
-            ${tile('go:skills', '⚡', 'Skill', 'Z • C • V', 't-teal')}
+            ${tile('go:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`, 't-green')}
             ${tile('go:stats', '📊', 'Statistik', PROFILE.stats.games + ' game', 't-gray')}
-            ${tile('go:shop', '🛒', 'Toko', 'Material', 't-pink')}
-            ${tile('go:howto', '📖', 'Cara Main', 'Panduan', 't-green')}
+            ${tile('go:howto', '📖', 'Cara Main', 'Panduan', 't-gray')}
           </div>
           <div class="foot">v${VERSION} • ${Online.available ? '🟢 Server online' : '⚪ Offline'} • ${TOWER_ORDER.length} tower • ${Object.keys(ENEMIES).length - 1} musuh</div>
         </div>`;
@@ -215,84 +230,116 @@ const Menu = {
         <h3>Kesulitan</h3>
         <div class="diffs">${Object.entries(DIFFS).map(([k, d]) => `<button class="btn ${DIFF === k ? 'sel' : ''}" style="background:${d.color}" data-act="diff:${k}">
           ${d.name}<small>${MODE === 'endless' ? '∞' : d.waves} wave • ❤️ ${d.hp} • $${d.cash} • 🪙×${d.coinMul}</small></button>`).join('')}</div>
-        <div class="loadout-mini">Loadout: ${PROFILE.loadout.map(k => `<i title="${TOWERS[k].name}" style="background:${TOWERS[k].color}"></i>`).join('')}
-          <button class="btn purple sm" data-act="go:towers">Ubah</button></div>
+        <div class="loadout-mini">Loadout: ${loadoutUnits().map(u => `<i title="${this.unitName(u)}" style="background:${u.evo ? EVOS[u.type].color : TOWERS[u.type].color}"></i>`).join('')}
+          <button class="btn purple sm" data-act="go:units">Ubah</button>
+          <span class="dim">Skill:</span> ${equippedSkills().map(id => `<span title="${skillById(id).name}">${skillById(id).icon}${skillLeft(id)}</span>`).join(' ') || '-'}
+          <button class="btn orange sm" data-act="go:skills">Ubah</button></div>
         <button class="btn big" data-act="start">MULAI ▶</button>`;
     },
 
-    towers() {
-      const sel = this.shopSel, d = TOWERS[sel], u = unitOf(sel), owned = PROFILE.unlocked.includes(sel), inLo = PROFILE.loadout.includes(sel);
-      const lv = unitLevel(u.xp), lo = unitXpFor(lv), hi = unitXpFor(lv + 1);
-      const mpct = lv >= UNIT_MAX_LV ? 100 : Math.min(100, (u.xp - lo) / (hi - lo) * 100);
-      const tr = u.trait && TRAITS[u.trait], ev = EVOS[sel], es = evoStatus(sel);
-      const rows = d.levels.map((_, i) => { const L = computeL(sel, i); return `<tr><td>${i}</td><td>${esc(L.name)}</td><td>$${costOf(sel, i)}</td><td>${
-        L.dmg ? `${L.dmg} dmg • ${L.range}r • ${L.rate}s` : L.income ? `$${L.income}/wave` : `+${Math.round(L.buff * 100)}% • ${L.range}r`}${
-        L.hidden ? ' • 👁' : ''}${L.pierceArmor ? ' • 🛡' : ''}${L.splash ? ' • 💥' : ''}${L.slow ? ' • ❄' : ''}${L.grantHidden ? ' • 📡' : ''}</td></tr>`; }).join('');
-      let action;
-      if (!owned) action = `<button class="btn gold" data-act="buy:${sel}" ${PROFILE.coins < d.unlock ? 'disabled' : ''}>🔓 Buka — 🪙 ${d.unlock}</button>`;
-      else if (inLo) action = `<button class="btn red" data-act="lo-rem:${sel}" ${PROFILE.loadout.length <= 1 ? 'disabled' : ''}>Keluarkan dari loadout</button>`;
-      else action = `<button class="btn" data-act="lo-add:${sel}" ${PROFILE.loadout.length >= LOADOUT_SIZE ? 'disabled' : ''}>Masukkan ke loadout</button>`;
-      const req = (ok, txt) => `<li class="${ok ? 'ok' : ''}">${ok ? '✅' : '⬜'} ${txt}</li>`;
-      const rollArmed = this.rollArm === sel;
-      return `${this.header('Tower & Loadout')}
-        <div class="loadout">${Array.from({ length: LOADOUT_SIZE }, (_, i) => {
-          const k = PROFILE.loadout[i];
-          return k ? `<div class="lslot ${unitOf(k).evo ? 'evo' : ''}" data-act="shop:${k}"><div class="ico" style="background:${towerColor(k)}">${unitOf(k).evo ? '★' : ''}</div>${towerName(k)}</div>`
-                   : `<div class="lslot empty">Kosong</div>`;
-        }).join('')}</div>
-        <div class="shop">
-          <div class="tlist">${TOWER_ORDER.map(k => {
-            const o = PROFILE.unlocked.includes(k), uk = unitOf(k), tk = uk.trait && TRAITS[uk.trait];
-            return `<div class="titem ${k === sel ? 'sel' : ''} ${o ? '' : 'locked'}" data-act="shop:${k}">
-              <div class="ico" style="background:${towerColor(k)}">${o ? (uk.evo ? '★' : '') : '🔒'}</div>
-              <div><b>${towerName(k)}</b><small>${o ? `M${unitLevel(uk.xp)}${tk ? ` • <span style="color:${RARITY[tk.rarity].color}">${tk.icon} ${tk.name}</span>` : ''}${PROFILE.loadout.includes(k) ? ' • ✔' : ''}` : '🪙 ' + TOWERS[k].unlock}</small></div></div>`;
-          }).join('')}<button class="btn gold" data-act="go:shop">🛒 Toko Material</button></div>
-          <div class="tdetail">
-            <div class="box">
-              <div class="ph"><div class="pico" style="background:${towerColor(sel)}">${u.evo ? '★' : ''}</div>
-                <div><h3>${towerName(sel)} ${u.evo ? `<small class="dim">(${d.name})</small>` : ''}</h3><span class="tag">${d.role}</span></div></div>
-              <p>${d.desc}</p>
-              <div class="mastery"><b>Mastery Lv ${lv}</b>${lv >= UNIT_MAX_LV ? ' (MAKS)' : ''} <small class="dim">+${Math.round((lv - 1) * MASTERY_BONUS * 100)}% damage</small>
-                <div class="mbar"><div style="width:${mpct}%"></div><span>${lv >= UNIT_MAX_LV ? 'MAKS' : `${u.xp - lo} / ${hi - lo} XP`}</span></div>
-                <small class="dim">XP didapat dari damage & kill tower ini saat bermain.</small></div>
-              <table><tr><th>Lv</th><th>Upgrade</th><th>Harga</th><th>Statistik (efektif)</th></tr>${rows}</table>
-              <small class="dim">👁 deteksi hidden • 🛡 tembus armor • 💥 area • ❄ slow • 📡 beri deteksi</small>
-              ${action}
-            </div>
-            <div class="box2">
-              <div class="box trait-box" style="${tr ? `border-color:${RARITY[tr.rarity].color}` : ''}">
-                <h4>🎲 Trait</h4>
-                <div class="trait-cur" id="traitCur">${tr ? `<span class="ticon">${tr.icon}</span><div><b style="color:${RARITY[tr.rarity].color}">${tr.name}</b> <span class="rar" style="background:${RARITY[tr.rarity].color}">${RARITY[tr.rarity].name}</span><small>${tr.desc}</small></div>` : '<span class="dim">Belum ada trait</span>'}</div>
-                <button class="btn purple" data-act="roll:${sel}" ${!owned || PROFILE.crystals < 1 ? 'disabled' : ''}>${rollArmed ? '⚠️ Yakin? Trait ini akan hilang' : `🎲 Roll Trait — 💎 1`} </button>
-                <details><summary>Peluang trait</summary><div class="odds">${Object.entries(RARITY).map(([rk, r]) => {
-                  const list = Object.values(TRAITS).filter(t => t.rarity === rk), pct = list.reduce((a, t) => a + t.w, 0);
-                  return `<div><b style="color:${r.color}">${r.name} ${pct}%</b><small>${list.map(t => `${t.icon} ${t.name}: ${t.desc}`).join('<br>')}</small></div>`; }).join('')}</div></details>
-              </div>
-              <div class="box evo-box ${u.evo ? 'done' : ''}">
-                <h4>🧬 Evolusi → ${ev.name}</h4>
-                <div class="evo-prev"><div class="pico" style="background:${d.color}"></div><span>➜</span><div class="pico" style="background:${ev.color}">★</div>
-                  <div><b>${ev.name}</b><small>${ev.desc}</small><small class="dim">${Object.entries(ev.mul).map(([k, v]) => ({ dmg: `Damage ×${v}`, range: `Range ×${v}`, splash: `Splash ×${v}`, income: `Pendapatan ×${v}`, buffAdd: `Buff +${v * 100}%` })[k]).join(' • ')}</small></div></div>
-                ${u.evo ? '<div class="evo-ok">★ Sudah berevolusi</div>' : `<ul class="reqs">
-                  ${req(es.owned, 'Tower dimiliki')}${req(es.lvOk, `Mastery Lv ${EVO_REQ.level} (sekarang ${lv})`)}
-                  ${req(es.stonesOk, `🔮 ${EVO_REQ.stones} Batu Evolusi (punya ${PROFILE.stones})`)}${req(es.coinsOk, `🪙 ${EVO_REQ.coins} koin`)}</ul>
-                  <button class="btn gold" data-act="evo:${sel}" ${es.owned && es.lvOk && es.stonesOk && es.coinsOk ? '' : 'disabled'}>🧬 EVOLUSI</button>`}
-              </div>
-            </div>
+    units() {
+      const v = PROFILE.vault, f = this.unitFilter || 'all';
+      let list = [...v.units];
+      if (f === 'equip') list = list.filter(u => PROFILE.loadout.includes(u.id));
+      else if (RARITY[f]) list = list.filter(u => UNIT_RARITY[u.type] === f);
+      list.sort((a, b) => RARITY[UNIT_RARITY[b.type]].rank - RARITY[UNIT_RARITY[a.type]].rank || b.evo - a.evo || b.xp - a.xp || a.type.localeCompare(b.type));
+      if (!this.unitSel || !v.units.some(u => u.id === this.unitSel)) this.unitSel = (list[0] || v.units[0] || {}).id;
+      const u = v.units.find(x => x.id === this.unitSel);
+      const slots = Array.from({ length: LOADOUT_SIZE }, (_, i) => { const x = unitById(PROFILE.loadout[i]); return x ? this.unitCard(x, { act: 'unit:' + x.id, noEquip: true, cls: 'slotc' }) : '<div class="ucard empty">Kosong</div>'; }).join('');
+      const filters = [['all', 'Semua'], ['equip', 'Terpasang'], ...RARITY_ORDER.map(r => [r, RARITY[r].name])].reverse().reverse();
+      return `${this.header('Unit')}
+        <div class="lo-row"><b>Loadout</b><div class="lo-slots">${slots}</div></div>
+        <div class="unitwrap">
+          <div class="box inv">
+            <div class="tabs sm">${filters.map(([k, l]) => `<button class="tab ${f === k ? 'on' : ''}" data-act="ufilter:${k}">${l}</button>`).join('')}</div>
+            <div class="ugrid">${list.map(x => this.unitCard(x, { sel: x.id === this.unitSel })).join('') || '<p class="dim">Tidak ada unit</p>'}</div>
+            <div class="row2"><button class="btn gold" data-act="go:gacha">🎰 Summon unit baru</button></div>
           </div>
+          ${u ? this.unitDetail(u) : '<div class="box">Pilih unit</div>'}
         </div>`;
     },
 
     shop() {
-      return `${this.header('Toko Material')}
-        <div class="cards">${Object.entries(MATERIALS).map(([k, m]) => `<div class="card shopc">
-          <div class="big-ic">${m.icon}</div><div class="nm">${m.name}</div><small>${m.desc}</small>
-          <div class="best">Dimiliki: ${PROFILE[k]}</div>
-          <div class="row2"><button class="btn gold sm" data-act="mat:${k}:1" ${PROFILE.coins < m.price ? 'disabled' : ''}>1× — 🪙 ${m.price}</button>
-          <button class="btn gold sm" data-act="mat:${k}:5" ${PROFILE.coins < m.price * 5 ? 'disabled' : ''}>5× — 🪙 ${m.price * 5}</button></div></div>`).join('')}</div>
-        <div class="box"><h4>Cara mendapatkan gratis</h4>
-          <p>💎 <b>Kristal Trait</b>: setiap boss dikalahkan, setiap 10 wave yang diselesaikan, menang (+2), Tantangan Harian (+3).</p>
-          <p>🔮 <b>Batu Evolusi</b>: menang di kesulitan Sulit, menang Tantangan Harian, wave 30+ di Endless, atau kalahkan 3+ boss dalam satu game.</p></div>
-        <button class="btn gray" data-act="go:towers">← Ke Tower & Loadout</button>`;
+      const tab = this.shopTab || 'skill', v = PROFILE.vault;
+      const tabs = [['skill', '⚡ Skill'], ['skin', '🎨 Skin'], ['material', '💎 Material'], ['topup', '💠 Top Up']];
+      let body = '';
+      if (tab === 'skill') body = `<div class="shopgrid">${ABILITIES.map(a => { const sp = SKILL_SHOP[a.id], cur = sp.currency === 'gems' ? '💠' : '🪙';
+        return `<div class="sitem"><div class="sic" style="background:${a.color}">${a.icon}</div><div class="sinfo"><b>${a.name}</b><small>${a.desc}</small>
+          <small class="dim">Stok: <b>${v.skillUses[a.id] || 0}</b> • CD ${a.cd} dtk</small></div>
+          <button class="btn sm ${sp.currency === 'gems' ? 'purple' : 'gold'}" data-act="buyskill:${a.id}">+${sp.uses} — ${cur} ${sp.price}</button></div>`; }).join('')}</div>`;
+      else if (tab === 'skin') body = `<div class="shopgrid skins">${Object.entries(SKINS).filter(([k]) => k !== 'default').map(([k, sk]) => {
+        const own = v.skins.includes(k);
+        return `<div class="sitem skin"><canvas width="64" height="64" data-icon="scout" data-skin="${k}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Kosmetik untuk semua unit</small></div>
+          ${own ? '<span class="owned">✔ Dimiliki</span>' : `<button class="btn sm purple" data-act="buyskin:${k}">💠 ${sk.price}</button>`}</div>`; }).join('')}</div>
+          <p class="dim">Pasang skin di menu <b>Unit</b> → pilih unit → Skin.</p>`;
+      else if (tab === 'material') body = `<div class="cards">${Object.entries(MATERIALS).map(([k, m]) => `<div class="card shopc">
+          <div class="big-ic">${m.icon}</div><div class="nm">${m.name}</div><small>${m.desc}</small><div class="best">Dimiliki: ${v[k]}</div>
+          <div class="row2"><button class="btn gold sm" data-act="mat:${k}:1">1× — 🪙 ${m.price}</button><button class="btn gold sm" data-act="mat:${k}:5">5× — 🪙 ${m.price * 5}</button></div></div>`).join('')}</div>`;
+      else body = this.topupBody();
+      return `${this.header('Toko')}<div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="shoptab:${k}">${l}</button>`).join('')}</div>
+        <div class="box">${body}</div>`;
+    },
+
+    gacha() {
+      const ban = this.banner || 'std', v = PROFILE.vault, feat = SHARED.featuredUnit(Date.now());
+      const rates = Object.entries(GACHA.rates).map(([r, p]) => `<span class="rate" style="--rc:${RARITY[r].color}">${RARITY[r].name} ${p}%</span>`).join('');
+      const pool = RARITY_ORDER.slice().reverse().map(r => `<div class="pool"><b style="color:${RARITY[r].color}">${RARITY[r].name}</b> ${SHARED.unitsOfRarity(r).map(t => TOWERS[t].name).join(', ')}</div>`).join('');
+      return `${this.header('Summon')}
+        <div class="tabs">${Object.entries(GACHA.banners).map(([k, b]) => `<button class="tab ${ban === k ? 'on' : ''}" data-act="banner:${k}">${b.name}</button>`).join('')}</div>
+        <div class="gacha box ${ban === 'feat' ? 'feat' : ''}">
+          <div class="gleft">
+            <h3>${GACHA.banners[ban].name}</h3><p class="dim">${GACHA.banners[ban].desc}</p>
+            ${ban === 'feat' ? `<div class="featured"><canvas width="96" height="96" data-icon="${feat}" data-skin="default" data-evo="0"></canvas><div><small>UNIT UNGGULAN HARI INI</small><b>${TOWERS[feat].name}</b>${this.rarityTag(feat)}<small>${TOWERS[feat].desc}</small></div></div>`
+              : `<div class="gacha-art">🎰</div>`}
+            <div class="rates">${rates}</div>
+            <p class="dim">Pity: <b>${v.pity[ban] || 0}/${GACHA.pity}</b> — Legendaris dijamin di tarikan ke-${GACHA.pity}. 10× menjamin minimal 1 Epik.</p>
+          </div>
+          <div class="gright">
+            <div class="gem-bal">💠 ${v.gems.toLocaleString('id-ID')}</div>
+            <button class="btn big gold" data-act="pull:1" ${v.gems < GACHA.cost1 ? 'disabled' : ''}>Summon ×1 <small>💠 ${GACHA.cost1}</small></button>
+            <button class="btn big purple" data-act="pull:10" ${v.gems < GACHA.cost10 ? 'disabled' : ''}>Summon ×10 <small>💠 ${GACHA.cost10} (hemat 10%)</small></button>
+            <button class="btn blue" data-act="shoptab:topup">💠 Top Up Permata</button>
+          </div>
+        </div>
+        <details class="box"><summary>Daftar unit per kelangkaan</summary>${pool}</details>
+        <div id="pullResult"></div>`;
+    },
+
+    trade() {
+      const nl = this.needLogin('Trading', 'trading unit dengan teman'); if (nl) return nl;
+      const d = this.tradeData;
+      const side = (sd) => `${sd.units.map(x => x.missing ? '<div class="ucard empty">Hilang</div>' : this.unitCard(x, { act: 'noop', noEquip: true })).join('')}${sd.gems ? `<div class="gemchip">💠 ${sd.gems}</div>` : ''}${!sd.units.length && !sd.gems ? '<small class="dim">—</small>' : ''}`;
+      const row = t => `<div class="trow box ${t.status}">
+        <div class="thead"><b>${t.mine ? 'Ke' : 'Dari'} ${esc(t.other)}</b><span class="tstat">${({ pending: '⏳ Menunggu', done: '✅ Selesai', declined: '❌ Ditolak', cancelled: '🚫 Dibatalkan', failed: '⚠️ Gagal', processing: '⏳ Diproses' })[t.status] || t.status}</span></div>
+        <div class="tsides"><div><small>${t.mine ? 'Kamu beri' : 'Kamu dapat'}</small><div class="tunits">${side(t.give)}</div></div><div class="tarrow">⇄</div>
+          <div><small>${t.mine ? 'Kamu minta' : 'Kamu beri'}</small><div class="tunits">${side(t.want)}</div></div></div>
+        ${t.reason ? `<small class="warn">${esc(t.reason)}</small>` : ''}
+        ${t.status === 'pending' ? `<div class="row2">${t.mine ? `<button class="btn sm gray" data-act="tcancel:${t.id}">Batalkan</button>` : `<button class="btn sm" data-act="taccept:${t.id}">✅ Terima</button><button class="btn sm red" data-act="tdecline:${t.id}">Tolak</button>`}</div>` : ''}
+      </div>`;
+      const pending = d ? d.trades.filter(t => t.status === 'pending' || t.status === 'processing') : [], hist = d ? d.trades.filter(t => !pending.includes(t)) : [];
+      return `${this.header('Trading')}
+        <div class="row2"><button class="btn big" data-act="tnew">➕ Buat Penawaran</button><button class="btn gray" data-act="trefresh">🔄 Muat ulang</button></div>
+        <div class="box tipbox">🔁 Tukar unit (beserta trait, evolusi & mastery-nya) dan Permata dengan teman. Unit awal/impor (⛔) dan unit terkunci tidak bisa diperdagangkan.</div>
+        <h3>Penawaran aktif</h3>${!d ? '<p class="dim">Memuat…</p>' : pending.map(row).join('') || '<p class="dim">Tidak ada penawaran aktif.</p>'}
+        ${hist.length ? `<h3>Riwayat</h3>${hist.slice(0, 10).map(row).join('')}` : ''}`;
+    },
+
+    tradeNew() {
+      const nl = this.needLogin('Trading', 'trading unit'); if (nl) return nl;
+      const T0 = this.tn || (this.tn = { friend: null, give: [], want: [], giveGems: 0, wantGems: 0, theirs: null });
+      const f = this.friendsData;
+      if (!T0.friend) return `${this.header('Pilih teman')}<div class="box">${!f ? '<p class="dim">Memuat…</p>' : f.friends.length ? f.friends.map(x => `<div class="frow">${this.avatar(x, 40)}<div class="fi"><b>${esc(x.name)}</b><small>Lv ${x.level}</small></div><button class="btn sm" data-act="tfriend:${x.id}">Pilih</button></div>`).join('') : '<p class="dim">Belum punya teman. Tambahkan teman dulu.</p>'}</div>`;
+      const mine = PROFILE.vault.units.filter(u => u.tradable !== false && !u.lock);
+      const fr = f && f.friends.find(x => x.id === T0.friend);
+      const pickGrid = (list, picked, act) => list.map(u => this.unitCard(u, { act: act + ':' + u.id, sel: picked.includes(u.id), noEquip: true })).join('') || '<p class="dim">Tidak ada unit yang bisa diperdagangkan</p>';
+      return `${this.header('Penawaran ke ' + esc(fr ? fr.name : 'teman'))}
+        <div class="tnew">
+          <div class="box"><h4>Kamu beri</h4><div class="ugrid sm">${pickGrid(mine, T0.give, 'tgive')}</div>
+            <div class="inrow"><span>💠 Permata</span><input id="tGiveGems" type="number" min="0" value="${T0.giveGems}" style="max-width:120px"><small class="dim">punya ${PROFILE.vault.gems}</small></div></div>
+          <div class="box"><h4>Kamu minta</h4><div class="ugrid sm">${T0.theirs ? pickGrid(T0.theirs, T0.want, 'twant') : '<p class="dim">Memuat unit teman…</p>'}</div>
+            <div class="inrow"><span>💠 Permata</span><input id="tWantGems" type="number" min="0" value="${T0.wantGems}" style="max-width:120px"></div></div>
+        </div>
+        <div class="row2"><button class="btn gray" data-act="tback">← Ganti teman</button><button class="btn big" data-act="tsend">📨 Kirim Penawaran</button></div>`;
     },
 
     achievements() {
@@ -329,15 +376,15 @@ const Menu = {
             normal: 'Musuh dasar', fast: 'Cepat tapi rapuh', tank: 'Lambat, HP besar, armor 25%', hidden: 'Hanya bisa diserang tower dengan deteksi hidden',
             regen: 'Memulihkan HP terus-menerus', armored: 'Armor 50%, gunakan tower tembus armor', splitter: 'Pecah menjadi 2 musuh kecil saat mati',
             boss: 'Muncul tiap 10 wave. Membuat tower di dekatnya pingsan (stun) dan memanggil pasukan' }[k]}${ENEMY_INTRO[k] ? ` <small class="dim">(mulai wave ${ENEMY_INTRO[k]})</small>` : ''}</td></tr>`).join('')}</table>
-          <h4>⚡ Skill & Skip</h4><p>Skill pemain (Serangan Udara, Badai Es, Perbaikan Base) terbuka saat level naik. Gunakan dengan tombol di kiri hotbar atau <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd>. Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
+          <h4>⚡ Skill & Skip</h4><p>Ada ${ABILITIES.length} skill. Pasang hingga ${SKILL_SLOTS} skill di menu <b>Skill</b> dan gunakan dengan <kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd>. Setiap pemakaian mengurangi stok — beli stok di <b>Toko</b>. Jika semua musuh wave sudah keluar, tekan <b>Skip</b> untuk memulai wave berikutnya lebih cepat dan dapat bonus uang.</p>
           <h4>📅 Mode</h4><p><b>Klasik</b>: menang di wave terakhir. <b>Endless</b>: wave tanpa batas, kejar skor tertinggi. <b>Tantangan Harian</b>: map, kesulitan, dan modifier berganti tiap hari. Selesaikan untuk bonus 🪙 ${DAILY_REWARD}.</p>
           <h4>🧬 Trait, Mastery & Evolusi</h4><p>Setiap tower punya <b>Mastery</b> (Lv 1–${UNIT_MAX_LV}, +2% damage per level) yang naik saat tower dipakai. Roll <b>Trait</b> dengan 💎 Kristal untuk bonus acak dari Biasa sampai Mitos. Setelah Mastery Lv ${EVO_REQ.level}, <b>Evolusikan</b> tower dengan 🔮 ${EVO_REQ.stones} Batu Evolusi + 🪙 ${EVO_REQ.coins} untuk bentuk baru dengan kemampuan unik.</p>
-          <h4>📈 Progres</h4><p>Setiap selesai bermain kamu mendapat <b>🪙 koin</b> dan <b>XP</b>. Gunakan koin untuk membuka tower baru di menu <b>Tower & Loadout</b>, lalu pilih hingga ${LOADOUT_SIZE} tower untuk dibawa ke pertandingan. Kesulitan dan map yang lebih sulit memberi koin lebih banyak.</p>
+          <h4>📈 Progres</h4><p>Setiap selesai bermain kamu mendapat <b>🪙 koin</b> dan <b>XP</b>. Dapatkan unit baru lewat <b>Summon</b> (💠 Permata), lalu pasang hingga ${LOADOUT_SIZE} unit di menu <b>Unit</b>. Unit bisa diperdagangkan dengan teman di menu <b>Trading</b>. Kesulitan dan map yang lebih sulit memberi koin lebih banyak.</p>
           <h4>⌨️ Kontrol</h4>
           <table><tr><td><kbd>1</kbd>–<kbd>${LOADOUT_SIZE}</kbd></td><td>Pilih tower</td></tr><tr><td>Klik</td><td>Pasang / pilih tower</td></tr>
           <tr><td><kbd>Shift</kbd> + klik</td><td>Pasang berulang</td></tr><tr><td><kbd>Q</kbd> / <kbd>E</kbd></td><td>Upgrade tower terpilih</td></tr>
           <tr><td><kbd>X</kbd> / <kbd>Del</kbd></td><td>Jual tower terpilih</td></tr><tr><td><kbd>T</kbd></td><td>Ganti mode target</td></tr>
-          <tr><td><kbd>Spasi</kbd></td><td>Mulai / skip wave</td></tr><tr><td><kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd></td><td>Skill pemain</td></tr><tr><td><kbd>F</kbd></td><td>Ganti kecepatan</td></tr>
+          <tr><td><kbd>Spasi</kbd></td><td>Mulai / skip wave</td></tr><tr><td><kbd>Z</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd></td><td>Skill pemain</td></tr><tr><td><kbd>F</kbd></td><td>Ganti kecepatan</td></tr>
           <tr><td><kbd>Esc</kbd> / klik kanan</td><td>Batal / pause</td></tr></table>
         </div>`;
     },
@@ -398,13 +445,15 @@ const Menu = {
     },
 
     skills() {
-      const lv = playerLevel();
-      return `${this.header('Skill Pemain')}
-        <div class="achs">${ABILITIES.map(a => `<div class="ach ${lv >= a.level ? 'got' : ''}">
-          <div class="medal">${lv >= a.level ? a.icon : '🔒'}</div>
-          <div><b>${a.name}</b> <kbd>${a.key.toUpperCase()}</kbd><small>${a.desc}</small><small>Cooldown ${a.cd} detik</small></div>
-          <div class="rw">Lv ${a.level}</div></div>`).join('')}</div>
-        <small class="dim">Naikkan level dengan bermain. XP didapat dari wave yang diselesaikan dan musuh yang dikalahkan.</small>`;
+      const eq = equippedSkills(), v = PROFILE.vault;
+      return `${this.header('Skill')}
+        <div class="box"><h4>Skill terpasang (${eq.length}/${SKILL_SLOTS}) — tombol ${SKILL_KEYS.map(k => `<kbd>${k.toUpperCase()}</kbd>`).join(' ')}</h4>
+          <div class="sk-eq">${Array.from({ length: SKILL_SLOTS }, (_, i) => { const a = skillById(eq[i]); return a ? `<div class="sk-slot" style="--c:${a.color}" data-act="skilltog:${a.id}"><span>${a.icon}</span><b>${a.name}</b><small>${SKILL_KEYS[i].toUpperCase()} • stok ${v.skillUses[a.id] || 0}</small></div>` : '<div class="sk-slot empty">Kosong</div>'; }).join('')}</div>
+          <small class="dim">Klik skill di bawah untuk memasang/melepas. Setiap pemakaian mengurangi stok — beli stok di Toko.</small></div>
+        <div class="shopgrid">${ABILITIES.map(a => { const sp = SKILL_SHOP[a.id], on = eq.includes(a.id);
+          return `<div class="sitem ${on ? 'on' : ''}"><div class="sic" style="background:${a.color}">${a.icon}</div><div class="sinfo"><b>${a.name} ${on ? '✔' : ''}</b><small>${a.desc}</small><small class="dim">Stok ${v.skillUses[a.id] || 0} • CD ${a.cd} dtk</small></div>
+            <div class="sbtns"><button class="btn sm ${on ? 'red' : 'blue'}" data-act="skilltog:${a.id}">${on ? 'Lepas' : 'Pasang'}</button>
+            <button class="btn sm ${sp.currency === 'gems' ? 'purple' : 'gold'}" data-act="buyskill:${a.id}">+${sp.uses} ${sp.currency === 'gems' ? '💠' : '🪙'}${sp.price}</button></div></div>`; }).join('')}</div>`;
     },
 
     pause() {
@@ -436,8 +485,8 @@ const Menu = {
           <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
           <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
           <tr><td>Durasi</td><td><b>${this.fmtTime(S.time)}</b></td></tr>
-          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.crystals ? ` &nbsp; <b>💎 +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}</td></tr></table>
-          ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${towerName(m.type)}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
+          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.gems ? ` &nbsp; <b>💠 +${d.gems}</b>` : ''}${d.crystals ? ` &nbsp; <b>💎 +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}</td></tr></table>
+          ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${TOWERS[m.type].name}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
         ${isMP() ? `<div class="row2"><button class="btn big" data-act="go:mabar">🤝 Mabar Lagi</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`
         : `<div class="row2"><button class="btn big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
@@ -448,6 +497,21 @@ const Menu = {
   after: {
     play() { document.querySelectorAll('canvas[data-map]').forEach(c => drawPreview(c, MAPS[+c.dataset.map])); },
     daily() { this.after.play(); },
+    units() { this.drawIcons(); },
+    shop() { this.drawIcons(); document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); },
+    gacha() { this.drawIcons(); },
+    trade() { this.drawIcons(); document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); if (Online.loggedIn && !this.tradeData) this.loadTrades(); },
+    tradeNew() {
+      this.drawIcons();
+      if (!Online.loggedIn) return;
+      if (!this.friendsData && !this.loadingF) this.loadFriends();
+      const t = this.tn;
+      if (t && t.friend && !t.theirs && !t.loading) {
+        t.loading = true;
+        Online.api('inv.of', null, 'GET', { id: t.friend }).then(r => { t.theirs = r.units; t.loading = false; if (this.screen === 'tradeNew') this.show('tradeNew', true); })
+          .catch(e => { t.loading = false; UI.toast('❌ ' + e.message); });
+      }
+    },
     main() { Online.refreshBadge && Online.refreshBadge(); },
     account() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); },
     friends() { document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); if (Online.loggedIn && !this.loadingF && (!this.friendsData || Date.now() - this.friendsAt > 10000)) this.loadFriends(); },
@@ -518,36 +582,79 @@ const Menu = {
       case 'discard': SaveGame.clear(); this.go('main'); break;
       case 'start': startGame(); break;
       case 'resume': sfx('click'); this.close(); break;
-      case 'quit': if (isMP()) MP.cleanup(); newGame(); this.go('main'); break;
-      case 'shop': this.shopSel = arg; this.rollArm = null; this.go('towers'); break;
+      case 'quit': if (isMP()) MP.cleanup(); else abandonGame(); newGame(); this.go('main'); break;
+      case 'noop': break;
+      case 'unit': this.unitSel = arg; this.rollArm = null; this.scrapArm = null; this.show('units', true); break;
+      case 'ufilter': this.unitFilter = arg; this.show('units', true); break;
+      case 'equip': {
+        const u = unitById(arg); if (!u) break;
+        const same = PROFILE.loadout.findIndex(id => (unitById(id) || {}).type === u.type);
+        if (same >= 0) PROFILE.loadout[same] = u.id;
+        else if (PROFILE.loadout.length < LOADOUT_SIZE) PROFILE.loadout.push(u.id);
+        else { UI.toast('Loadout penuh — lepas unit lain dulu'); break; }
+        saveProfile(); sfx('place'); this.show('units', true); break;
+      }
+      case 'unequip': if (PROFILE.loadout.length > 1) { PROFILE.loadout = PROFILE.loadout.filter(id => id !== arg); saveProfile(); } this.show('units', true); break;
+      case 'ulock': { const u = unitById(arg); this.eco('lock', { unitId: arg, lock: !(u && u.lock) }); break; }
+      case 'scrap':
+        if (this.scrapArm !== arg) { this.scrapArm = arg; this.show('units', true); break; }
+        this.scrapArm = null; this.eco('scrap', { unitIds: [arg] }, r => `♻️ Didapat: ${['coins', 'crystals', 'stones'].filter(k => r[k]).map(k => ({ coins: '🪙', crystals: '💎', stones: '🔮' })[k] + ' ' + r[k]).join(' ')}`); break;
       case 'roll': {
-        const u = unitOf(arg);
-        if (u.trait && RARITY[TRAITS[u.trait].rarity].rank >= 2 && this.rollArm !== arg) { this.rollArm = arg; this.go('towers'); break; }
+        const u = unitById(arg); if (!u) break;
+        if (u.trait && RARITY[TRAITS[u.trait].rarity].rank >= 2 && this.rollArm !== arg) { this.rollArm = arg; this.show('units', true); break; }
         this.rollArm = null;
-        const id = rollTrait(arg);
-        if (!id) { sfx('error'); break; }
-        this.show('towers'); this.animateRoll(id); break;
+        Eco.act('rollTrait', { unitId: arg }).then(r => { PROFILE.stats.rolls++; saveProfile(); this.show('units', true); this.animateRoll(r.trait); checkAchievements(null); })
+          .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
+        break;
       }
       case 'evo':
-        if (evolve(arg)) { sfx('win'); UI.toast(`🧬 ${TOWERS[arg].name} berevolusi menjadi ${EVOS[arg].name}!`, 'gold', 4000); this.show('towers'); $('overlay').querySelector('.evo-box').classList.add('flash'); }
-        else sfx('error');
+        Eco.act('evolve', { unitId: arg }).then(() => { const u = unitById(arg); sfx('win'); UI.toast(`🧬 Berevolusi menjadi ${EVOS[u.type].name}!`, 'gold', 4000); this.show('units', true); checkAchievements(null); })
+          .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
         break;
-      case 'mat': {
-        const k = arg, n = +a.split(':')[2], cost = MATERIALS[k].price * n;
-        if (PROFILE.coins < cost) { sfx('error'); break; }
-        PROFILE.coins -= cost; PROFILE[k] += n; saveProfile(); sfx('coin');
-        UI.toast(`${MATERIALS[k].icon} +${n} ${MATERIALS[k].name}`, 'gold'); this.show('shop'); break;
+      case 'setskin': { const [, id, skin] = a.split(':'); this.eco('setSkin', { unitId: id, skin }); break; }
+      case 'mat': this.eco('buyMaterial', { key: arg, n: +a.split(':')[2] }, r => `${MATERIALS[r.key].icon} +${r.n} ${MATERIALS[r.key].name}`); break;
+      case 'buyskill': this.eco('buySkill', { skill: arg, packs: 1 }, r => `${skillById(r.skill).icon} Stok ${skillById(r.skill).name}: ${r.uses}`); break;
+      case 'buyskin': this.eco('buySkin', { skin: arg }, r => `🎨 Skin ${SKINS[r.skin].name} dibeli!`); break;
+      case 'shoptab': this.shopTab = arg; this.go('shop'); break;
+      case 'topup': this.topup(arg); break;
+      case 'banner': this.banner = arg; this.show('gacha', true); break;
+      case 'pull':
+        Eco.act('summon', { banner: this.banner || 'std', count: +arg }).then(r => { this.show('gacha', true); this.showPull(r.units); checkAchievements(null); })
+          .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
+        break;
+      case 'pullclose': { const el = $('pullResult'); if (el) el.innerHTML = ''; break; }
+      case 'skilltog': {
+        const eq = PROFILE.skillLoadout || (PROFILE.skillLoadout = []);
+        if (eq.includes(arg)) PROFILE.skillLoadout = eq.filter(x => x !== arg);
+        else if (eq.length < SKILL_SLOTS) eq.push(arg);
+        else { UI.toast(`Maksimal ${SKILL_SLOTS} skill`); break; }
+        saveProfile(); sfx('click'); this.show('skills', true); break;
       }
-      case 'buy': {
-        const d = TOWERS[arg];
-        if (PROFILE.coins < d.unlock) { sfx('error'); break; }
-        PROFILE.coins -= d.unlock; PROFILE.unlocked.push(arg);
-        if (PROFILE.loadout.length < LOADOUT_SIZE) PROFILE.loadout.push(arg);
-        saveProfile(); sfx('achieve'); UI.toast(`🔓 ${d.name} terbuka!`, 'gold');
-        checkAchievements(null); this.show('towers'); break;
+      case 'trefresh': this.tradeData = null; this.loadTrades(); break;
+      case 'tnew': this.tn = null; this.go('tradeNew'); break;
+      case 'tfriend': this.tn.friend = arg; this.tn.theirs = null; this.show('tradeNew', true); break;
+      case 'tback': this.tn = null; this.show('tradeNew', true); break;
+      case 'tgive': case 'twant': {
+        const k = cmd === 'tgive' ? 'give' : 'want', list = this.tn[k];
+        this.tn[k] = list.includes(arg) ? list.filter(x => x !== arg) : list.length < 8 ? [...list, arg] : list;
+        this.tn.giveGems = +($('tGiveGems') || {}).value || 0; this.tn.wantGems = +($('tWantGems') || {}).value || 0;
+        this.show('tradeNew', true); break;
       }
-      case 'lo-add': if (PROFILE.loadout.length < LOADOUT_SIZE) { PROFILE.loadout.push(arg); this.sortLoadout(); saveProfile(); } this.go('towers'); break;
-      case 'lo-rem': if (PROFILE.loadout.length > 1) { PROFILE.loadout = PROFILE.loadout.filter(k => k !== arg); saveProfile(); } this.go('towers'); break;
+      case 'tsend': {
+        const t = this.tn; t.giveGems = +($('tGiveGems') || {}).value || 0; t.wantGems = +($('tWantGems') || {}).value || 0;
+        Online.api('trade.create', { to: t.friend, give: { units: t.give, gems: t.giveGems }, want: { units: t.want, gems: t.wantGems } })
+          .then(() => { UI.toast('📨 Penawaran dikirim!', 'gold'); this.tn = null; this.tradeData = null; this.go('trade'); })
+          .catch(e => UI.toast('❌ ' + e.message));
+        break;
+      }
+      case 'taccept':
+        Online.api('trade.respond', { id: arg, accept: true }).then(async () => {
+          PROFILE.stats.trades = (PROFILE.stats.trades || 0) + 1; saveProfile();
+          await Online.refreshVault(); sfx('win'); UI.toast('✅ Trading berhasil!', 'gold'); this.tradeData = null; this.loadTrades(); checkAchievements(null);
+        }).catch(e => { UI.toast('❌ ' + e.message); this.tradeData = null; this.loadTrades(); });
+        break;
+      case 'tdecline': Online.api('trade.respond', { id: arg, accept: false }).then(() => { this.tradeData = null; this.loadTrades(); }); break;
+      case 'tcancel': Online.api('trade.cancel', { id: arg }).then(() => { this.tradeData = null; this.loadTrades(); }); break;
       case 'tog': SET[arg] = !SET[arg]; saveSettings(); Sound.applyVolume(); if (arg === 'music' && SET.music) Sound.startMusic(); this.go('settings'); break;
       case 'quality': SET.quality = SET.quality === 'high' ? 'low' : 'high'; saveSettings(); this.go('settings'); break;
       case 'reset':
@@ -561,7 +668,7 @@ const Menu = {
     try {
       this.friendsData = await Online.api('friends.list', null, 'GET'); this.friendsAt = Date.now();
       Online.requests = this.friendsData.incoming.length; Online.refreshUi && document.querySelectorAll('[data-badge="friends"]').forEach(b => b.textContent = Online.requests || '');
-      if (['friends', 'mabar', 'lobby'].includes(this.screen)) this.show(this.screen, true);
+      if (['friends', 'mabar', 'lobby', 'tradeNew'].includes(this.screen)) this.show(this.screen, true);
     } catch (e) { UI.toast('❌ ' + e.message); }
     this.loadingF = false;
   },
@@ -571,6 +678,97 @@ const Menu = {
     const inp = $('lobbyIn'), val = inp ? inp.value : '', focused = document.activeElement === inp;
     this.show(this.screen, true);
     const n = $('lobbyIn'); if (n) { n.value = val; if (focused) { n.focus(); n.setSelectionRange(val.length, val.length); } }
+  },
+  unitDetail(u) {
+    const d = TOWERS[u.type], ev = EVOS[u.type], es = evoStatus(u), lv = unitLevel(u.xp), lo = unitXpFor(lv), hi = unitXpFor(lv + 1);
+    const mpct = lv >= UNIT_MAX_LV ? 100 : Math.min(100, (u.xp - lo) / (hi - lo) * 100), tr = u.trait && TRAITS[u.trait];
+    const inLo = PROFILE.loadout.includes(u.id), v = PROFILE.vault;
+    const rows = d.levels.map((_, i) => { const L = computeL(u.type, i, u); return `<tr><td>${i}</td><td>${esc(L.name)}</td><td>$${Math.round(d.levels[i].cost * ((tr && tr.costMul) || 1))}</td><td>${
+      L.dmg ? `${L.dmg} dmg • ${L.range}r • ${L.rate}s` : L.income ? `$${L.income}/wave` : `+${Math.round(L.buff * 100)}% • ${L.range}r`}${
+      L.hidden ? ' • 👁' : ''}${L.pierceArmor ? ' • 🛡' : ''}${L.splash || L.splashHit ? ' • 💥' : ''}${L.slow ? ' • ❄' : ''}${L.chain ? ' • ⚡' + L.chain : ''}${L.dot ? ' • 🔥' : ''}${L.line ? ' • ➖' : ''}</td></tr>`; }).join('');
+    const req = (ok, txt) => `<li class="${ok ? 'ok' : ''}">${ok ? '✅' : '⬜'} ${txt}</li>`;
+    const sameType = PROFILE.loadout.map(unitById).find(x => x && x.type === u.type && x.id !== u.id);
+    return `<div class="udetail">
+      <div class="box">
+        <div class="ph"><canvas width="72" height="72" data-icon="${u.type}" data-skin="${u.skin || 'default'}" data-evo="${u.evo ? 1 : 0}"></canvas>
+          <div><h3>${this.unitName(u)} ${u.evo ? `<small class="dim">(${d.name})</small>` : ''}</h3>${this.rarityTag(u.type)} <span class="tag">${d.role}</span>
+          ${u.tradable === false ? '<span class="tag gray" title="Unit awal/impor">⛔ Tidak bisa ditukar</span>' : ''}</div></div>
+        <p>${u.evo ? '★ ' + ev.desc : d.desc}</p>
+        <div class="mastery"><b>Mastery Lv ${lv}</b> <small class="dim">+${Math.round((lv - 1) * MASTERY_BONUS * 100)}% damage</small>
+          <div class="mbar"><div style="width:${mpct}%"></div><span>${lv >= UNIT_MAX_LV ? 'MAKS' : `${u.xp - lo} / ${hi - lo} XP`}</span></div></div>
+        <table><tr><th>Lv</th><th>Upgrade</th><th>Harga</th><th>Statistik</th></tr>${rows}</table>
+        <div class="row2">
+          ${inLo ? `<button class="btn red" data-act="unequip:${u.id}" ${PROFILE.loadout.length <= 1 ? 'disabled' : ''}>Lepas dari loadout</button>`
+                 : `<button class="btn" data-act="equip:${u.id}">${sameType ? 'Ganti ' + this.unitName(sameType) : PROFILE.loadout.length >= LOADOUT_SIZE ? 'Loadout penuh' : 'Pasang ke loadout'}</button>`}
+          <button class="btn sm gray" data-act="ulock:${u.id}">${u.lock ? '🔓 Buka kunci' : '🔒 Kunci'}</button>
+          <button class="btn sm red" data-act="scrap:${u.id}" ${u.lock || inLo ? 'disabled' : ''} title="Hancurkan untuk material">♻️ ${this.scrapArm === u.id ? 'Yakin?' : 'Hancurkan'}</button>
+        </div>
+      </div>
+      <div class="box2">
+        <div class="box trait-box" style="${tr ? `border-color:${RARITY[tr.rarity].color}` : ''}">
+          <h4>🎲 Trait</h4>
+          <div class="trait-cur" id="traitCur">${tr ? `<span class="ticon">${tr.icon}</span><div><b style="color:${RARITY[tr.rarity].color}">${tr.name}</b> <span class="rar" style="background:${RARITY[tr.rarity].color}">${RARITY[tr.rarity].name}</span><small>${tr.desc}</small></div>` : '<span class="dim">Belum ada trait</span>'}</div>
+          <button class="btn purple" data-act="roll:${u.id}" ${v.crystals < 1 ? 'disabled' : ''}>${this.rollArm === u.id ? '⚠️ Yakin? Trait ini akan hilang' : '🎲 Roll Trait — 💎 1'}</button>
+          <details><summary>Peluang trait</summary><div class="odds">${Object.entries(RARITY).map(([rk, r]) => {
+            const list = Object.values(TRAITS).filter(t => t.rarity === rk), pct = list.reduce((a, t) => a + t.w, 0);
+            return `<div><b style="color:${r.color}">${r.name} ${pct}%</b><small>${list.map(t => `${t.icon} ${t.name}: ${t.desc}`).join('<br>')}</small></div>`; }).join('')}</div></details>
+        </div>
+        <div class="box evo-box ${u.evo ? 'done' : ''}">
+          <h4>🧬 Evolusi → ${ev.name}</h4>
+          <p><small>${ev.desc}</small></p>
+          ${u.evo ? '<div class="evo-ok">★ Sudah berevolusi</div>' : `<ul class="reqs">${req(es.lvOk, `Mastery Lv ${EVO_REQ.level} (sekarang ${lv})`)}${req(es.stonesOk, `🔮 ${EVO_REQ.stones} Batu Evolusi (punya ${v.stones})`)}${req(es.coinsOk, `🪙 ${EVO_REQ.coins} koin`)}</ul>
+            <button class="btn gold" data-act="evo:${u.id}" ${es.lvOk && es.stonesOk && es.coinsOk ? '' : 'disabled'}>🧬 EVOLUSI</button>`}
+        </div>
+        <div class="box"><h4>🎨 Skin</h4><div class="skinpick">${v.skins.map(k => `<button class="skb ${u.skin === k || (!u.skin && k === 'default') ? 'on' : ''}" data-act="setskin:${u.id}:${k}" title="${SKINS[k].name}">${SKINS[k].icon}</button>`).join('')}
+          <button class="skb more" data-act="shoptab:skin" title="Beli skin">＋</button></div></div>
+      </div>
+    </div>`;
+  },
+  topupBody() {
+    if (!Online.loggedIn) return `<div class="center-box"><div class="big-ic">💠</div><h3>Masuk dulu untuk top up</h3><p class="dim">Permata hasil top up tersimpan aman di akunmu.</p>${this.loginBlock()}</div>`;
+    if (!Online.cfg.topup) return `<div class="center-box"><div class="big-ic">🛠️</div><h3>Top up belum aktif</h3><p class="dim">Pembayaran Midtrans belum dikonfigurasi di server.</p></div>`;
+    return `<div class="topup">${TOPUP.map(p => `<button class="tpack" data-act="topup:${p.id}">${p.tag ? `<i>${p.tag}</i>` : ''}<span class="tg">💠 ${p.gems.toLocaleString('id-ID')}</span>
+      ${p.bonus ? `<small class="bonus">+${p.bonus} bonus</small>` : '<small>&nbsp;</small>'}<b>Rp ${p.price.toLocaleString('id-ID')}</b></button>`).join('')}</div>
+      <p class="dim center">Pembayaran diproses Midtrans (QRIS, e-wallet, transfer bank, kartu). Permata masuk otomatis setelah pembayaran berhasil.</p>
+      ${Online.cfg.midtransProd ? '' : '<p class="warn center">Mode SANDBOX — gunakan data pembayaran uji Midtrans.</p>'}`;
+  },
+  /** Animasi hasil summon */
+  showPull(units) {
+    const el = $('pullResult'); if (!el) return;
+    const best = Math.max(...units.map(u => RARITY[UNIT_RARITY[u.type]].rank));
+    el.innerHTML = `<div class="pullov ${best >= 3 ? 'gold' : ''}" data-act="pullclose"><div class="pullcards">${units.map((u, i) => `<div class="pcardx r-${UNIT_RARITY[u.type]}" style="--d:${i * 0.18}s">
+      <div class="back">?</div><div class="front"><canvas width="80" height="80" data-icon="${u.type}" data-skin="default" data-evo="0"></canvas><b>${TOWERS[u.type].name}</b>${this.rarityTag(u.type)}</div></div>`).join('')}</div>
+      <small>Klik untuk menutup</small></div>`;
+    this.drawIcons(el);
+    units.forEach((u, i) => setTimeout(() => sfx(RARITY[UNIT_RARITY[u.type]].rank >= 3 ? 'win' : RARITY[UNIT_RARITY[u.type]].rank >= 2 ? 'achieve' : 'coin'), 300 + i * 180));
+  },
+  drawIcons(root) { (root || document).querySelectorAll('canvas[data-icon]').forEach(c => drawUnitIcon(c, c.dataset.icon, c.dataset.skin, c.dataset.evo === '1')); },
+  async loadTrades() {
+    try { this.tradeData = await Online.api('trade.list', null, 'GET'); if (this.screen === 'trade') this.show('trade', true); }
+    catch (e) { UI.toast('❌ ' + e.message); }
+  },
+  /** Jalankan aksi ekonomi lalu tampilkan ulang layar */
+  async eco(action, payload, okMsg) {
+    try { const r = await Eco.act(action, payload); if (okMsg) UI.toast(typeof okMsg === 'function' ? okMsg(r) : okMsg, 'gold'); this.show(this.screen, true); return r; }
+    catch (e) { sfx('error'); UI.toast('❌ ' + e.message); return null; }
+  },
+  async topup(packId) {
+    try {
+      UI.toast('⏳ Membuat transaksi…');
+      const r = await Online.api('pay.create', { pack: packId });
+      await loadSnap();
+      const check = async () => {
+        for (let i = 0; i < 6; i++) {
+          const st = await Online.api('pay.status', null, 'GET', { order: r.orderId }).catch(() => null);
+          if (st && st.status === 'paid') { await Online.refreshVault(); sfx('win'); UI.toast(`💠 Top up berhasil! +${st.gems} Permata`, 'gold', 5000); this.show(this.screen, true); return; }
+          if (st && st.status !== 'pending') { UI.toast('Pembayaran ' + st.status); return; }
+          await new Promise(res => setTimeout(res, 2500));
+        }
+        UI.toast('⏳ Pembayaran masih diproses. Permata akan masuk otomatis setelah lunas.', '', 5000);
+      };
+      if (window.snap) window.snap.pay(r.token, { onSuccess: check, onPending: check, onError: () => UI.toast('❌ Pembayaran gagal'), onClose: check });
+      else window.open(r.redirectUrl, '_blank');
+    } catch (e) { UI.toast('❌ ' + e.message); }
   },
   saveButton() {
     const g = SaveGame.get(); if (!g) return '';
@@ -595,7 +793,6 @@ const Menu = {
       show(keys[Math.floor(Math.random() * keys.length)]); sfx('click');
     }, 60 + i * 4);
   },
-  sortLoadout() { PROFILE.loadout.sort((a, b) => TOWER_ORDER.indexOf(a) - TOWER_ORDER.indexOf(b)); },
 };
 
 function startGame(opts = {}) {
@@ -606,4 +803,16 @@ function startGame(opts = {}) {
   Menu.close();
   UI.banner(opts.daily ? `📅 Tantangan Harian` : `${MAP.name} • ${DIFFS[DIFF].name}`, '#fff', 1400);
   tip('start');
+}
+
+/** Muat skrip Midtrans Snap sesuai mode (sandbox / produksi) */
+function loadSnap() {
+  if (window.snap) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = Online.cfg.midtransProd ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
+    sc.setAttribute('data-client-key', Online.cfg.midtransClientKey || '');
+    sc.onload = res; sc.onerror = () => rej(new Error('Gagal memuat Midtrans'));
+    document.head.appendChild(sc);
+  });
 }

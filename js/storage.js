@@ -22,13 +22,30 @@ const defaultSettings = () => ({
   sound:true, music:true, sfxVol:0.5, musicVol:0.3,
   dmgNum:true, shake:true, range:true, grid:false, fps:false, autoPause:true, quality:'high',
 });
-const defaultProfile = () => ({
-  coins:0, xp:0, crystals:3, stones:0,
-  units: Object.fromEntries(TOWER_ORDER.map(k => [k, { xp:0, trait:null, evo:false }])),
-  unlocked:[...DEFAULT_LOADOUT], loadout:[...DEFAULT_LOADOUT],
-  achievements:[], best:{}, mapsPlayed:{}, runs:[], tips:[], daily:{ date:'', won:false, best:0 },
-  stats:{ games:0, wins:0, kills:0, bossKills:0, towersPlaced:0, cashEarned:0, maxed:0, playTime:0, abilities:0, skips:0, dailyWins:0, rolls:0 },
-});
+const defaultProfile = () => {
+  const vault = SHARED.newVault(Date.now(), Math.random);
+  return {
+    xp: 0, vault, loadout: vault.units.map(u => u.id), skillLoadout: [...DEFAULT_SKILLS],
+    achievements: [], best: {}, mapsPlayed: {}, runs: [], tips: [], daily: { date: '', won: false, best: 0 },
+    stats: { games: 0, wins: 0, kills: 0, bossKills: 0, towersPlaced: 0, cashEarned: 0, maxed: 0, playTime: 0, abilities: 0, skips: 0, dailyWins: 0, rolls: 0, trades: 0 },
+  };
+};
+
+/** Migrasi profil versi lama (unit per jenis + koin lokal) ke inventaris unit */
+function migrateProfile(p) {
+  if (p.vault && Array.isArray(p.vault.units)) return p;
+  const v = SHARED.newVault(Date.now(), Math.random);
+  const legacyUnits = p.units || {}, owned = Array.isArray(p.unlocked) && p.unlocked.length ? p.unlocked : STARTER_UNITS;
+  v.units = owned.filter(t => UNIT_RARITY[t]).map(t => SHARED.makeUnit(t, Math.random, Date.now(), {
+    trait: (legacyUnits[t] || {}).trait || null, evo: !!(legacyUnits[t] || {}).evo, xp: (legacyUnits[t] || {}).xp || 0, tradable: false }));
+  v.coins = p.coins || 0; v.crystals = Math.max(v.crystals, p.crystals || 0); v.stones = p.stones || 0;
+  v.achClaimed = [...(p.achievements || [])];
+  const ids = (p.loadout || []).map(t => (v.units.find(u => u.type === t) || {}).id).filter(Boolean);
+  p.loadout = ids.length ? ids : v.units.map(u => u.id).slice(0, LOADOUT_SIZE);
+  p.vault = v; p.skillLoadout = p.skillLoadout || [...DEFAULT_SKILLS];
+  delete p.units; delete p.unlocked; delete p.coins; delete p.crystals; delete p.stones;
+  return p;
+}
 
 // Simpanan game yang sedang berjalan (lanjutkan nanti)
 const SaveGame = {
@@ -38,7 +55,12 @@ const SaveGame = {
 };
 
 const SET = Storage.load('btd_settings', defaultSettings());
-const PROFILE = Storage.load('btd_profile', defaultProfile());
+const PROFILE = migrateProfile((() => {
+  let raw = null; try { raw = JSON.parse(localStorage.getItem('btd_profile') || 'null'); } catch (e) {}
+  if (!raw) return defaultProfile();
+  if (!raw.vault) return deepMerge({ ...defaultProfile(), vault: undefined }, raw);
+  return deepMerge(defaultProfile(), raw);
+})());
 const saveSettings = () => Storage.save('btd_settings', SET);
 const saveProfile = () => {
   PROFILE.updatedAt = Date.now();

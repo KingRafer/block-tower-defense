@@ -42,7 +42,7 @@ const UI = {
 
   /** Hotbar berdasarkan loadout pemain */
   renderBar() {
-    const lo = PROFILE.loadout;
+    const lo = loadoutTypes();
     $('bar').innerHTML = lo.map((k, i) => {
       const d = TOWERS[k], c = costOf(k, 0), u = unitOf(k), tr = u.trait && TRAITS[u.trait];
       return `<div class="slot ${S.placing === k ? 'sel' : ''} ${u.evo ? 'evo' : ''}" data-k="${k}" data-i="${i}" ${tr ? `style="--rc:${RARITY[tr.rarity].color}"` : ''}>
@@ -172,19 +172,20 @@ const UI = {
 
   /** Tombol skill pemain */
   renderAbilities() {
-    const lv = playerLevel();
-    $('abilities').innerHTML = ABILITIES.map(a => {
-      const locked = lv < a.level;
-      return `<button class="abil ${locked ? 'locked' : ''} ${S.targeting === a.id ? 'sel' : ''}" data-ab="${a.id}" style="--c:${a.color}"
-        title="${a.name} (${a.key.toUpperCase()}) — ${locked ? 'Terbuka di level ' + a.level : a.desc}">
-        <span class="ai">${locked ? '🔒' : a.icon}</span><span class="ak">${a.key.toUpperCase()}</span><span class="acd"></span></button>`;
-    }).join('');
+    const list = equippedSkills();
+    $('abilities').innerHTML = list.map((id, i) => {
+      const a = skillById(id), left = skillLeft(id);
+      return `<button class="abil ${left <= 0 ? 'locked' : ''} ${S.targeting === a.id ? 'sel' : ''}" data-ab="${a.id}" style="--c:${a.color}"
+        title="${a.name} (${SKILL_KEYS[i].toUpperCase()}) — ${a.desc} • Sisa ${left}">
+        <span class="ai">${a.icon}</span><span class="ak">${SKILL_KEYS[i].toUpperCase()}</span><span class="aq">${left}</span><span class="acd"></span></button>`;
+    }).join('') || '<small class="dim" style="align-self:center">Pasang skill di menu Skill</small>';
     $('abilities').querySelectorAll('.abil').forEach(b => b.onclick = () => useAbility(b.dataset.ab));
     this.updateAbilities();
   },
   updateAbilities() {
     $('abilities').querySelectorAll('.abil').forEach(b => {
-      const a = ABILITIES.find(x => x.id === b.dataset.ab), cd = S.abilityCd[a.id] || 0;
+      const a = skillById(b.dataset.ab), cd = S.abilityCd[a.id] || 0, left = skillLeft(a.id);
+      const q = b.querySelector('.aq'); if (q && q.textContent !== String(left)) { q.textContent = left; b.classList.toggle('locked', left <= 0); }
       b.querySelector('.acd').textContent = cd > 0 ? Math.ceil(cd) : '';
       b.style.setProperty('--p', cd > 0 ? (cd / a.cd * 100) + '%' : '0%');
       b.classList.toggle('cooling', cd > 0);

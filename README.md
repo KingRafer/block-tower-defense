@@ -20,6 +20,10 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 ## ✨ Fitur
 | Kategori | Isi |
 |---|---|
+| 🎰 Gacha | Semua unit didapat lewat **Summon** (💠 Permata): Banner Standar & Banner Unggulan harian, pity 60, peluang ditampilkan |
+| 🔁 Trading | Tukar unit (lengkap dengan trait/evolusi/mastery) dan Permata dengan teman, divalidasi server |
+| 💠 Top Up | Beli Permata lewat **Midtrans** (QRIS, e-wallet, transfer, kartu) |
+| 🎨 Skin | 9 skin kosmetik (Emas, Neon, Bayangan, Es, Lava, Santa, Ninja, Robot, Pelangi) |
 | 🤝 Mabar | Co-op 2–4 pemain: lobby dengan kode room, chat, undang teman, koneksi P2P WebRTC + relay server |
 | 👥 Teman | Tambah teman dengan kode, terima/tolak permintaan, status online, gabung ke room teman |
 | 🔐 Akun Google | Login/daftar dengan Google, progres tersimpan di cloud (MongoDB) dan bisa dipakai di perangkat lain |
@@ -29,19 +33,19 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | 📊 Mastery | Level tower 1–20 yang naik saat dipakai (+2% damage per level) |
 | 🛒 Material | 💎 Kristal Trait & 🔮 Batu Evolusi dari hadiah game atau toko |
 | 🎮 Mode | **Klasik**, **Endless** (wave tanpa batas), dan **Tantangan Harian** dengan modifier acak |
-| ⚡ Skill pemain | Serangan Udara, Badai Es, Perbaikan Base, terbuka sesuai level |
+| ⚡ Skill pemain | 10 skill, pasang 4 sekaligus, stok pemakaian dibeli di Toko |
 | ⏭️ Skip wave | Mulai wave berikutnya lebih cepat dan dapat bonus uang |
 | 💾 Simpan & lanjutkan | Progres tersimpan otomatis tiap akhir wave |
 | 🏆 Papan skor | 15 skor terbaik dengan sistem poin |
 | 💡 Tutorial | Tips muncul otomatis untuk pemain baru |
 | 🗺️ Map | 4 map dengan tema berbeda: Padang Rumput, Gurun Pasir, Kutub Salju, Gunung Lava |
 | ⚔️ Kesulitan | Mudah (20 wave), Normal (30 wave), Sulit (40 wave) |
-| 🗼 Tower | 8 tower, masing-masing 4–5 level upgrade dengan nama unik |
+| 🗼 Unit | 19 unit (Biasa → Mitos) dengan mekanik unik: petir berantai, laser, racun, railgun, aura waktu, nuklir, naga |
 | 🧟 Musuh | 8 jenis musuh: hidden, armor, regenerasi, pemecah, dan boss |
 | 👑 Boss | Muncul tiap 10 wave, bisa **stun** tower dan **memanggil pasukan** |
 | 📈 Progres | Koin, XP, dan level pemain yang tersimpan antar sesi |
 | 🛒 Toko & Loadout | Buka tower baru dengan koin, bawa maksimal 6 tower per game |
-| 🏅 Pencapaian | 22 pencapaian dengan hadiah koin |
+| 🏅 Pencapaian | 24 pencapaian dengan hadiah koin |
 | 📊 Statistik | Statistik lengkap dan tabel rekor per map/kesulitan |
 | 🔊 Audio | Efek suara dan musik latar yang dibuat langsung oleh browser (WebAudio) |
 | ⚙️ Pengaturan | Volume, angka damage, getaran layar, grid, FPS, kualitas partikel, auto-pause |
@@ -52,17 +56,16 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
   <img src="docs/screenshot-loadout.png" width="49%" alt="Tower & Loadout">
 </p>
 
-## 🗼 Tower
-| Tower | Harga | Buka | Peran |
-|---|---|---|---|
-| Scout | $200 | Default | Serba guna, deteksi hidden di Lv 2 |
-| Sniper | $350 | Default | Damage besar, jangkauan sangat jauh |
-| Demoman | $450 | Default | Roket ledakan area |
-| Freezer | $400 | Default | Memperlambat musuh |
-| Farm | $250 | Default | Uang tambahan tiap akhir wave |
-| Minigunner | $1.200 | 🪙 600 | DPS sangat tinggi |
-| Commander | $650 | 🪙 900 | Buff kecepatan tembak & deteksi hidden untuk tower sekitar |
-| Rocketeer | $1.500 | 🪙 1.400 | Misil tembus armor, damage ekstra ke boss |
+## 🗼 Unit (didapat dari Summon)
+| Kelangkaan | Peluang | Unit |
+|---|---|---|
+| Biasa | 55% | Scout, Sniper, Farm, Gunslinger |
+| Langka | 30% | Demoman, Freezer, Meriam, Pembakar, Mortir |
+| Epik | 11% | Minigunner, Commander, Tesla, Laser, Racun |
+| Legendaris | 3,5% | Rocketeer, Railgun, Penjaga Waktu |
+| Mitos | 0,5% | Nuklir, Naga Api |
+
+Pemain baru mendapat Scout, Sniper, Demoman, Farm dan 300 💠. Setiap unit bisa diberi **trait**, **dievolusikan**, diberi **skin**, dikunci, dihancurkan untuk material, atau diperdagangkan.
 
 ## 🧟 Musuh
 | Musuh | Ciri | Mulai |
@@ -86,7 +89,7 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 | `X` / `Del` | Jual tower terpilih (kembali 60%) |
 | `T` | Ganti mode target (Pertama/Terakhir/Terkuat/Terdekat) |
 | `Spasi` | Mulai / skip wave |
-| `Z` `C` `V` | Skill: Serangan Udara, Badai Es, Perbaikan Base |
+| `Z` `C` `V` `B` | 4 skill yang terpasang |
 | `F` | Ganti kecepatan 1x/2x/3x |
 | `Esc` / klik kanan | Batal / pause |
 
@@ -114,11 +117,20 @@ Syarat: **Mastery Lv 10 + 🔮 3 Batu Evolusi + 🪙 1.000**. Tower yang sudah b
 | Rocketeer | Warlord | Menembak 2 misil sekaligus |
 
 ## ⚡ Skill Pemain
-| Skill | Tombol | Level | Cooldown | Efek |
-|---|---|---|---|---|
-| ✈️ Serangan Udara | `Z` | 1 | 45 dtk | 3 bom di lokasi pilihan, tembus armor & kena hidden |
-| 🧊 Badai Es | `C` | 3 | 60 dtk | Semua musuh melambat 80% selama 4 dtk |
-| 🔧 Perbaikan Base | `V` | 5 | 90 dtk | Pulihkan 30% nyawa base |
+Pasang hingga 4 skill (tombol `Z` `C` `V` `B`). Setiap pemakaian mengurangi stok yang dibeli di Toko.
+
+| Skill | Efek | Harga (3×) |
+|---|---|---|
+| ✈️ Serangan Udara | 3 bom di lokasi pilihan | 🪙 300 |
+| 🧊 Badai Es | Semua musuh melambat 80% | 🪙 300 |
+| 🔧 Perbaikan Base | Pulihkan 30% nyawa | 🪙 400 |
+| 💰 Dana Darurat | +$300 + $40/wave | 🪙 250 |
+| 📡 Radar | Semua tower melihat hidden 15 dtk | 🪙 350 |
+| ⚡ Overclock | Semua tower 2× lebih cepat 8 dtk | 🪙 500 |
+| 🛡️ Perisai Base | Base kebal 8 dtk | 🪙 600 |
+| ☄️ Meteor | Damage area sangat besar | 💠 40 |
+| 🌀 Putar Waktu | Musuh mundur 3 petak | 💠 40 |
+| ⛈️ Badai Petir | 12 sambaran petir acak | 💠 60 |
 
 ## 📅 Tantangan Harian
 Setiap hari map, kesulitan, dan 2 modifier dipilih secara acak (sama untuk semua pemain di hari yang sama). Contoh modifier: *Musuh Gesit*, *Kulit Baja*, *Tanpa Farm*, *Base Rapuh*, *Malam Berkabut*. Selesaikan 20 wave untuk mendapat 🪙 500.
@@ -128,13 +140,14 @@ Setiap hari map, kesulitan, dan 2 modifier dipilih secara acak (sama untuk semua
 block-tower-defense/
 ├── index.html          # Halaman utama & layout HUD
 ├── api/                # Backend Vercel (satu fungsi: /api?r=...)
-│   ├── index.js        # Rute: auth, profil, teman, room, relay, papan skor
-│   └── _lib/           # Koneksi MongoDB & autentikasi
+│   ├── index.js        # Rute: auth, profil, ekonomi, trading, top up, teman, room, relay, papan skor
+│   └── _lib/           # MongoDB, autentikasi, ekonomi (vault, trading, Midtrans)
 ├── test/               # Uji API dengan MongoDB palsu
 ├── dev-server.js       # Server lokal (statis + /api)
 ├── css/style.css       # Semua styling (tema, menu, responsif)
 ├── js/
-│   ├── config.js       # Data: map, tower, musuh, kesulitan, mode, skill, modifier, pencapaian
+│   ├── shared.js       # Logika ekonomi bersama browser & server (gacha, trait, toko, hadiah)
+│   ├── config.js       # Data: map, unit, musuh, kesulitan, mode, skill, modifier, pencapaian
 │   ├── storage.js      # Simpan/muat pengaturan, profil & game berjalan (localStorage)
 │   ├── audio.js        # Efek suara & musik prosedural (WebAudio)
 │   ├── game.js         # Logika inti: wave, tower, musuh, boss, skill, harian, skor

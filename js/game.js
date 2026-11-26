@@ -64,7 +64,7 @@ function newGame(opts = {}) {
     waveTime: 0, waveTotal: 0, earned: 0, kills: 0, bossKills: 0, leaked: false,
     placing: null, selected: null, targeting: null, mouse: { x: -99, y: -99, in: false },
     time: 0, autoTimer: 0, recorded: false, nextId: 1, shake: 0, abilityCd: {}, freezeT: 0, uxp: {},
-    me, mp, players: {}, uxpBy: {}, fxOut: [],
+    me, mp, players: {}, uxpBy: {}, fxOut: [], skillsUsed: {}, overclockT: 0, shieldT: 0, radarT: 0, stormQ: [],
   };
   if (mp) S.autoSkip = false;
   UI.refreshAll();
@@ -201,7 +201,7 @@ function endWave() {
   fxEmit(['n', `Wave selesai! +$${100 + Math.min(S.wave, 60) * 30}`, '#ffd54f', 1200]);
   saveGameState();
   if (S.wave === 1) tip('wave1');
-  if (S.wave === 2 && levelFromXp(PROFILE.xp) >= ABILITIES[0].level) tip('ability');
+  if (S.wave === 2) tip('ability');
   const next = wavePreview(S.wave + 1);
   if (next.hidden && S.wave + 1 <= ENEMY_INTRO.hidden + 1) tip('hidden');
   if (next.boss) tip('boss');
@@ -220,66 +220,118 @@ function skipWave() {
   checkAchievements(summary());
 }
 
-/* ---------------- SKILL PEMAIN ---------------- */
+/* ---------------- SKILL PEMAIN (stok terbatas, dibeli di toko) ---------------- */
 const playerLevel = () => levelFromXp(PROFILE.xp);
+const skillById = id => ABILITIES.find(a => a.id === id);
+/** Sisa pemakaian skill untuk pemain ini (stok dikurangi yang sudah dipakai di game ini) */
+const skillLeft = id => Math.max(0, (PROFILE.vault.skillUses[id] || 0) - ((S && S.skillsUsed[id]) || 0));
+const equippedSkills = () => (PROFILE.skillLoadout || []).filter(skillById).slice(0, SKILL_SLOTS);
+
 function useAbility(id) {
-  const a = ABILITIES.find(x => x.id === id);
-  if (!a || !S || Menu.open || S.state === 'win' || S.state === 'lose') return;
-  if (playerLevel() < a.level) { sfx('error'); UI.toast(`🔒 ${a.name} terbuka di level ${a.level}`); return; }
+  const a = skillById(id);
+  if (!a || !S || S.state === 'win' || S.state === 'lose' || (Menu.open && !isMP())) return;
+  if (skillLeft(id) <= 0) { sfx('error'); UI.toast(`🛒 Stok ${a.name} habis — beli di Toko`); return; }
   if (S.abilityCd[id] > 0) { sfx('error'); return; }
-  if (id === 'airstrike') {
-    S.targeting = S.targeting ? null : 'airstrike'; S.placing = null; S.selected = null;
+  if (a.target) {
+    S.targeting = S.targeting === id ? null : id; S.placing = null; S.selected = null;
     sfx('click'); UI.hidePanel(); UI.renderBar(); UI.renderAbilities(); return;
   }
-  PROFILE.stats.abilities++;
-  if (isGuest()) { MP.act({ a: 'ability', id }); S.abilityCd[id] = a.cd; UI.renderAbilities(); checkAchievements(summary()); return; }
+  consumeSkill(a);
+  if (isGuest()) { MP.act({ a: 'ability', id }); S.abilityCd[id] = a.cd; UI.renderAbilities(); return; }
   execAbility(id, S.me);
+}
+/** Dipanggil saat pemain mengklik peta dalam mode bidik (Serangan Udara / Meteor) */
+function targetAt(x, y) {
+  const id = S.targeting; S.targeting = null;
+  const a = skillById(id); if (!a) return;
+  consumeSkill(a);
+  if (isGuest()) { MP.act({ a: 'ability', id, x: Math.round(x), y: Math.round(y) }); S.abilityCd[id] = a.cd; UI.renderAbilities(); return; }
+  execAbility(id, S.me, x, y);
+}
+const airstrikeAt = (x, y) => { S.targeting = 'airstrike'; targetAt(x, y); };
+function consumeSkill(a) {
+  S.skillsUsed[a.id] = (S.skillsUsed[a.id] || 0) + 1;
+  PROFILE.stats.abilities++;
+  checkAchievements(summary());
 }
 /** Jalankan skill (di host / solo) untuk pemain pid */
 function execAbility(id, pid, x, y) {
-  const a = ABILITIES.find(q => q.id === id); if (!a) return;
+  const a = skillById(id); if (!a) return;
   const cds = pid === S.me ? S.abilityCd : (S.players[pid] && (S.players[pid].abilityCd || (S.players[pid].abilityCd = {})));
   if (!cds || cds[id] > 0) return;
-  if (id === 'airstrike') {
-    for (let i = 0; i < 3; i++) S.strikes.push({ x: x + (i - 1) * 34, y: y + (i % 2 ? -18 : 18), t: 0.6 + i * 0.25, max: 0.6 + i * 0.25 });
-    sfx('rocket');
-  }
-  if (id === 'freeze') {
-    S.freezeT = 4;
-    S.enemies.forEach(e => { e.slowUntil = S.time + 4; e.slowF = e.boss ? 0.4 : 0.8; });
-    sfx('freeze'); UI.banner('🧊 BADAI ES', '#81d4fa', 1000); fxEmit(['n', '🧊 BADAI ES', '#81d4fa', 1000, 'freeze']);
-  }
-  if (id === 'repair') {
-    const h = Math.round(S.maxHp * 0.3), before = S.hp;
-    S.hp = Math.min(S.maxHp, S.hp + h);
-    addText(W - 60, (exitRow() - 1) * T, '+' + Math.round(S.hp - before) + ' ❤️', '#69f0ae', 1.5);
-    puff(19.5 * T, exitRow() * T, '#69f0ae', 16); sfx('upgrade');
+  const W2 = Math.min(S.wave, 80);
+  switch (id) {
+    case 'airstrike':
+      for (let i = 0; i < 3; i++) S.strikes.push({ x: x + (i - 1) * 34, y: y + (i % 2 ? -18 : 18), t: 0.6 + i * 0.25, max: 0.6 + i * 0.25, r: 1.4, dmg: 40 + W2 * 18 });
+      sfx('rocket'); break;
+    case 'meteor':
+      S.strikes.push({ x, y, t: 1.1, max: 1.1, r: 2.3, dmg: 160 + W2 * 50, big: true });
+      sfx('stun'); announce('☄️ METEOR!', '#ff7043'); break;
+    case 'freeze':
+      S.freezeT = 4;
+      S.enemies.forEach(e => { e.slowUntil = S.time + 4; e.slowF = e.boss ? 0.4 : 0.8; });
+      sfx('freeze'); announce('🧊 BADAI ES', '#81d4fa'); break;
+    case 'repair': {
+      const h = Math.round(S.maxHp * 0.3), before = S.hp;
+      S.hp = Math.min(S.maxHp, S.hp + h);
+      addText(W - 60, (exitRow() - 1) * T, '+' + Math.round(S.hp - before) + ' ❤️', '#69f0ae', 1.5);
+      puff(19.5 * T, exitRow() * T, '#69f0ae', 16); sfx('upgrade'); break;
+    }
+    case 'cash': {
+      const amt = 300 + W2 * 40; addCash(pid, amt);
+      if (pid === S.me) addText(W / 2, 70, `+$${amt}`, '#ffd54f', 1.5);
+      sfx('coin'); break;
+    }
+    case 'radar': S.radarT = 15; sfx('achieve'); announce('📡 RADAR AKTIF', '#b388ff'); break;
+    case 'overclock': S.overclockT = 8; sfx('upgrade'); announce('⚡ OVERCLOCK', '#ffee58'); break;
+    case 'shield': S.shieldT = 8; sfx('achieve'); announce('🛡️ PERISAI BASE', '#64b5f6'); break;
+    case 'rewind':
+      for (const e of S.enemies) if (!e.boss) placeAtDist(e, Math.max(0, e.dist - 3 * T));
+      sfx('stun'); announce('🌀 PUTAR WAKTU', '#64ffda'); break;
+    case 'storm':
+      for (let i = 0; i < 12; i++) S.stormQ.push({ t: i * 0.22, dmg: 30 + W2 * 12 });
+      sfx('stun'); announce('⛈️ BADAI PETIR', '#9fa8da'); break;
   }
   cds[id] = a.cd;
   if (pid !== S.me) addText(W / 2, 40, `${playerName(pid)}: ${a.icon} ${a.name}`, '#fff', 1.5);
-  if (pid === S.me) { checkAchievements(summary()); UI.renderAbilities(); }
+  if (pid === S.me) UI.renderAbilities();
 }
-function airstrikeAt(x, y) {
-  S.targeting = null;
-  PROFILE.stats.abilities++;
-  if (isGuest()) { MP.act({ a: 'ability', id: 'airstrike', x: Math.round(x), y: Math.round(y) }); S.abilityCd.airstrike = ABILITIES[0].cd; UI.renderAbilities(); return; }
-  execAbility('airstrike', S.me, x, y);
+function announce(text, col) { UI.banner(text, col, 1000); fxEmit(['n', text, col, 1000]); }
+/** Pindahkan musuh ke titik tertentu di sepanjang jalur */
+function placeAtDist(e, dist) {
+  let acc = 0;
+  for (let i = 0; i < pathPx.length - 1; i++) {
+    const a = pathPx[i], b = pathPx[i + 1], seg = Math.hypot(b.x - a.x, b.y - a.y);
+    if (acc + seg >= dist) { const k = (dist - acc) / seg; e.x = a.x + (b.x - a.x) * k; e.y = a.y + (b.y - a.y) * k; e.wp = i + 1; e.dist = dist; return; }
+    acc += seg;
+  }
 }
 function tickCooldowns(cds, dt) { for (const k in cds) if (cds[k] > 0) cds[k] = Math.max(0, cds[k] - dt); }
 function updateStrikes(dt) {
   tickCooldowns(S.abilityCd, dt);
   for (const id in S.players) if (id !== S.me && S.players[id].abilityCd) tickCooldowns(S.players[id].abilityCd, dt);
-  S.freezeT = Math.max(0, S.freezeT - dt);
+  S.freezeT = Math.max(0, S.freezeT - dt); S.radarT = Math.max(0, S.radarT - dt);
+  S.overclockT = Math.max(0, S.overclockT - dt); S.shieldT = Math.max(0, S.shieldT - dt);
   for (const st of S.strikes) {
     st.t -= dt;
     if (st.t > 0) continue;
     st.done = true;
-    const R = 1.4 * T, dmg = 40 + Math.min(S.wave, 80) * 18;
-    S.effects.push({ kind: 'boom', x: st.x, y: st.y, r: R, life: 0.45, max: 0.45 }); fxEmit(['b', st.x | 0, st.y | 0, R | 0, 0.45]);
-    if (SET.shake) S.shake = 6; sfx('boom');
+    const R = (st.r || 1.4) * T, dmg = st.dmg || 40 + Math.min(S.wave, 80) * 18;
+    S.effects.push({ kind: 'boom', x: st.x, y: st.y, r: R, life: st.big ? 0.8 : 0.45, max: st.big ? 0.8 : 0.45 }); fxEmit(['b', st.x | 0, st.y | 0, R | 0, st.big ? 0.8 : 0.45]);
+    if (SET.shake) S.shake = st.big ? 14 : 6; sfx('boom');
     for (const e of S.enemies) if (!e.dead && Math.hypot(e.x - st.x, e.y - st.y) <= R) damage(e, dmg, { pierceArmor: true }, null);
   }
   S.strikes = S.strikes.filter(st => !st.done);
+  if (S.stormQ.length) {
+    for (const q of S.stormQ) q.t -= dt;
+    while (S.stormQ.length && S.stormQ[0].t <= 0) {
+      const q = S.stormQ.shift(), pool = S.enemies.filter(e => !e.dead);
+      if (!pool.length) continue;
+      const e = pool[Math.floor(Math.random() * pool.length)];
+      tracer(e.x + (Math.random() - 0.5) * 40, 0, e.x, e.y - 8, '#c5cae9', 4, 0.2, 'tesla');
+      damage(e, q.dmg, { pierceArmor: true }, null);
+    }
+  }
 }
 
 /* ---------------- MUSUH ---------------- */
@@ -323,7 +375,27 @@ function kill(e, src) {
 }
 
 /* ---------------- STATISTIK UNIT (mastery + trait + evolusi) ---------------- */
-const unitOf = type => PROFILE.units[type] || (PROFILE.units[type] = { xp: 0, trait: null, evo: false });
+const NO_UNIT = { xp: 0, trait: null, evo: false, skin: 'default' };
+const unitById = id => PROFILE.vault.units.find(u => u.id === id) || null;
+/** Unit yang dipakai untuk satu jenis tower: yang ada di loadout, jika tidak ada → unit terbaik milik pemain */
+function unitOf(type) {
+  for (const id of PROFILE.loadout) { const u = unitById(id); if (u && u.type === type) return u; }
+  return PROFILE.vault.units.filter(u => u.type === type).sort((a, b) => (b.evo - a.evo) || (b.xp - a.xp))[0] || NO_UNIT;
+}
+const loadoutUnits = () => PROFILE.loadout.map(unitById).filter(Boolean);
+const loadoutTypes = () => loadoutUnits().map(u => u.type);
+/** Data unit ringkas per jenis (dikirim ke pemain lain saat mabar) */
+const myUnitsMap = () => Object.fromEntries(loadoutUnits().map(u => [u.type, { xp: u.xp, trait: u.trait, evo: u.evo, skin: u.skin }]));
+/** Bersihkan loadout dari unit yang sudah tidak dimiliki (mis. setelah trading) */
+function cleanLoadout(prevTypes) {
+  const seen = new Set();
+  PROFILE.loadout = PROFILE.loadout.filter(id => { const u = unitById(id); if (!u || seen.has(u.type)) return false; seen.add(u.type); return true; });
+  for (const t of prevTypes || []) {
+    if (seen.has(t) || PROFILE.loadout.length >= LOADOUT_SIZE) continue;
+    const u = PROFILE.vault.units.find(x => x.type === t); if (u) { PROFILE.loadout.push(u.id); seen.add(t); }
+  }
+  if (!PROFILE.loadout.length && PROFILE.vault.units.length) PROFILE.loadout = [PROFILE.vault.units[0].id];
+}
 const r2 = v => Math.round(v * 100) / 100;
 /** Statistik efektif satu level tower setelah mastery, trait, dan evolusi */
 function computeL(type, level, unit = unitOf(type)) {
@@ -336,6 +408,10 @@ function computeL(type, level, unit = unitOf(type)) {
   if (L.range) L.range = r2(L.range * (tr && tr.rangeMul || 1) * (em.range || 1));
   if (L.rate) L.rate = r2(L.rate * (tr && tr.rateMul || 1));
   if (L.splash) L.splash = r2(L.splash * (em.splash || 1));
+  if (L.chain) L.chain += em.chainAdd || 0;
+  if (L.rampMax) L.rampMax = r2(L.rampMax + (em.rampAdd || 0));
+  if (L.dot) L.dot = { ...L.dot, pct: L.dot.pct * (em.dotMul || 1) };
+  if (L.aura && L.slow) L.slow = r2(Math.min(0.85, L.slow + (em.slowAdd || 0)));
   if (tr && tr.hidden && L.dmg) L.hidden = true;
   if (tr && tr.pierce) L.pierceArmor = true;
   if (tr && tr.bossMul) L.bossMul = r2((L.bossMul || 1) * tr.bossMul);
@@ -368,7 +444,7 @@ function makeTower(type, c, r, pid = S.me) {
   const u = unitFor(type, pid);
   return { id: S.nextId++, type, c, r, x: (c + 0.5) * T, y: (r + 0.5) * T, level: 0, cd: 0, angle: -Math.PI / 2,
            spent: costOf(type, 0, pid), target: 'first', recoil: 0, dmg: 0, kills: 0, stunUntil: 0, buff: 0, gh: false,
-           L: computeL(type, 0, u), evo: !!u.evo, trait: u.trait, shots: 0, ramp: 0, owner: pid };
+           L: computeL(type, 0, u), evo: !!u.evo, trait: u.trait, skin: u.skin || 'default', shots: 0, ramp: 0, owner: pid };
 }
 function placeTower(type, c, r, pid = S.me) {
   if (pid === S.me && isGuest()) {
@@ -417,14 +493,14 @@ function setTarget(t, mode) {
 const TARGET_MODES = ['first', 'last', 'strong', 'close'];
 const TARGET_LABEL = { first: 'Pertama', last: 'Terakhir', strong: 'Terkuat', close: 'Terdekat' };
 
-function canSeeHidden(t) { return !!(lvl(t).hidden || t.gh); }
+function canSeeHidden(t) { return !!(lvl(t).hidden || t.gh || S.radarT > 0); }
 function pickTarget(t, L) {
   const R = L.range * T, seeHidden = canSeeHidden(t);
   let best = null, bv = -Infinity;
   for (const e of S.enemies) {
     if (e.dead || (e.hidden && !seeHidden)) continue;
     const d = Math.hypot(e.x - t.x, e.y - t.y);
-    if (d > R) continue;
+    if (d > R || (L.minRange && d < L.minRange * T)) continue;
     const v = t.target === 'first' ? e.dist : t.target === 'last' ? -e.dist : t.target === 'strong' ? e.hp : -d;
     if (v > bv) { bv = v; best = e; }
   }
@@ -443,39 +519,105 @@ function applyBuffs() {
 }
 function fire(t, L, e) {
   const mx = t.x + Math.cos(t.angle) * 22, my = t.y - 10 + Math.sin(t.angle) * 22;
-  if (t.type === 'demoman' || t.type === 'rocketeer') {
-    sfx('rocket');
+  const kind = PROJ[t.type];
+  if (kind) {
+    sfx(kind === 'nuke' ? 'stun' : kind === 'fire' ? 'freeze' : 'rocket');
     const n = L.perk === 'double' ? 2 : 1;
     for (let i = 0; i < n; i++)
-      S.projectiles.push({ x: mx + i * 8, y: my - i * 10, tx: e.x, ty: e.y, target: e, L, src: t, a: t.angle, big: t.type === 'rocketeer', trail: 0 });
+      S.projectiles.push({ x: mx + i * 8, y: my - i * 10, tx: e.x, ty: e.y, target: kind === 'shell' || kind === 'nuke' ? null : e, L, src: t, a: t.angle,
+        big: t.type === 'rocketeer' || kind === 'nuke', kind, trail: 0, sx: mx, sy: my, life: 0 });
     return;
   }
-  sfx(t.type === 'sniper' ? 'snipe' : t.type === 'freezer' ? 'freeze' : 'shoot');
-  const col = t.type === 'freezer' ? '#81d4fa' : t.type === 'sniper' ? '#fff59d' : '#ffeb3b';
-  S.effects.push({ kind: 'tracer', x1: mx, y1: my, x2: e.x, y2: e.y - 8, life: t.type === 'sniper' ? 0.15 : 0.06, max: 0.15, col, w: t.type === 'sniper' ? 3 : 2 });
-  fxEmit(['t', mx | 0, my | 0, e.x | 0, (e.y - 8) | 0, col, t.type === 'sniper' ? 3 : 2, t.type === 'sniper' ? 0.15 : 0.06, t.type]);
+  const C = TRACER[t.type] || TRACER.default;
+  sfx(C.sfx);
+  if (L.line) return fireLine(t, L, e, mx, my);
+  tracer(mx, my, e.x, e.y - 8, C.col, C.w, C.life, t.type);
   S.effects.push({ kind: 'flash', x: mx, y: my, life: 0.05, max: 0.05 });
-  if (L.slow) {
-    const f = e.boss ? L.slow / 2 : L.slow;
-    e.slowF = Math.max(S.time < e.slowUntil ? e.slowF : 0, f); e.slowUntil = S.time + 2;
-  }
+  if (L.slow) applySlow(e, L.slow);
+  if (L.chain) return fireChain(t, L, e);
   // Perk evolusi
   let dmg = L.dmg;
   if (L.perk === 'triple' && ++t.shots % 4 === 0) { dmg *= 3; addText(e.x, e.y - 34, '×3', '#ffeb3b', 0.6); }
   if (L.perk === 'crit' && Math.random() < 0.25) { dmg *= 3; addText(e.x, e.y - 34, 'CRIT!', '#ff5252', 0.7); }
   if (L.perk === 'ramp') { t.ramp = Math.min(0.8, t.ramp + 0.04); dmg *= 1 + t.ramp; }
+  if (L.beam) { if (t.beamTarget !== e.id) { t.beamTarget = e.id; t.heat = 0; } t.heat = Math.min(L.rampMax, (t.heat || 0) + 0.06); dmg *= 1 + t.heat; }
   if (L.perk === 'freeze' && !e.boss && Math.random() < 0.2) { e.frozenUntil = S.time + 1; addText(e.x, e.y - 34, '❄', '#81d4fa', 0.6); }
   damage(e, dmg, L, t);
+  if (L.dot && !e.dead) applyDot(e, L, t);
+  if (L.splashHit) {      // semburan / racun mengenai musuh di sekitar target
+    for (const o of S.enemies) {
+      if (o === e || o.dead || (o.hidden && !canSeeHidden(t))) continue;
+      if (Math.hypot(o.x - e.x, o.y - e.y) <= L.splashHit * T) { damage(o, dmg * 0.6, L, t, true); if (L.dot && !o.dead) applyDot(o, L, t); if (L.slow) applySlow(o, L.slow); }
+    }
+  }
+}
+/* Warna & suara tembakan langsung per tower */
+const TRACER = {
+  default: { col: '#ffeb3b', w: 2, life: 0.06, sfx: 'shoot' },
+  sniper: { col: '#fff59d', w: 3, life: 0.15, sfx: 'snipe' }, freezer: { col: '#81d4fa', w: 2, life: 0.06, sfx: 'freeze' },
+  flamer: { col: '#ff7043', w: 6, life: 0.1, sfx: 'shoot' }, tesla: { col: '#18ffff', w: 3, life: 0.15, sfx: 'stun' },
+  laser: { col: '#ff1744', w: 4, life: 0.11, sfx: 'shoot' }, poison: { col: '#76ff03', w: 4, life: 0.12, sfx: 'freeze' },
+  railgun: { col: '#82b1ff', w: 6, life: 0.25, sfx: 'snipe' }, pistol: { col: '#ffe082', w: 2, life: 0.05, sfx: 'shoot' },
+};
+function tracer(x1, y1, x2, y2, col, w, life, type) {
+  S.effects.push({ kind: 'tracer', x1, y1, x2, y2, life, max: 0.15, col, w });
+  fxEmit(['t', x1 | 0, y1 | 0, x2 | 0, y2 | 0, col, w, life, type]);
+}
+function applySlow(e, slow) {
+  const f = e.boss ? slow / 2 : slow;
+  e.slowF = Math.max(S.time < e.slowUntil ? e.slowF : 0, f); e.slowUntil = S.time + 2;
+}
+function applyDot(e, L, src) {
+  e.dot = { dps: L.dmg * L.dot.pct, until: S.time + L.dot.dur, src, col: L.dot.col };
+}
+/** Petir berantai (Tesla) */
+function fireChain(t, L, first) {
+  const hit = new Set([first.id]); let cur = first, dmg = L.dmg;
+  damage(first, dmg, L, t);
+  for (let i = 1; i < L.chain; i++) {
+    let next = null, nd = L.chainRange * T;
+    for (const o of S.enemies) {
+      if (o.dead || hit.has(o.id) || (o.hidden && !canSeeHidden(t))) continue;
+      const d = Math.hypot(o.x - cur.x, o.y - cur.y); if (d <= nd) { nd = d; next = o; }
+    }
+    if (!next) break;
+    tracer(cur.x, cur.y - 8, next.x, next.y - 8, '#18ffff', 3, 0.15, 'tesla');
+    dmg *= 0.85; damage(next, dmg, L, t); hit.add(next.id); cur = next;
+  }
+}
+/** Tembakan tembus garis (Railgun) */
+function fireLine(t, L, e, mx, my) {
+  const ang = Math.atan2(e.y - t.y, e.x - t.x), len = L.range * T, ex = t.x + Math.cos(ang) * len, ey = t.y + Math.sin(ang) * len;
+  tracer(mx, my, ex, ey, '#82b1ff', 6, 0.25, 'railgun');
+  let dmg = L.dmg;
+  if (L.perk === 'crit' && Math.random() < 0.25) { dmg *= 3; addText(e.x, e.y - 34, 'CRIT!', '#ff5252', 0.7); }
+  for (const o of S.enemies) {
+    if (o.dead || (o.hidden && !canSeeHidden(t))) continue;
+    const px = o.x - t.x, py = o.y - t.y, proj = px * Math.cos(ang) + py * Math.sin(ang);
+    if (proj < 0 || proj > len) continue;
+    if (Math.abs(-px * Math.sin(ang) + py * Math.cos(ang)) <= 16) damage(o, dmg, L, t);
+  }
+}
+/** Aura (Penjaga Waktu): melukai & memperlambat semua musuh di dalam jangkauan */
+function pulseAura(t, L) {
+  let any = false;
+  for (const o of S.enemies) {
+    if (o.dead || (o.hidden && !canSeeHidden(t))) continue;
+    if (Math.hypot(o.x - t.x, o.y - t.y) <= L.range * T) { damage(o, L.dmg, L, t, true); applySlow(o, L.slow); any = true; }
+  }
+  if (any) { S.effects.push({ kind: 'shock', x: t.x, y: t.y, r: L.range * T, life: 0.4, max: 0.4, col: '#64ffda' }); fxEmit(['s', t.x | 0, t.y | 0, (L.range * T) | 0, '#64ffda', 0.4]); }
 }
 function explode(p) {
   const R = p.L.splash * T;
   S.effects.push({ kind: 'boom', x: p.tx, y: p.ty, r: R, life: 0.35, max: 0.35 }); fxEmit(['b', p.tx | 0, p.ty | 0, R | 0, 0.35]);
+  if (p.kind === 'nuke') { S.effects.push({ kind: 'shock', x: p.tx, y: p.ty, r: R * 1.4, life: 0.8, max: 0.8, col: '#ffeb3b' }); fxEmit(['s', p.tx | 0, p.ty | 0, (R * 1.4) | 0, '#ffeb3b', 0.8]); if (SET.shake) S.shake = 14; }
   sfx('boom');
   for (const e of S.enemies) {
     if (e.dead || (e.hidden && !canSeeHidden(p.src) && e !== p.target)) continue;
     if (Math.hypot(e.x - p.tx, e.y - p.ty) <= R) {
       damage(e, p.L.dmg, p.L, p.src);
-      if (p.L.perk === 'burn' && !e.dead) e.burn = { dps: p.L.dmg * 0.3, until: S.time + 3, src: p.src };
+      if (p.L.perk === 'burn' && !e.dead) e.dot = { dps: p.L.dmg * 0.3, until: S.time + 3, src: p.src, col: 'burn' };
+      if (p.L.dot && !e.dead) applyDot(e, p.L, p.src);
     }
   }
 }
@@ -513,7 +655,7 @@ function update(dt) {
     if (e.regen && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.regen * dt);
     if (e.boss) bossAbilities(e, dt);
     e.hitT = Math.max(0, e.hitT - dt);
-    if (e.burn && S.time < e.burn.until) { damage(e, e.burn.dps * dt, e.burn.src.L, e.burn.src, true); if (e.dead) continue; }
+    if (e.dot && S.time < e.dot.until) { damage(e, e.dot.dps * dt, e.dot.src.L || {}, e.dot.src, true); if (e.dead) continue; }
     if (e.frozenUntil && S.time < e.frozenUntil) continue;
     let move = e.spd * T * (S.time < e.slowUntil ? (1 - e.slowF) : 1) * dt;
     while (move > 0 && e.wp < pathPx.length) {
@@ -523,8 +665,8 @@ function update(dt) {
     }
     if (e.wp >= pathPx.length) {
       e.dead = true; S.leaked = true;
-      const dmg = e.boss ? 9999 : Math.ceil(e.hp);
-      S.hp -= dmg; sfx('leak'); if (SET.shake) S.shake = 8;
+      const dmg = S.shieldT > 0 ? 0 : e.boss ? 9999 : Math.ceil(e.hp);
+      S.hp -= dmg; sfx(dmg ? 'leak' : 'freeze'); if (SET.shake && dmg) S.shake = 8;
       addText(W - 60, (exitRow() + 0.5) * T, '-' + dmg, '#ef5350', 1.2);
     }
   }
@@ -537,18 +679,19 @@ function update(dt) {
     t.recoil = Math.max(0, t.recoil - dt * 6);
     if (S.time < t.stunUntil) continue;
     const L = lvl(t); t.cd -= dt;
+    if (L.aura) { if (t.cd <= 0) { t.cd = L.rate; pulseAura(t, L); } continue; }
     const tg = pickTarget(t, L);
     if (!tg && t.ramp) t.ramp = Math.max(0, t.ramp - dt * 0.5);
     if (tg) {
       t.angle = Math.atan2(tg.y - t.y, tg.x - t.x);
-      if (t.cd <= 0) { t.cd = L.rate * (1 - t.buff); t.recoil = 1; fire(t, L, tg); }
+      if (t.cd <= 0) { t.cd = L.rate * (1 - t.buff) * (S.overclockT > 0 ? 0.5 : 1); t.recoil = 1; fire(t, L, tg); }
     }
   }
 
   // Proyektil
   for (const p of S.projectiles) {
     if (p.target && !p.target.dead) { p.tx = p.target.x; p.ty = p.target.y; }
-    const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy), mv = (p.big ? 7 : 9) * T * dt;
+    const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy), mv = (p.kind === 'nuke' ? 4 : p.kind === 'shell' ? 6 : p.big ? 7 : 9) * T * dt;
     p.trail -= dt;
     if (p.trail <= 0) { p.trail = 0.03; S.effects.push({ kind: 'smoke', x: p.x, y: p.y, life: 0.4, max: 0.4 }); }
     if (d <= mv) { p.done = true; explode(p); }
@@ -592,10 +735,12 @@ function checkAchievements(g) {
   const got = [];
   for (const a of ACHIEVEMENTS) {
     if (PROFILE.achievements.includes(a.id)) continue;
-    if (a.test(PROFILE, g)) { PROFILE.achievements.push(a.id); PROFILE.coins += a.coins; got.push(a); }
+    if (a.test(PROFILE, g)) { PROFILE.achievements.push(a.id); got.push(a); }
   }
-  got.forEach((a, i) => setTimeout(() => { sfx('achieve'); UI.toast(`🏅 ${a.name} — +${a.coins} koin`, 'gold'); }, i * 700));
   if (got.length) saveProfile();
+  got.forEach((a, i) => setTimeout(() => {
+    Eco.act('achClaim', { id: a.id }).then(r => { if (!r.already) { sfx('achieve'); UI.toast(`🏅 ${a.name} — +${r.coins} 🪙 +${r.gems} 💠`, 'gold'); } }).catch(() => {});
+  }, i * 700));
   return got;
 }
 function bestKey(mapId, diff, mode) { return mapId + '_' + diff + (mode === 'endless' ? '_endless' : ''); }
@@ -603,7 +748,21 @@ function calcScore(cleared, won) {
   const mul = DIFFS[S.diff].coinMul * (1 + MAP.stars * 0.1) * (S.daily ? 1.2 : 1);
   return Math.round((cleared * 500 + S.kills * 5 + Math.max(0, S.hp) * 10 + S.bossKills * 1000 + (won ? 5000 : 0)) * mul);
 }
-function finishGame(won) {
+/** Data hasil permainan yang diklaim ke ekonomi (server atau lokal) */
+function claimPayload(won, abandoned) {
+  const cleared = won ? S.wave : Math.max(0, S.wave - 1);
+  const uxp = {};
+  for (const [type, gain] of Object.entries(S.uxp)) { const u = unitOf(type); if (u.id) uxp[u.id] = Math.round(gain); }
+  return { result: { cleared, won, diff: S.diff, map: MAP.id, mode: S.mode, daily: !!S.daily, bossKills: S.bossKills,
+    duration: Math.round(S.time), uxp, skillsUsed: { ...S.skillsUsed }, abandoned: !!abandoned } };
+}
+/** Saat keluar di tengah permainan: hanya kurangi stok skill yang terpakai */
+function abandonGame() {
+  if (!S || S.recorded || !Object.keys(S.skillsUsed).length) return;
+  S.recorded = true;
+  Eco.act('claim', claimPayload(false, true)).catch(() => {});
+}
+async function finishGame(won) {
   if (S.recorded) return; S.recorded = true;
   SaveGame.clear();
   const D = DIFFS[S.diff];
@@ -615,31 +774,19 @@ function finishGame(won) {
     record = cleared > (PROFILE.best[key] || 0);
     if (record) PROFILE.best[key] = cleared;
   }
+  if (S.daily) { const ds = dailyState(); ds.best = Math.max(ds.best, cleared); if (won && !ds.won) { ds.won = true; PROFILE.stats.dailyWins++; } }
 
-  let coins = Math.round((cleared * 12 + (won ? 250 : 0) + S.bossKills * 40) * D.coinMul * (1 + MAP.stars * 0.1));
-  let dailyReward = 0;
-  if (S.daily) {
-    const ds = dailyState();
-    ds.best = Math.max(ds.best, cleared);
-    if (won && !ds.won) { ds.won = true; dailyReward = DAILY_REWARD; coins += dailyReward; PROFILE.stats.dailyWins++; }
-  }
+  // Hadiah: dihitung oleh modul ekonomi (server jika login)
+  let rw = { coins: 0, crystals: 0, stones: 0, gems: 0, mastery: [], dailyReward: 0 };
+  const prevTypes = loadoutTypes();
+  try { rw = await Eco.act('claim', claimPayload(won)); }
+  catch (e) { UI.toast('⚠️ Hadiah gagal disimpan: ' + e.message, '', 5000); }
+  cleanLoadout(prevTypes);
+  const mastery = (rw.mastery || []).sort((a, b) => b.gain - a.gain);
+
   const xp = Math.round(cleared * 20 * D.coinMul + S.kills * 0.5 + (won ? 300 : 0));
-
-  // Material
-  const crystals = S.bossKills + Math.floor(cleared / 10) + (won ? 2 : 0) + (S.daily && won ? 3 : 0);
-  const stones = (won && S.diff === 'hard' ? 1 : 0) + (S.daily && won ? 1 : 0) + (S.mode === 'endless' && cleared >= 30 ? 1 : 0) + (S.bossKills >= 3 ? 1 : 0);
-  PROFILE.crystals += crystals; PROFILE.stones += stones;
-
-  // Mastery tower
-  const mastery = [];
-  for (const [type, gain] of Object.entries(S.uxp)) {
-    const u = unitOf(type), before = unitLevel(u.xp);
-    u.xp += Math.round(gain);
-    mastery.push({ type, gain: Math.round(gain), lv: unitLevel(u.xp), up: unitLevel(u.xp) > before });
-  }
-  mastery.sort((a, b) => b.gain - a.gain);
   const lvBefore = levelFromXp(PROFILE.xp);
-  PROFILE.coins += coins; PROFILE.xp += xp;
+  PROFILE.xp += xp;
   const lvAfter = levelFromXp(PROFILE.xp);
 
   // Papan skor lokal (15 terbaik)
@@ -659,35 +806,32 @@ function finishGame(won) {
   const ach = checkAchievements(summary());
 
   sfx(won ? 'win' : 'lose');
-  const unlockedSkill = ABILITIES.find(a => a.level > lvBefore && a.level <= lvAfter);
-  Menu.endData = { won, record, coins, xp, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank, dailyReward, unlockedSkill, crystals, stones, mastery };
-  setTimeout(() => Menu.show('end'), 900);
+  Menu.endData = { won, record, coins: rw.coins || 0, xp, gems: rw.gems || 0, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank,
+    dailyReward: rw.dailyReward || 0, crystals: rw.crystals || 0, stones: rw.stones || 0, mastery, used: rw.used || {} };
+  setTimeout(() => Menu.show('end'), 600);
 }
 
-/* ---------------- TRAIT & EVOLUSI ---------------- */
-function rollTraitId() {
-  const total = Object.values(TRAITS).reduce((a, t) => a + t.w, 0);
-  let r = Math.random() * total;
-  for (const [id, t] of Object.entries(TRAITS)) { r -= t.w; if (r <= 0) return id; }
-  return 'kuat1';
-}
-function rollTrait(type) {
-  if (PROFILE.crystals < 1 || !PROFILE.unlocked.includes(type)) return null;
-  PROFILE.crystals--; PROFILE.stats.rolls++;
-  const id = rollTraitId();
-  unitOf(type).trait = id;
-  saveProfile(); checkAchievements(null);
-  return id;
-}
-function evoStatus(type) {
-  const u = unitOf(type), lv = unitLevel(u.xp);
-  return { owned: PROFILE.unlocked.includes(type), done: u.evo, lvOk: lv >= EVO_REQ.level,
-           stonesOk: PROFILE.stones >= EVO_REQ.stones, coinsOk: PROFILE.coins >= EVO_REQ.coins };
-}
-function evolve(type) {
-  const st = evoStatus(type);
-  if (!st.owned || st.done || !st.lvOk || !st.stonesOk || !st.coinsOk) return false;
-  PROFILE.stones -= EVO_REQ.stones; PROFILE.coins -= EVO_REQ.coins; unitOf(type).evo = true;
-  saveProfile(); checkAchievements(null);
-  return true;
+/* ---------------- EKONOMI (lokal untuk tamu, server untuk akun) ---------------- */
+const Eco = {
+  remote() { return typeof Online !== 'undefined' && Online.loggedIn && Online.vaultReady; },
+  async act(action, payload) {
+    if (typeof Online !== 'undefined' && Online.loggedIn && !Online.vaultReady) throw new Error('Data akun masih dimuat, coba lagi sebentar');
+    if (this.remote()) {
+      const r = await Online.api('eco.act', { action, payload });
+      this.apply(r.vault);
+      return r.result;
+    }
+    const res = SHARED.actions[action](PROFILE.vault, payload || {}, { rng: Math.random, now: Date.now(), server: false });
+    saveProfile();
+    return res;
+  },
+  apply(vault) {
+    const prev = loadoutTypes();
+    PROFILE.vault = vault; cleanLoadout(prev);
+    Storage.save('btd_profile', PROFILE);
+  },
+};
+function evoStatus(u) {
+  const lv = unitLevel(u.xp), v = PROFILE.vault;
+  return { done: u.evo, lvOk: lv >= EVO_REQ.level, stonesOk: v.stones >= EVO_REQ.stones, coinsOk: v.coins >= EVO_REQ.coins };
 }

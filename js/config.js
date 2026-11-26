@@ -4,7 +4,9 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '3.0.0';
+const VERSION = '4.0.0';
+const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
+  TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, ACH_REWARDS, ACH_GEMS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
 const SELL_RATE = 0.6;
 const LOADOUT_SIZE = 6;
@@ -99,8 +101,90 @@ const TOWERS = {
       {name:'Pelacak',        cost:3000, dmg:90,  range:6.0, rate:2.5, splash:1.1, pierceArmor:true, bossMul:1.8, hidden:true},
       {name:'Peluncur Ganda', cost:7000, dmg:180, range:6.5, rate:2.0, splash:1.3, pierceArmor:true, bossMul:2.0, hidden:true}]},
 };
-const TOWER_ORDER = ['scout','sniper','demoman','freezer','farm','minigun','commander','rocketeer'];
-const DEFAULT_LOADOUT = ['scout','sniper','demoman','freezer','farm'];
+Object.assign(TOWERS, {
+  pistol: { name:'Gunslinger', color:'#8d6e63', limit:8, role:'Serba guna',
+    desc:'Penembak cepat bersenjata ganda. Murah dan andal.',
+    levels:[
+      {name:'Gunslinger',     cost:150,  dmg:1.5, range:2.8, rate:0.5},
+      {name:'Pistol Ganda',   cost:150,  dmg:2.5, range:3.0, rate:0.45},
+      {name:'Peluru Perak',   cost:450,  dmg:4,   range:3.2, rate:0.4, hidden:true},
+      {name:'Koboi',          cost:1000, dmg:7,   range:3.4, rate:0.33, hidden:true},
+      {name:'Legenda Barat',  cost:2200, dmg:12,  range:3.7, rate:0.28, hidden:true}]},
+  cannon: { name:'Meriam', color:'#455a64', limit:5, role:'Area',
+    desc:'Peluru meriam berat dengan ledakan kecil.',
+    levels:[
+      {name:'Meriam',         cost:500,  dmg:9,  range:3.6, rate:2.4, splash:0.7},
+      {name:'Laras Baja',     cost:400,  dmg:15, range:3.8, rate:2.2, splash:0.8},
+      {name:'Peluru Inti',    cost:1000, dmg:26, range:4.0, rate:2.0, splash:0.9, pierceArmor:true},
+      {name:'Meriam Kapal',   cost:2400, dmg:50, range:4.3, rate:1.8, splash:1.0, pierceArmor:true, hidden:true}]},
+  flamer: { name:'Pembakar', color:'#ff7043', limit:5, role:'Area dekat',
+    desc:'Menyemburkan api jarak dekat yang membakar musuh.',
+    levels:[
+      {name:'Pembakar',       cost:550,  dmg:1,   range:2.2, rate:0.25, splashHit:0.7, dot:{pct:0.6, dur:2, col:'burn'}},
+      {name:'Bahan Bakar',    cost:450,  dmg:1.6, range:2.3, rate:0.22, splashHit:0.8, dot:{pct:0.6, dur:2.5, col:'burn'}},
+      {name:'Api Biru',       cost:1100, dmg:2.6, range:2.5, rate:0.2,  splashHit:0.9, dot:{pct:0.7, dur:3, col:'burn'}, hidden:true},
+      {name:'Neraka',         cost:2600, dmg:4.5, range:2.7, rate:0.18, splashHit:1.0, dot:{pct:0.8, dur:3, col:'burn'}, hidden:true, pierceArmor:true}]},
+  mortar: { name:'Mortir', color:'#5d4037', limit:4, role:'Jarak jauh',
+    desc:'Peluru melambung jarak jauh. Tidak bisa menembak terlalu dekat.',
+    levels:[
+      {name:'Mortir',         cost:600,  dmg:10, range:6,   rate:3.2, splash:1.3, minRange:1.8},
+      {name:'Laras Panjang',  cost:500,  dmg:17, range:6.5, rate:3.0, splash:1.4, minRange:1.8},
+      {name:'Peluru Cluster', cost:1300, dmg:30, range:7,   rate:2.7, splash:1.6, minRange:1.8, hidden:true},
+      {name:'Artileri Berat', cost:3000, dmg:60, range:7.5, rate:2.4, splash:1.9, minRange:1.8, hidden:true, pierceArmor:true}]},
+  tesla: { name:'Tesla', color:'#00bcd4', limit:4, role:'Berantai',
+    desc:'Petir yang melompat ke beberapa musuh sekaligus.',
+    levels:[
+      {name:'Tesla',          cost:1100, dmg:5,  range:3.2, rate:1.3, chain:3, chainRange:1.6},
+      {name:'Kumparan',       cost:800,  dmg:8,  range:3.4, rate:1.2, chain:4, chainRange:1.7},
+      {name:'Tegangan Tinggi',cost:2000, dmg:13, range:3.6, rate:1.05,chain:5, chainRange:1.8, hidden:true},
+      {name:'Badai Listrik',  cost:4500, dmg:24, range:3.9, rate:0.9, chain:7, chainRange:2.0, hidden:true, pierceArmor:true}]},
+  laser: { name:'Laser', color:'#e53935', limit:4, role:'DPS tinggi',
+    desc:'Sinar terus-menerus yang makin panas pada target yang sama.',
+    levels:[
+      {name:'Laser',          cost:1300, dmg:1.2, range:3.3, rate:0.1, beam:true, rampMax:1.5},
+      {name:'Lensa Fokus',    cost:900,  dmg:2,   range:3.5, rate:0.1, beam:true, rampMax:1.8},
+      {name:'Sinar Merah',    cost:2200, dmg:3.2, range:3.8, rate:0.1, beam:true, rampMax:2.1, hidden:true},
+      {name:'Sinar Kematian', cost:5000, dmg:5.5, range:4.1, rate:0.1, beam:true, rampMax:2.5, hidden:true, pierceArmor:true}]},
+  poison: { name:'Racun', color:'#7cb342', limit:4, role:'Pendukung',
+    desc:'Racun yang memperlambat dan melukai musuh perlahan.',
+    levels:[
+      {name:'Racun',          cost:900,  dmg:2,  range:3.0, rate:1.4, splashHit:0.9, slow:0.2, dot:{pct:1.5, dur:4, col:'poison'}},
+      {name:'Racun Pekat',    cost:700,  dmg:3.5,range:3.2, rate:1.3, splashHit:1.0, slow:0.25, dot:{pct:1.5, dur:4, col:'poison'}},
+      {name:'Wabah',          cost:1800, dmg:6,  range:3.4, rate:1.2, splashHit:1.2, slow:0.3, dot:{pct:1.6, dur:5, col:'poison'}, hidden:true},
+      {name:'Pandemi',        cost:4000, dmg:11, range:3.7, rate:1.0, splashHit:1.4, slow:0.35, dot:{pct:1.8, dur:5, col:'poison'}, hidden:true, pierceArmor:true}]},
+  railgun: { name:'Railgun', color:'#3949ab', limit:3, role:'Tembus barisan',
+    desc:'Proyektil elektromagnetik yang menembus semua musuh dalam satu garis.',
+    levels:[
+      {name:'Railgun',        cost:2000, dmg:30,  range:6,   rate:3.4, line:true, pierceArmor:true},
+      {name:'Akselerator',    cost:1600, dmg:50,  range:6.5, rate:3.1, line:true, pierceArmor:true},
+      {name:'Pemindai',       cost:3500, dmg:85,  range:7,   rate:2.8, line:true, pierceArmor:true, hidden:true},
+      {name:'Meriam Gauss',   cost:8000, dmg:170, range:7.5, rate:2.4, line:true, pierceArmor:true, hidden:true}]},
+  warden: { name:'Penjaga Waktu', color:'#26a69a', limit:2, role:'Aura',
+    desc:'Aura yang memperlambat dan melukai semua musuh di sekitarnya.',
+    levels:[
+      {name:'Penjaga Waktu',  cost:1800, dmg:1,  range:2.4, rate:0.5, aura:true, slow:0.3},
+      {name:'Jam Pasir',      cost:1400, dmg:2,  range:2.7, rate:0.5, aura:true, slow:0.38},
+      {name:'Distorsi',       cost:3200, dmg:4,  range:3.0, rate:0.5, aura:true, slow:0.45, hidden:true},
+      {name:'Penguasa Waktu', cost:7000, dmg:8,  range:3.4, rate:0.5, aura:true, slow:0.55, hidden:true, pierceArmor:true}]},
+  nuke: { name:'Nuklir', color:'#827717', limit:1, role:'Penghancur',
+    desc:'Hulu ledak nuklir: sangat lambat, ledakan raksasa.',
+    levels:[
+      {name:'Nuklir',         cost:3500,  dmg:120, range:7,   rate:9,   splash:2.6, pierceArmor:true, bossMul:1.3},
+      {name:'Uranium',        cost:3000,  dmg:220, range:7.5, rate:8.5, splash:2.9, pierceArmor:true, bossMul:1.3, hidden:true},
+      {name:'Plutonium',      cost:7000,  dmg:420, range:8,   rate:8,   splash:3.2, pierceArmor:true, bossMul:1.4, hidden:true},
+      {name:'Hari Kiamat',    cost:15000, dmg:900, range:9,   rate:7,   splash:3.6, pierceArmor:true, bossMul:1.5, hidden:true}]},
+  dragon: { name:'Naga Api', color:'#c62828', limit:1, role:'Mitos',
+    desc:'Naga penyembur bola api yang membakar area luas.',
+    levels:[
+      {name:'Naga Api',       cost:3000,  dmg:14,  range:4.2, rate:0.7,  splash:1.1, dot:{pct:0.5, dur:3, col:'burn'}},
+      {name:'Sisik Baja',     cost:2600,  dmg:24,  range:4.5, rate:0.65, splash:1.2, dot:{pct:0.5, dur:3, col:'burn'}, pierceArmor:true},
+      {name:'Mata Naga',      cost:6000,  dmg:42,  range:4.8, rate:0.6,  splash:1.4, dot:{pct:0.6, dur:3, col:'burn'}, pierceArmor:true, hidden:true},
+      {name:'Naga Purba',     cost:13000, dmg:85,  range:5.2, rate:0.5,  splash:1.6, dot:{pct:0.7, dur:3, col:'burn'}, pierceArmor:true, hidden:true}]},
+});
+const TOWER_ORDER = [...UNIT_TYPES].sort((a, b) => RARITY[UNIT_RARITY[a]].rank - RARITY[UNIT_RARITY[b]].rank);
+const DEFAULT_LOADOUT = [...STARTER_UNITS];
+/* Jenis proyektil (tower lain memakai tembakan langsung) */
+const PROJ = { demoman: 'rocket', rocketeer: 'rocket', cannon: 'shell', mortar: 'shell', nuke: 'nuke', dragon: 'fire' };
 
 /* ---------------- MUSUH ---------------- */
 const ENEMIES = {
@@ -134,7 +218,7 @@ const ACHIEVEMENTS = [
   { id:'perfect',     name:'Tanpa Cela',       desc:'Menang tanpa kehilangan nyawa',  coins:500, test:(p,g)=>g && g.won && g.hp>=g.maxHp },
   { id:'hard_win',    name:'Legenda',          desc:'Menang di kesulitan Sulit',      coins:1000,test:(p,g)=>g && g.won && g.diff==='hard' },
   { id:'all_maps',    name:'Penjelajah',       desc:'Menang di semua map',            coins:800, test:(p)=>MAPS.every(m=>Object.keys(DIFFS).some(d=>(p.best[m.id+'_'+d]||0)>=DIFFS[d].waves)) },
-  { id:'collector',   name:'Kolektor',         desc:'Buka semua tower',               coins:300, test:(p)=>TOWER_ORDER.every(k=>p.unlocked.includes(k)) },
+  { id:'collector',   name:'Kolektor',         desc:'Miliki semua jenis unit',               coins:300, test:(p)=>UNIT_TYPES.every(k=>p.vault.units.some(u=>u.type===k)) },
   { id:'rich',        name:'Sultan',           desc:'Dapatkan $50.000 dalam satu game', coins:300, test:(p,g)=>g && g.earned>=50000 },
 ];
 
@@ -148,13 +232,20 @@ const MODES = {
  * Terbuka berdasarkan level pemain. Dipakai saat bermain dengan tombol Z / C / V.
  */
 const ABILITIES = [
-  { id:'airstrike', name:'Serangan Udara', icon:'✈️', key:'z', cd:45, level:1, color:'#ef6c00',
-    desc:'Klik lokasi di peta untuk menjatuhkan 3 bom. Tembus armor & mengenai hidden.' },
-  { id:'freeze',    name:'Badai Es',       icon:'🧊', key:'c', cd:60, level:3, color:'#0288d1',
-    desc:'Memperlambat semua musuh 80% selama 4 detik (boss 40%).' },
-  { id:'repair',    name:'Perbaikan Base', icon:'🔧', key:'v', cd:90, level:5, color:'#2e7d32',
-    desc:'Memulihkan 30% nyawa base.' },
+  { id:'airstrike', name:'Serangan Udara', icon:'✈️', cd:45, color:'#ef6c00', target:true, desc:'Klik lokasi untuk menjatuhkan 3 bom. Tembus armor & mengenai hidden.' },
+  { id:'freeze',    name:'Badai Es',       icon:'🧊', cd:60, color:'#0288d1', desc:'Memperlambat semua musuh 80% selama 4 detik (boss 40%).' },
+  { id:'repair',    name:'Perbaikan Base', icon:'🔧', cd:90, color:'#2e7d32', desc:'Memulihkan 30% nyawa base.' },
+  { id:'cash',      name:'Dana Darurat',   icon:'💰', cd:60, color:'#f9a825', desc:'Langsung mendapat $300 + $40 per wave.' },
+  { id:'radar',     name:'Radar',          icon:'📡', cd:60, color:'#5e35b1', desc:'Semua tower bisa melihat musuh hidden selama 15 detik.' },
+  { id:'overclock', name:'Overclock',      icon:'⚡', cd:75, color:'#fbc02d', desc:'Semua tower menembak 2× lebih cepat selama 8 detik.' },
+  { id:'shield',    name:'Perisai Base',   icon:'🛡️', cd:90, color:'#1565c0', desc:'Base kebal dari musuh yang lolos selama 8 detik.' },
+  { id:'meteor',    name:'Meteor',         icon:'☄️', cd:60, color:'#d84315', target:true, desc:'Klik lokasi: meteor raksasa dengan damage sangat besar.' },
+  { id:'rewind',    name:'Putar Waktu',    icon:'🌀', cd:80, color:'#00897b', desc:'Mendorong semua musuh (kecuali boss) mundur 3 petak.' },
+  { id:'storm',     name:'Badai Petir',    icon:'⛈️', cd:70, color:'#283593', desc:'12 sambaran petir ke musuh acak.' },
 ];
+const SKILL_KEYS = ['z', 'c', 'v', 'b'];
+const SKILL_SLOTS = 4;
+const DEFAULT_SKILLS = ['airstrike', 'freeze', 'repair'];
 
 /* ---------------- MODIFIER (Tantangan Harian) ---------------- */
 const MODIFIERS = {
@@ -174,7 +265,7 @@ const TIPS = {
   start:   'Pilih tower di bawah (atau tekan 1) lalu klik rumput di dekat jalur.',
   placed:  'Bagus! Tekan "Mulai Wave" atau Spasi untuk memulai.',
   wave1:   'Klik tower untuk melihat statistik, upgrade (Q), atau jual (X).',
-  ability: 'Gunakan skill di kiri bawah (Z) saat keadaan genting!',
+  ability: 'Gunakan skill di kiri bawah (Z/C/V/B) saat keadaan genting! Beli stok skill di Toko.',
   skip:    'Semua musuh sudah keluar? Tekan "Skip" untuk lanjut lebih cepat dan dapat bonus uang.',
   hidden:  'Wave berikutnya ada musuh Hantu! Pastikan ada tower dengan deteksi hidden (👁).',
   boss:    'Boss datang! Boss bisa membuat tower di dekatnya pingsan. Jangan biarkan dia lolos.',
@@ -191,35 +282,7 @@ ACHIEVEMENTS.push(
 /* =========================================================
  * SISTEM UNIT: mastery, trait, evolusi, material
  * ========================================================= */
-const UNIT_MAX_LV = 20;
-const unitXpFor = lv => 40 * (lv - 1) * (lv - 1);                  // total XP untuk level lv
-const unitLevel = xp => Math.min(UNIT_MAX_LV, 1 + Math.floor(Math.sqrt(xp / 40)));
-const MASTERY_BONUS = 0.02;                                          // +2% damage per level
 
-const RARITY = {
-  common:    { name:'Biasa',      color:'#9e9e9e', rank:0 },
-  rare:      { name:'Langka',     color:'#42a5f5', rank:1 },
-  epic:      { name:'Epik',       color:'#ab47bc', rank:2 },
-  legendary: { name:'Legendaris', color:'#ffb300', rank:3 },
-  mythic:    { name:'Mitos',      color:'#ff1744', rank:4 },
-};
-/* w = bobot peluang (total 100). dmgMul juga berlaku untuk pendapatan Farm & buff Commander. */
-const TRAITS = {
-  kuat1:     { name:'Kuat I',        icon:'💪', rarity:'common',    w:20,  dmgMul:1.05,  desc:'+5% damage' },
-  cepat1:    { name:'Cepat I',       icon:'⚡', rarity:'common',    w:20,  rateMul:0.95, desc:'Cooldown −5%' },
-  jangkau1:  { name:'Jangkauan I',   icon:'🎯', rarity:'common',    w:20,  rangeMul:1.05,desc:'+5% range' },
-  kuat2:     { name:'Kuat II',       icon:'💪', rarity:'rare',      w:8,   dmgMul:1.12,  desc:'+12% damage' },
-  cepat2:    { name:'Cepat II',      icon:'⚡', rarity:'rare',      w:8,   rateMul:0.9,  desc:'Cooldown −10%' },
-  jangkau2:  { name:'Jangkauan II',  icon:'🎯', rarity:'rare',      w:5,   rangeMul:1.12,desc:'+12% range' },
-  hemat:     { name:'Hemat',         icon:'🏷️', rarity:'rare',      w:4,   costMul:0.85, desc:'Harga pasang & upgrade −15%' },
-  kuat3:     { name:'Kuat III',      icon:'💪', rarity:'epic',      w:3,   dmgMul:1.2,   desc:'+20% damage' },
-  mataelang: { name:'Mata Elang',    icon:'👁️', rarity:'epic',      w:3,   rangeMul:1.08, hidden:true, desc:'Deteksi hidden sejak Lv 0, +8% range' },
-  penembus:  { name:'Penembus',      icon:'🛡️', rarity:'epic',      w:2.5, dmgMul:1.08, pierce:true, desc:'Tembus armor, +8% damage' },
-  pemburu:   { name:'Pemburu Raja',  icon:'👑', rarity:'epic',      w:2.5, bossMul:1.35, desc:'+35% damage ke boss' },
-  midas:     { name:'Midas',         icon:'💰', rarity:'legendary', w:1.5, dmgMul:1.1, rewardMul:1.3, desc:'Hadiah kill +30%, +10% damage' },
-  berserker: { name:'Berserker',     icon:'🔥', rarity:'legendary', w:2,   dmgMul:1.25, rateMul:0.85, desc:'+25% damage, cooldown −15%' },
-  dewa:      { name:'Dewa Perang',   icon:'🌟', rarity:'mythic',    w:0.5, dmgMul:1.4, rateMul:0.8, rangeMul:1.15, hidden:true, desc:'+40% damage, cooldown −20%, +15% range, deteksi hidden' },
-};
 
 /* Evolusi: bentuk baru dengan pengali statistik dan perk unik */
 const EVOS = {
@@ -231,17 +294,29 @@ const EVOS = {
   minigun:   { name:'Gatling Titan', color:'#212121', perk:'ramp',     mul:{ dmg:1.3, range:1.1 },  desc:'Damage naik bertahap hingga +80% selama terus menembak.' },
   commander: { name:'Panglima',      color:'#1a237e', perk:'marshal',  mul:{ buffAdd:0.1, range:1.2 }, desc:'Buff +10% lebih kuat dan jangkauan +20%.' },
   rocketeer: { name:'Warlord',       color:'#4a148c', perk:'double',   mul:{ dmg:1.25, range:1.1 }, desc:'Meluncurkan 2 misil sekaligus.' },
+  pistol:    { name:'Desperado',     color:'#4e342e', perk:'crit',     mul:{ dmg:1.5, range:1.1 },  desc:'25% peluang critical hit 3× damage.' },
+  cannon:    { name:'Meriam Kepung', color:'#263238', perk:'burn',     mul:{ dmg:1.4, splash:1.3 }, desc:'Ledakan membakar musuh.' },
+  flamer:    { name:'Infernal',      color:'#bf360c', perk:'ramp',     mul:{ dmg:1.5, range:1.15 }, desc:'Api makin panas selama terus menyembur (hingga +80%).' },
+  mortar:    { name:'Artileri',      color:'#3e2723', perk:'double',   mul:{ dmg:1.3, range:1.1 },  desc:'Menembakkan 2 peluru sekaligus.' },
+  tesla:     { name:'Raja Petir',    color:'#006064', perk:null,       mul:{ dmg:1.4, chainAdd:3 }, desc:'Petir melompat ke 3 musuh tambahan.' },
+  laser:     { name:'Prisma',        color:'#b71c1c', perk:null,       mul:{ dmg:1.3, rampAdd:1.0 },desc:'Sinar bisa memanas hingga +100% lebih tinggi.' },
+  poison:    { name:'Wabah Hitam',   color:'#33691e', perk:null,       mul:{ dmg:1.3, dotMul:2 },   desc:'Racun 2× lebih mematikan.' },
+  railgun:   { name:'Gauss Prime',   color:'#1a237e', perk:'crit',     mul:{ dmg:1.3, range:1.1 },  desc:'25% peluang critical hit 3× damage.' },
+  warden:    { name:'Chronos',       color:'#004d40', perk:null,       mul:{ dmg:1.5, slowAdd:0.15, range:1.2 }, desc:'Perlambatan +15% dan jangkauan +20%.' },
+  nuke:      { name:'Tsar Bomba',    color:'#33691e', perk:null,       mul:{ dmg:1.5, splash:1.3 }, desc:'Ledakan 50% lebih kuat dan 30% lebih luas.' },
+  dragon:    { name:'Naga Purbakala',color:'#4a0000', perk:'double',   mul:{ dmg:1.3, range:1.1 },  desc:'Menyemburkan 2 bola api sekaligus.' },
 };
-const EVO_REQ = { level:10, stones:3, coins:1000 };
 
-const MATERIALS = {
-  crystals: { name:'Kristal Trait', icon:'💎', price:200, desc:'Dipakai untuk roll trait tower.' },
-  stones:   { name:'Batu Evolusi',  icon:'🔮', price:900, desc:'Dipakai untuk evolusi tower.' },
-};
+
 
 ACHIEVEMENTS.push(
   { id:'trait_1',    name:'Coba Peruntungan', desc:'Roll trait pertama kali',          coins:50,  test:(p)=>p.stats.rolls>=1 },
-  { id:'trait_leg',  name:'Hoki Besar',       desc:'Dapatkan trait Legendaris/Mitos',  coins:400, test:(p)=>Object.values(p.units).some(u=>u.trait && RARITY[TRAITS[u.trait].rarity].rank>=3) },
-  { id:'evo_1',      name:'Evolusi!',         desc:'Evolusikan sebuah tower',          coins:300, test:(p)=>Object.values(p.units).some(u=>u.evo) },
-  { id:'mastery_20', name:'Ahli Sejati',      desc:'Capai mastery Lv 20 pada tower',   coins:500, test:(p)=>Object.values(p.units).some(u=>unitLevel(u.xp)>=UNIT_MAX_LV) },
+  { id:'trait_leg',  name:'Hoki Besar',       desc:'Dapatkan trait Legendaris/Mitos',  coins:400, test:(p)=>p.vault.units.some(u=>u.trait && RARITY[TRAITS[u.trait].rarity].rank>=3) },
+  { id:'evo_1',      name:'Evolusi!',         desc:'Evolusikan sebuah unit',          coins:300, test:(p)=>p.vault.units.some(u=>u.evo) },
+  { id:'mastery_20', name:'Ahli Sejati',      desc:'Capai mastery Lv 20 pada tower',   coins:500, test:(p)=>p.vault.units.some(u=>unitLevel(u.xp)>=UNIT_MAX_LV) },
+  { id:'gacha_10',   name:'Penarik Nasib',    desc:'Lakukan 10 summon',                coins:150, test:(p)=>(p.vault.pulls||0)>=10 },
+  { id:'trade_1',    name:'Pedagang',         desc:'Selesaikan 1 trading',             coins:200, test:(p)=>(p.stats.trades||0)>=1 },
 );
+
+/* Hadiah pencapaian diambil dari modul bersama agar sama dengan server */
+ACHIEVEMENTS.forEach(a => { a.coins = ACH_REWARDS[a.id] || a.coins; a.gems = ACH_GEMS; });

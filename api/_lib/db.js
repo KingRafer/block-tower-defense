@@ -40,6 +40,10 @@ async function ensureIndexes(d) {
     d.collection('invites').createIndex({ createdAt: 1 }, { expireAfterSeconds: 600 }),
     d.collection('runs').createIndex({ mode: 1, score: -1 }),
     d.collection('runs').createIndex({ user: 1, score: -1 }),
+    d.collection('units').createIndex({ owner: 1 }),
+    d.collection('trades').createIndex({ to: 1, status: 1 }),
+    d.collection('trades').createIndex({ from: 1, status: 1 }),
+    d.collection('payments').createIndex({ user: 1, createdAt: -1 }),
   ]);
 }
 

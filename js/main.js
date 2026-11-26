@@ -18,7 +18,7 @@ cv.addEventListener('pointerdown', ev => {
   if (ev.button === 2 || Menu.open) return;
   const p = canvasPos(ev); S.mouse = { ...p, in: true };
   const c = Math.floor(p.x / T), r = Math.floor(p.y / T);
-  if (S.targeting === 'airstrike') { airstrikeAt(p.x, p.y); return; }
+  if (S.targeting) { targetAt(p.x, p.y); return; }
   if (S.placing) {
     const t = placeTower(S.placing, c, r);
     if (t && !ev.shiftKey) { S.placing = null; UI.renderBar(); }
@@ -45,12 +45,13 @@ addEventListener('keydown', ev => {
   }
   if (Menu.open) return;
   const n = parseInt(k, 10);
-  if (n >= 1 && n <= PROFILE.loadout.length) UI.selectPlace(PROFILE.loadout[n - 1]);
+  const lt = loadoutTypes();
+  if (n >= 1 && n <= lt.length) UI.selectPlace(lt[n - 1]);
   else if ((k === 'q' || k === 'e') && S.selected) upgradeTower(S.selected);
   else if ((k === 'x' || k === 'delete') && S.selected) sellTower(S.selected);
   else if (k === 't' && S.selected && $('tgtBtn')) $('tgtBtn').click();
   else if (k === ' ') { ev.preventDefault(); if (canSkip()) skipWave(); else startWave(); }
-  else if (ABILITIES.some(a => a.key === k)) useAbility(ABILITIES.find(a => a.key === k).id);
+  else if (SKILL_KEYS.includes(k) && equippedSkills()[SKILL_KEYS.indexOf(k)]) useAbility(equippedSkills()[SKILL_KEYS.indexOf(k)]);
   else if (k === 'f' && !isGuest()) $('speedBtn').click();
   else if (k === 'enter' && isMP()) { ev.preventDefault(); $('chatIn').focus(); }
 });

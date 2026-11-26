@@ -7,6 +7,7 @@
 const crypto = require('crypto');
 const { db } = require('./_lib/db');
 const { signSession, verifySession, verifyGoogleToken } = require('./_lib/auth');
+const eco = require('./_lib/eco');
 
 const ONLINE_MS = 70 * 1000;          // dianggap online jika heartbeat < 70 dtk
 const MAX_PLAYERS = 4;
@@ -55,7 +56,8 @@ const pairKey = (x, y) => (x < y ? { a: x, b: y } : { a: y, b: x });
 /* ---------------- HANDLER ---------------- */
 const routes = {
   /* Konfigurasi publik untuk client */
-  'config': async () => ({ googleClientId: process.env.GOOGLE_CLIENT_ID || '', devAuth: devAuthEnabled() }),
+  'config': async () => ({ googleClientId: process.env.GOOGLE_CLIENT_ID || '', devAuth: devAuthEnabled(),
+    midtransClientKey: process.env.MIDTRANS_CLIENT_KEY || '', midtransProd: process.env.MIDTRANS_PRODUCTION === '1', topup: !!process.env.MIDTRANS_SERVER_KEY }),
 
   /* Login / daftar dengan Google (akun dibuat otomatis saat login pertama) */
   'auth.google': async (req, d) => {
@@ -256,6 +258,43 @@ const routes = {
     return { msgs: msgs.map(m => ({ from: m.from, d: m.d })) };
   },
 
+  /* ---------- Ekonomi (vault di server) ---------- */
+  'eco.state': async (req, d, u) => ({ vault: (await eco.loadVault(d, u)).vault }),
+  'eco.init': async (req, d, u) => {
+    const had = !!u.vault;
+    const { vault } = await eco.loadVault(d, u, req.body && req.body.import);
+    return { vault, created: !had };
+  },
+  'eco.act': async (req, d, u) => eco.runAction(d, u, String(req.body && req.body.action || ''), req.body && req.body.payload),
+
+  /* ---------- Trading ---------- */
+  'inv.of': async (req, d, u) => {
+    const id = String(req.query.id || '');
+    const fr = await d.collection('friendships').findOne(pairKey(u._id, id));
+    if (!fr || fr.status !== 'accepted') throw err(403, 'Hanya bisa melihat unit teman');
+    const units = await d.collection('units').find({ owner: id, tradable: true, lock: false }).toArray();
+    return { units: units.map(eco.docUnit) };
+  },
+  'trade.create': async (req, d, u) => eco.tradeCreate(d, u, req.body || {}),
+  'trade.list': async (req, d, u) => eco.tradeList(d, u),
+  'trade.respond': async (req, d, u) => {
+    const id = String(req.body && req.body.id);
+    if (req.body.accept) return eco.tradeAccept(d, u, id);
+    await d.collection('trades').updateOne({ _id: id, to: u._id, status: 'pending' }, { $set: { status: 'declined', doneAt: Date.now() } });
+    return { ok: true };
+  },
+  'trade.cancel': async (req, d, u) => {
+    await d.collection('trades').updateOne({ _id: String(req.body && req.body.id), from: u._id, status: 'pending' }, { $set: { status: 'cancelled', doneAt: Date.now() } });
+    return { ok: true };
+  },
+
+  /* ---------- Top up (Midtrans) ---------- */
+  'pay.create': async (req, d, u) => eco.payCreate(d, u, req.body || {}),
+  'pay.status': async (req, d, u) => eco.payStatus(d, u, req.query.order || (req.body && req.body.order)),
+  'pay.notify': async (req, d) => eco.payNotify(d, req.body),
+  'pay.history': async (req, d, u) => ({ payments: (await d.collection('payments').find({ user: u._id }).sort({ createdAt: -1 }).limit(10).toArray())
+    .map(p => ({ id: p._id, gems: p.gems, price: p.price, status: p.status, at: p.createdAt })) }),
+
   /* ---------- Papan skor global ---------- */
   'lb.submit': async (req, d, u) => {
     const b = req.body || {};
@@ -276,7 +315,7 @@ const routes = {
   },
 };
 
-const PUBLIC = new Set(['config', 'auth.google', 'auth.dev', 'lb.get']);
+const PUBLIC = new Set(['config', 'auth.google', 'auth.dev', 'lb.get', 'pay.notify']);
 function devAuthEnabled() { return process.env.DEV_AUTH === '1' && process.env.NODE_ENV !== 'production' && process.env.VERCEL_ENV !== 'production'; }
 
 module.exports = async function handler(req, res) {

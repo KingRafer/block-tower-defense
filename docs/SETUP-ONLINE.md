@@ -22,6 +22,11 @@ Browser ──HTTPS──▶ Vercel (/api — satu fungsi serverless) ──▶ 
 | `relay` | pesan antar pemain sementara | TTL 2 menit |
 | `invites` | undangan mabar | TTL 10 menit |
 | `runs` | skor global | `{mode, score}` |
+| `units` | unit milik pemain (trait, evolusi, xp, skin) | `owner` |
+| `trades` | penawaran trading | `{to,status}`, `{from,status}` |
+| `payments` | transaksi top up Midtrans | `{user, createdAt}` |
+
+Mata uang akun (Permata, koin, material, stok skill) disimpan di `users.vault` dengan kontrol versi.
 
 Index dibuat otomatis oleh server saat pertama dijalankan (`api/_lib/db.js`).
 
@@ -32,6 +37,9 @@ Index dibuat otomatis oleh server saat pertama dijalankan (`api/_lib/db.js`).
 | `MONGODB_DB` | `block_tower_defense` (opsional) |
 | `SESSION_SECRET` | String acak ≥ 32 karakter untuk menandatangani token login |
 | `GOOGLE_CLIENT_ID` | OAuth Client ID dari Google Cloud (lihat di bawah) |
+| `MIDTRANS_SERVER_KEY` | Server Key Midtrans (sandbox: `SB-Mid-server-...`) |
+| `MIDTRANS_CLIENT_KEY` | Client Key Midtrans (sandbox: `SB-Mid-client-...`) |
+| `MIDTRANS_PRODUCTION` | `1` untuk produksi; kosongkan untuk sandbox |
 
 Setelah mengubah env, lakukan **Redeploy**.
 
@@ -47,6 +55,15 @@ Setelah mengubah env, lakukan **Redeploy**.
 7. Klik **Create**, salin **Client ID** (berakhiran `.apps.googleusercontent.com`). **Client Secret tidak diperlukan.**
 8. Masukkan ke Vercel sebagai `GOOGLE_CLIENT_ID`, lalu **Redeploy**.
 
+## Top up (Midtrans)
+1. Daftar/masuk **https://dashboard.midtrans.com** → pilih environment **Sandbox** untuk uji coba.
+2. **Settings → Access Keys**: salin *Server Key* dan *Client Key* ke env Vercel.
+3. **Settings → Payment → Notification URL**: isi `https://blocktowerdefense.vercel.app/api?r=pay.notify`.
+4. Redeploy. Uji dengan simulator pembayaran sandbox Midtrans.
+5. Untuk uang asli: selesaikan verifikasi bisnis Midtrans, ganti ke key **Production**, set `MIDTRANS_PRODUCTION=1`.
+
+Permata dikreditkan sekali per transaksi (signature SHA-512 diverifikasi; client juga mengecek status langsung ke Midtrans setelah popup ditutup).
+
 ## Uji lokal
 ```bash
 npm install
@@ -59,6 +76,7 @@ GOOGLE_CLIENT_ID="...apps.googleusercontent.com" DEV_AUTH=1 node dev-server.js
 Uji API tanpa database sungguhan:
 ```bash
 node test/api.test.js
+node test/eco.test.js
 ```
 
 ## Keamanan & batasan

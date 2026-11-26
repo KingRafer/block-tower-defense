@@ -15,7 +15,7 @@ function match(doc, f) {
         if (op === '$gt' && !(v > val(x))) return false;
         if (op === '$lt' && !(v < val(x))) return false;
       }
-    } else if (v !== val(cond)) return false;
+    } else if (cond === null ? v != null : v !== val(cond)) return false;
   }
   return true;
 }
@@ -45,8 +45,14 @@ class Collection {
     const next = { ...d };
     for (const [k, v] of Object.entries(upd.$set || {})) next[k] = clone(v);
     for (const [k, v] of Object.entries(upd.$push || {})) next[k] = [...(next[k] || []), clone(v)];
+    for (const [k, v] of Object.entries(upd.$inc || {})) next[k] = (next[k] || 0) + v;
     this.checkUnique(next, d); Object.assign(d, next);
     return { matchedCount: 1 };
+  }
+  async updateMany(f, upd) {
+    let n = 0;
+    for (const d of this.docs.filter(x => match(x, f))) { await this.updateOne({ _id: d._id }, upd); n++; }
+    return { matchedCount: n, modifiedCount: n };
   }
   async deleteOne(f) { const i = this.docs.findIndex(x => match(x, f)); if (i >= 0) this.docs.splice(i, 1); return { deletedCount: i >= 0 ? 1 : 0 }; }
   async deleteMany(f) { const n = this.docs.length; this.docs = this.docs.filter(x => !match(x, f)); return { deletedCount: n - this.docs.length }; }
