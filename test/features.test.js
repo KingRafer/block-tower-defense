@@ -58,5 +58,25 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   // hadiah klaim permainan menambah misi & pass
   r = await act('claim', { result: { diff: 'normal', cleared: 3, bossKills: 0, duration: 600, mode: 'classic' } });
   assert.strictEqual(r.body.vault.missions.d.games, 1); assert(r.body.result.pxp > 0);
+  // unit rahasia & peluang
+  const sum = o => Object.values(o).reduce((x, y) => x + y, 0);
+  assert(Math.abs(sum(SHARED.GACHA.rates) - 100) < 1e-9 && Math.abs(sum(SHARED.LUCKY.rates) - 100) < 1e-9, 'total peluang 100%');
+  assert.deepStrictEqual(SHARED.unitsOfRarity('secret').sort(), ['cosmic', 'reaper']);
+  // misi pass (season) + toko pass
+  const users2 = new DB.MongoClient().db('feat_test').collection('users');
+  const u2 = await users2.findOne({ _id: P.user.id });
+  u2.vault.missions.s = { games: 40, wins: 25 }; u2.vault.pass.tok = (u2.vault.pass.tok || 0);
+  await users2.updateOne({ _id: P.user.id }, { $set: { vault: u2.vault } });
+  r = await act('missionClaim', { kind: 'season', id: 's_games' });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body) + JSON.stringify(u2.vault.missions)); assert.strictEqual(r.body.result.tok, 120);
+  r = await act('missionClaim', { kind: 'season', id: 's_win' }); assert.strictEqual(r.body.result.tok, 200);
+  const tokNow = r.body.vault.pass.tok;
+  assert.strictEqual(tokNow, 120 + 200 + 5 * (SHARED.PASS_TOK.f + SHARED.PASS_TOK.p), 'token dari klaim tier + misi pass');
+  assert.strictEqual((await act('missionClaim', { kind: 'season', id: 's_boss' })).status, 400, 'misi pass belum selesai');
+  r = await act('passShopBuy', { id: 'legend' });
+  assert.strictEqual(r.status, 200); assert.strictEqual(SHARED.UNIT_RARITY[r.body.result.got.unit.type], 'legendary');
+  assert.strictEqual(r.body.vault.pass.tok, tokNow - 350);
+  r = await act('passShopBuy', { id: 'legend' }); assert.strictEqual(r.status, 400, 'token kurang / stok');
+  assert.strictEqual((await act('passShopBuy', { id: 'secret' })).status, 400, 'token kurang');
   console.log('✅ Semua uji misi, season pass & kode redeem lulus');
 })().catch(e => { console.error('❌', e); process.exit(1); });

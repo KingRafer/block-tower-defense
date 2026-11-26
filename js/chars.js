@@ -30,11 +30,13 @@ const CHARS = {
   samurai:   { shirt: '#b71c1c', pants: '#212121', hat: 'kabuto', hatC: '#212121', face: 'menpo', outfit: ['samuraiArmor'], weapon: 'katana' },
   wizard:    { shirt: '#5e35b1', pants: '#311b92', hat: 'wizard', hatC: '#4527a0', face: 'beard', faceC: '#eeeeee', outfit: ['robe', 'runes'], weapon: 'wizstaff', robe: true },
   angel:     { shirt: '#fffde7', pants: '#fff8e1', hat: 'halo', hatC: '#ffd54f', face: 'serene', outfit: ['robe', 'goldtrim'], back: 'wings', weapon: 'holyspear', robe: true },
+  reaper:    { shirt: '#1a1033', pants: '#0d0820', hat: 'reaperhood', hatC: '#120b26', face: 'skull', outfit: ['robe', 'voidchain'], back: 'voidaura', weapon: 'scythe', robe: true },
+  cosmic:    { shirt: '#1a237e', pants: '#0d1240', hat: 'galaxycrown', hatC: '#ffd54f', face: 'starface', outfit: ['robe', 'stars'], back: 'starcape', weapon: 'starorb', robe: true },
   nuke:      { special: true },
   dragon:    { special: true },
 };
 /* Tinggi penutup kepala (untuk mahkota evolusi) */
-const HAT_TOP = { cowboy: 37, wizard: 50, kabuto: 40, officer: 34, mad: 33, plague: 36, robin: 36, halo: 40, chrono: 33, beanie: 35, ninja: 32 };
+const HAT_TOP = { reaperhood: 34, galaxycrown: 40,  cowboy: 37, wizard: 50, kabuto: 40, officer: 34, mad: 33, plague: 36, robin: 36, halo: 40, chrono: 33, beanie: 35, ninja: 32 };
 
 /* ---------- helper gambar ---------- */
 const OL = 'rgba(0,0,0,.55)';
@@ -58,6 +60,9 @@ function drawBack(sp, x, y, shirt, sk) {
     case 'toxtank': R(x - 16, y - 11, 7, 14, '#558b2f'); C(x - 12.5, y - 4, 2, '#ccff90', false); break;
     case 'katanaBack': ctx.save(); ctx.translate(x - 8, y - 4); ctx.rotate(0.7); R(-1.5, -16, 3, 22, '#212121'); R(-2.5, -18, 5, 2, '#ffd54f'); R(-1.5, -24, 3, 6, '#b71c1c'); ctx.restore(); break;
     case 'jetpack': { R(x - 17, y - 11, 8, 15, '#90a4ae'); R(x - 17, y - 11, 8, 3, '#cfd8dc'); const f = 3 + Math.sin(tt * 30) * 2; P([x - 16, y + 4, x - 10, y + 4, x - 13, y + 8 + f], '#ffb300', false); P([x - 15, y + 4, x - 11, y + 4, x - 13, y + 6 + f / 2], '#fff59d', false); break; }
+    case 'voidaura': { for (let i = 0; i < 5; i++) { const a = tt * 1.5 + i * 1.26, r = 15 + Math.sin(tt * 3 + i) * 2; ctx.save(); ctx.globalAlpha *= 0.45; C(x + Math.cos(a) * r, y - 8 + Math.sin(a) * r * 0.6, 3 + (i % 2), '#7c4dff', false); ctx.restore(); } break; }
+    case 'starcape': { const w = Math.sin(tt * 2.5) * 2; P([x - 9, y - 9, x + 5, y - 9, x + 2 + w, y + 11, x - 16 + w, y + 10], '#0d1240');
+      for (let i = 0; i < 6; i++) { const tw = 0.5 + Math.sin(tt * 4 + i * 1.7) * 0.5; ctx.save(); ctx.globalAlpha *= tw; C(x - 12 + (i * 5) % 14 + w * 0.5, y - 5 + (i * 7) % 14, 0.9, '#fff', false); ctx.restore(); } break; }
     case 'wings': {
       const fl = Math.sin(tt * 4) * 3;
       for (const s of [-1, 1]) {
@@ -102,6 +107,8 @@ function drawBody(sp, x, y, shirt, pants, skin) {
       case 'robe': R(x - 1, y - 8, 2, 16, shade(shirt, 40), false); R(x - 9, y - 1, 18, 2, '#ffd54f', false); break;
       case 'runes': { const tt = time(); for (let i = 0; i < 3; i++) C(x - 6 + i * 6, y + 6 + Math.sin(tt * 3 + i) * 0.6, 1, '#b388ff', false); break; }
       case 'goldtrim': R(x - 9, y - 8, 18, 1.5, '#ffd54f', false); R(x - 12, y + 8, 24, 2, '#ffd54f', false); break;
+      case 'voidchain': ctx.strokeStyle = '#9575cd'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 1.5]); ctx.beginPath(); ctx.moveTo(x - 8, y - 7); ctx.lineTo(x + 8, y + 3); ctx.stroke(); ctx.setLineDash([]); C(x - 1, y - 2, 1.8, '#b388ff', false); break;
+      case 'stars': { const tt = time(); for (let i = 0; i < 5; i++) { const tw = 0.4 + Math.abs(Math.sin(tt * 3 + i * 2)) * 0.6; ctx.save(); ctx.globalAlpha *= tw; C(x - 7 + (i * 4.3) % 14, y - 6 + (i * 5.1) % 15, 0.9, i % 2 ? '#fff59d' : '#ffffff', false); ctx.restore(); } R(x - 9, y - 1, 18, 1.5, '#ffd54f', false); break; }
       case 'samuraiArmor': for (let i = 0; i < 3; i++) R(x - 9, y - 7 + i * 3.6, 18, 2.6, i % 2 ? '#212121' : '#d32f2f', false); R(x - 13, y - 9, 6, 7, '#212121'); R(x + 7, y - 9, 6, 7, '#212121'); R(x - 13, y - 9, 6, 2, '#d32f2f', false); R(x + 7, y - 9, 6, 2, '#d32f2f', false); break;
     }
   }
@@ -128,6 +135,11 @@ function drawHead(sp, x, y, skin, sk) {
     case 'grin': eyes(); R(x - 2, y - 14, 7, 2.5, '#fff', true); break;
     case 'glow': { const g = 0.7 + Math.sin(time() * 3) * 0.3; R(x - 8, y - 24, 16, 15, 'rgba(0,40,40,.55)', false); ctx.globalAlpha *= g; R(x - 4, y - 18, 3, 2, fc, false); R(x + 2, y - 18, 3, 2, fc, false); ctx.globalAlpha /= g; break; }
     case 'menpo': eyes('#b71c1c'); R(x - 8, y - 15, 16, 6, '#b71c1c'); R(x - 6, y - 13, 12, 1, '#212121', false); R(x - 4, y - 15, 1, 6, '#ffd54f', false); R(x + 3, y - 15, 1, 6, '#ffd54f', false); break;
+    case 'skull': { R(x - 8, y - 24, 16, 15, '#eceff1'); R(x - 8, y - 24, 16, 3, '#ffffff', false); const g = 0.6 + Math.sin(time() * 5) * 0.4;
+      R(x - 5, y - 20, 4, 4, '#111', false); R(x + 2, y - 20, 4, 4, '#111', false); ctx.save(); ctx.globalAlpha *= g; R(x - 4, y - 19, 2, 2, '#e040fb', false); R(x + 3, y - 19, 2, 2, '#e040fb', false); ctx.restore();
+      P([x - 1, y - 15, x + 1, y - 15, x, y - 13], '#111', false); for (let i = 0; i < 4; i++) R(x - 4 + i * 2.5, y - 12, 1.5, 2.5, '#fff', true); break; }
+    case 'starface': { R(x - 8, y - 24, 16, 15, '#283593'); const g = 0.7 + Math.sin(time() * 4) * 0.3; ctx.save(); ctx.globalAlpha *= g; R(x - 5, y - 19, 4, 2.5, '#ffffff', false); R(x + 2, y - 19, 4, 2.5, '#ffffff', false); ctx.restore();
+      C(x - 5, y - 13, 0.6, '#fff', false); C(x + 5, y - 22, 0.6, '#fff', false); C(x + 3, y - 12, 0.5, '#fff59d', false); break; }
     case 'serene': R(x - 4, y - 18, 3, 1.3, '#5d4037', false); R(x + 2, y - 18, 3, 1.3, '#5d4037', false); R(x, y - 13, 3, 1.3, '#d48c8c', false); R(x - 7, y - 15, 2, 1.5, 'rgba(255,138,128,.5)', false); R(x + 5, y - 15, 2, 1.5, 'rgba(255,138,128,.5)', false); break;
     default: eyes(); mouth();
   }
@@ -157,13 +169,16 @@ function drawHat(sp, x, y, sk) {
       P([x - 1, y - 30, x - 10, y - 40, x - 6, y - 31], '#ffd54f'); P([x + 1, y - 30, x + 10, y - 40, x + 6, y - 31], '#ffd54f'); C(x, y - 31, 2, '#ffd54f'); break;
     case 'wizard': { const b = Math.sin(tt * 2) * 1.5; P([x - 13, y - 25, x + 13, y - 25, x + 3, y - 44, x + 11 + b, y - 50, x - 3, y - 42], c); R(x - 13, y - 27, 26, 3, d);
       for (const [sx, sy] of [[-3, -33], [3, -38], [-6, -29]]) P([x + sx, y + sy - 1.5, x + sx + 0.6, y + sy, x + sx + 1.8, y + sy, x + sx + 0.8, y + sy + 0.8, x + sx + 1.2, y + sy + 2, x + sx, y + sy + 1.2, x + sx - 1.2, y + sy + 2, x + sx - 0.8, y + sy + 0.8, x + sx - 1.8, y + sy, x + sx - 0.6, y + sy], '#ffd54f', false); break; }
+    case 'reaperhood': P([x - 12, y - 7, x - 11, y - 29, x, y - 36, x + 11, y - 29, x + 12, y - 7, x + 9, y - 7, x + 9, y - 26, x - 9, y - 26, x - 9, y - 7], c); R(x - 9, y - 27, 18, 2, '#4a148c', false); break;
+    case 'galaxycrown': { R(x - 9, y - 30, 18, 5, c); for (let i = 0; i < 4; i++) P([x - 9 + i * 6, y - 30, x - 6 + i * 6, y - 37, x - 3 + i * 6, y - 30], c); C(x, y - 33, 1.8, '#e040fb', false);
+      for (let i = 0; i < 3; i++) { const a = tt * 1.8 + i * 2.09; C(x + Math.cos(a) * 14, y - 36 + Math.sin(a) * 4, 1.8 + (i === 0 ? 0.8 : 0), ['#4fc3f7', '#ff8a65', '#aed581'][i]); } break; }
     case 'halo': { R(x - 9, y - 27, 18, 4, '#ffe082', false); const h = Math.sin(tt * 2.5) * 1.5; ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, y - 34 + h, 10, 3, 0, 0, 7); ctx.stroke(); ctx.strokeStyle = 'rgba(255,245,157,.5)'; ctx.lineWidth = 5; ctx.stroke(); break; }
   }
 }
 /* ---------- senjata (koordinat lokal: bahu di 0,0, arah depan = +x) ---------- */
 function drawWeapon(sp, t, shirt, skin, sk) {
   const rc = (t.recoil || 0) * 4, g = sk.gun, tt = time(), w = sp.weapon;
-  if (w !== 'flag' && w !== 'hourstaff' && w !== 'teslastaff') { R(-2, -2, 9, 4, shirt); R(6, -2, 4, 4, skin); }
+  if (!['flag', 'hourstaff', 'teslastaff', 'starorb'].includes(w)) { R(-2, -2, 9, 4, shirt); R(6, -2, 4, 4, skin); }
   switch (w) {
     case 'rifle': R(-3 - rc, -1, 7, 4, '#6d4c41'); R(4 - rc, -2.5, 14, 5, g || '#37474f'); R(18 - rc, -1.2, 8, 2.4, '#263238'); R(9 - rc, 2, 3, 5, '#212121'); R(10 - rc, -5, 4, 2.5, '#212121'); break;
     case 'sniper': R(-5 - rc, -1, 9, 4, '#5d4037'); R(4 - rc, -2.5, 12, 5, g || '#3e2723'); R(16 - rc, -1, 18, 2.2, '#212121'); R(32 - rc, -1.6, 3, 3.2, '#212121'); R(7 - rc, -7, 10, 3.5, '#111'); C(17 - rc, -5.3, 1.6, '#4fc3f7', false); R(10 - rc, -3.5, 2, 1.5, '#111', false); break;
@@ -194,6 +209,12 @@ function drawWeapon(sp, t, shirt, skin, sk) {
       if ((t.recoil || 0) > 0.4) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 30, -0.2, 1.4); ctx.stroke(); } break; }
     case 'wizstaff': { R(-6, -1.5, 30, 3, '#6d4c41'); R(20, -3, 3, 6, '#ffd54f'); const p = 0.7 + Math.sin(tt * 4) * 0.3; ctx.globalAlpha *= 0.35 * p; C(28, 0, 7, g || '#b388ff', false); ctx.globalAlpha /= 0.35 * p; C(28, 0, 4, g || '#7c4dff'); C(27, -1.2, 1.4, '#ede7f6', false);
       for (let i = 0; i < 3; i++) { const a = tt * 3 + i * 2.1; C(28 + Math.cos(a) * 7, Math.sin(a) * 7, 0.9, '#e1bee7', false); } break; }
+    case 'scythe': { const sw = (t.recoil || 0) > 0.05 ? -t.recoil * 1.2 : 0; ctx.rotate(sw - 0.95); R(-6, -1.4, 36, 2.8, '#3e2723'); R(-6, -1.4, 36, 0.8, '#6d4c41', false); R(26, -2.4, 3, 4.8, '#9e9e9e');
+      P([28, -2, 40, -18, 44, -16, 34, -4, 30, 1], g || '#cfd8dc'); P([30, -2, 40, -15, 42, -14, 33, -3], '#ffffff', false);
+      ctx.save(); ctx.globalAlpha *= 0.35 + Math.sin(time() * 4) * 0.2; C(38, -10, 7, '#b388ff', false); ctx.restore(); break; }
+    case 'starorb': { R(-2, -2, 8, 4, shirt); const tt2 = time(), bob = Math.sin(tt2 * 3) * 1.5; ctx.save(); ctx.globalAlpha *= 0.35; C(14, -6 + bob, 9, '#7c4dff', false); ctx.restore();
+      C(14, -6 + bob, 5, '#311b92'); C(13, -7 + bob, 3, '#7c4dff', false); C(12, -8 + bob, 1.2, '#fff', false);
+      for (let i = 0; i < 4; i++) { const a = tt2 * 2.5 + i * 1.57; C(14 + Math.cos(a) * 9, -6 + bob + Math.sin(a) * 5, 1, i % 2 ? '#fff59d' : '#ffffff', false); } break; }
     case 'holyspear': { R(-8, -1.3, 34, 2.6, g || '#ffd54f'); R(-8, -1.3, 34, 0.8, '#fff8e1', false); P([26, -3.5, 36, 0, 26, 3.5], '#fffde7'); R(24, -4, 2, 8, '#ffb300');
       const p = 0.6 + Math.sin(tt * 3) * 0.4; ctx.globalAlpha *= 0.4 * p; C(33, 0, 6, '#fff59d', false); ctx.globalAlpha /= 0.4 * p; break; }
   }
@@ -218,11 +239,11 @@ function drawHero(t, x, y, sk, evo, base) {
   if (evo) { const top = HAT_TOP[spx.hat] || 30, b = Math.sin(time() * 3) * 1.5; ctx.fillStyle = '#ffd600'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(x - 7, y - top - 2 + b); ctx.lineTo(x - 7, y - top - 8 + b); ctx.lineTo(x - 3.5, y - top - 5 + b); ctx.lineTo(x, y - top - 10 + b); ctx.lineTo(x + 3.5, y - top - 5 + b); ctx.lineTo(x + 7, y - top - 8 + b); ctx.lineTo(x + 7, y - top - 2 + b); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   // senjata mengikuti arah bidik
-  const aim = sp.weapon === 'flag' || sp.weapon === 'hourstaff' || sp.weapon === 'teslastaff' ? 0
+  const aim = ['flag', 'hourstaff', 'teslastaff', 'scythe', 'starorb'].includes(sp.weapon) ? 0
     : t.type === 'mortar' ? -Math.PI / 2.6 * face + (face < 0 ? Math.PI : 0) : (t.angle || 0);
   ctx.save(); ctx.translate(x + 3 * face, y - 4); ctx.rotate(aim);
-  if (face < 0 && !['flag', 'hourstaff', 'teslastaff'].includes(sp.weapon)) ctx.scale(1, -1);
-  if (face < 0 && ['flag', 'hourstaff', 'teslastaff'].includes(sp.weapon)) ctx.scale(-1, 1);
+  const upright = ['flag', 'hourstaff', 'teslastaff', 'scythe', 'starorb'].includes(sp.weapon);
+  if (face < 0) ctx.scale(upright ? -1 : 1, upright ? 1 : -1);
   drawWeapon(sp, t, shirt, skin, sk);
   ctx.restore();
 }

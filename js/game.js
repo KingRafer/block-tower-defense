@@ -585,7 +585,7 @@ const TRACER = {
   laser: { col: '#ff1744', w: 4, life: 0.11, sfx: 'shoot' }, poison: { col: '#76ff03', w: 4, life: 0.12, sfx: 'freeze' },
   railgun: { col: '#82b1ff', w: 6, life: 0.25, sfx: 'snipe' }, pistol: { col: '#ffe082', w: 2, life: 0.05, sfx: 'shoot' },
   archer: { col: '#d7ccc8', w: 2, life: 0.1, sfx: 'shoot' }, shotgun: { col: '#ffcc80', w: 4, life: 0.07, sfx: 'snipe' }, ninja: { col: '#cfd8dc', w: 2, life: 0.08, sfx: 'shoot' },
-  samurai: { col: '#ffffff', w: 5, life: 0.12, sfx: 'snipe' }, wizard: { col: '#b388ff', w: 3, life: 0.16, sfx: 'stun' }, angel: { col: '#fff59d', w: 8, life: 0.3, sfx: 'snipe' },
+  samurai: { col: '#ffffff', w: 5, life: 0.12, sfx: 'snipe' }, cosmic: { col: '#ea80fc', w: 4, life: 0.2, sfx: 'stun' }, wizard: { col: '#b388ff', w: 3, life: 0.16, sfx: 'stun' }, angel: { col: '#fff59d', w: 8, life: 0.3, sfx: 'snipe' },
 };
 function tracer(x1, y1, x2, y2, col, w, life, type) {
   S.effects.push({ kind: 'tracer', x1, y1, x2, y2, life, max: 0.15, col, w });
@@ -604,7 +604,7 @@ function fireChain(t, L, first) {
   const hit = new Set([first.id]); let cur = first, dmg = L.dmg;
   const C = TRACER[t.type] || TRACER.tesla;
   if (L.perk === 'crit' && Math.random() < 0.25) { dmg *= 3; addText(first.x, first.y - 34, 'CRIT!', '#ff5252', 0.7); }
-  const extra = o => { if (L.slow) applySlow(o, L.slow); if (L.perk === 'freeze' && !o.boss && Math.random() < 0.2) { o.frozenUntil = S.time + 1; addText(o.x, o.y - 34, '❄', '#81d4fa', 0.6); } };
+  const extra = o => { if (L.slow) applySlow(o, L.slow); if (L.dot && !o.dead) applyDot(o, L, t); if (L.perk === 'freeze' && !o.boss && Math.random() < 0.2) { o.frozenUntil = S.time + 1; addText(o.x, o.y - 34, '❄', '#81d4fa', 0.6); } };
   damage(first, dmg, L, t); extra(first);
   for (let i = 1; i < L.chain; i++) {
     let next = null, nd = L.chainRange * T;
@@ -638,7 +638,8 @@ function pulseAura(t, L) {
     if (o.dead || (o.hidden && !canSeeHidden(t))) continue;
     if (Math.hypot(o.x - t.x, o.y - t.y) <= L.range * T) { damage(o, L.dmg, L, t, true); applySlow(o, L.slow); any = true; }
   }
-  if (any) { S.effects.push({ kind: 'shock', x: t.x, y: t.y, r: L.range * T, life: 0.4, max: 0.4, col: '#64ffda' }); fxEmit(['s', t.x | 0, t.y | 0, (L.range * T) | 0, '#64ffda', 0.4]); }
+  const ac = t.type === 'reaper' ? '#b388ff' : '#64ffda';
+  if (any) { S.effects.push({ kind: 'shock', x: t.x, y: t.y, r: L.range * T, life: 0.4, max: 0.4, col: ac }); fxEmit(['s', t.x | 0, t.y | 0, (L.range * T) | 0, ac, 0.4]); }
 }
 function explode(p) {
   const R = p.L.splash * T;

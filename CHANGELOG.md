@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.6.0] — 2026-11-26
+### Ditambahkan
+- **Unit RAHASIA** (kelangkaan baru, sangat langka): Malaikat Maut (aura sabit kehampaan) & Kaisar Kosmik (bintang jatuh berantai) — peluang Summon 0,03%, Lucky 0,15%, atau dari Toko Pass.
+- **Index Unit** di menu Summon: semua 27 unit terlihat bentuknya (normal & evolusi), statistik, peluang per tarikan, dan status koleksi.
+- **Misi Pass** (berlaku satu season) yang memberi XP Pass + 🎟️ Token.
+- **Toko Pass**: tukar 🎟️ Token (dari klaim tier & misi pass) dengan Diamond, Koin, Kristal, Batu Evolusi, unit Legendaris/Mitos/RAHASIA acak, dan skin season — stok per season.
+### Diubah
+- **Tema UI serasi "Midnight & Gold"**: semua panel, tile, kartu & tombol memakai satu palet (navy + aksen emas), tidak lagi warna-warni.
+- **Latar menu baru** untuk semua layar: langit sesuai jam WIB, sinar matahari berputar, bintang berkelip, 3 lapis pegunungan bersalju, kastil dengan jendela menyala, deretan pohon, kunang-kunang.
+- **Menu utama di HP muat dalam 1 layar** tanpa scroll; room mabar di HP juga lebih ringkas.
+
 ## [4.5.0] — 2026-11-26
 ### Ditambahkan
 - **6 unit baru (total 25)**: Pemanah (Biasa), Shotgunner (Langka), Ninja (Epik), Samurai & Penyihir (Legendaris), Malaikat Agung (Mitos) — lengkap dengan evolusi.

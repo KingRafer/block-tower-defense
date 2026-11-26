@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '4.5.0';
+const VERSION = '4.6.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
@@ -229,6 +229,23 @@ Object.assign(TOWERS, {
       {name:'Penghakiman',    cost:9000,  dmg:180, range:7.0, rate:1.8, line:true, pierceArmor:true, hidden:true, dot:{pct:0.7, dur:3, col:'burn'}, bossMul:1.3},
       {name:'Serafim',        cost:18000, dmg:340, range:7.8, rate:1.5, line:true, pierceArmor:true, hidden:true, dot:{pct:0.8, dur:4, col:'burn'}, bossMul:1.6}]},
 });
+/* ---------------- UNIT RAHASIA (sangat langka) ---------------- */
+Object.assign(TOWERS, {
+  reaper: { name:'Malaikat Maut', color:'#311b92', limit:1, role:'Rahasia',
+    desc:'Penuai jiwa dari kehampaan. Aura sabit mematikan yang melukai & memperlambat semua musuh di sekitarnya, menembus armor.',
+    levels:[
+      {name:'Malaikat Maut',  cost:6000,  dmg:30,  range:2.8, rate:0.6, aura:true, slow:0.35, hidden:true, pierceArmor:true},
+      {name:'Sabit Kehampaan',cost:6000,  dmg:55,  range:3.1, rate:0.55,aura:true, slow:0.42, hidden:true, pierceArmor:true},
+      {name:'Penuai Jiwa',    cost:12000, dmg:100, range:3.4, rate:0.5, aura:true, slow:0.5,  hidden:true, pierceArmor:true, bossMul:1.4},
+      {name:'Raja Kematian',  cost:25000, dmg:190, range:3.8, rate:0.45,aura:true, slow:0.6,  hidden:true, pierceArmor:true, bossMul:1.8}]},
+  cosmic: { name:'Kaisar Kosmik', color:'#1a237e', limit:1, role:'Rahasia',
+    desc:'Penguasa galaksi. Bintang jatuh yang melompat ke banyak musuh, membakar & memperlambat mereka.',
+    levels:[
+      {name:'Kaisar Kosmik',  cost:7000,  dmg:80,  range:5.0, rate:1.5, chain:6,  chainRange:2.2, slow:0.3,  hidden:true, pierceArmor:true, dot:{pct:0.4, dur:3, col:'burn'}},
+      {name:'Nebula',         cost:7000,  dmg:140, range:5.4, rate:1.4, chain:7,  chainRange:2.4, slow:0.35, hidden:true, pierceArmor:true, dot:{pct:0.5, dur:3, col:'burn'}},
+      {name:'Supernova',      cost:14000, dmg:250, range:5.8, rate:1.25,chain:9,  chainRange:2.6, slow:0.4,  hidden:true, pierceArmor:true, dot:{pct:0.6, dur:3, col:'burn'}, bossMul:1.4},
+      {name:'Lubang Hitam',   cost:28000, dmg:460, range:6.3, rate:1.1, chain:12, chainRange:2.9, slow:0.45, hidden:true, pierceArmor:true, dot:{pct:0.7, dur:4, col:'burn'}, bossMul:1.8}]},
+});
 const TOWER_ORDER = [...UNIT_TYPES].sort((a, b) => RARITY[UNIT_RARITY[a]].rank - RARITY[UNIT_RARITY[b]].rank);
 const DEFAULT_LOADOUT = [...STARTER_UNITS];
 /* Jenis proyektil (tower lain memakai tembakan langsung) */
@@ -371,6 +388,8 @@ const EVOS = {
   ninja:     { name:'Kage',          color:'#000000', perk:'crit',     mul:{ dmg:1.35, chainAdd:2 }, desc:'Shuriken memantul +2 dan 25% critical.' },
   samurai:   { name:'Shogun Naga',   color:'#7f0000', perk:'crit',     mul:{ dmg:1.45, range:1.1 }, desc:'25% peluang tebasan critical 3× damage.' },
   wizard:    { name:'Penyihir Waktu',color:'#311b92', perk:'freeze',   mul:{ dmg:1.35, chainAdd:2 }, desc:'Sihir 20% membekukan musuh 1 detik, +2 lompatan.' },
+  reaper:    { name:'Dewa Kematian', color:'#000000', perk:null,       mul:{ dmg:1.5, slowAdd:0.1, range:1.15 }, desc:'Aura +50% damage, +10% perlambatan, +15% jangkauan.' },
+  cosmic:    { name:'Pencipta Semesta', color:'#000051', perk:'crit', mul:{ dmg:1.45, chainAdd:3 }, desc:'Bintang melompat +3 dan 25% critical.' },
   angel:     { name:'Serafim Emas',  color:'#ffd54f', perk:'crit',     mul:{ dmg:1.4, range:1.1 },  desc:'25% peluang sinar critical 3× damage.' },
 };
 
