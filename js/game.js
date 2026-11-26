@@ -435,6 +435,7 @@ function computeL(type, level, unit = unitOf(type)) {
   if (L.range) L.range = r2(L.range * (tr && tr.rangeMul || 1) * (em.range || 1));
   if (L.rate) L.rate = r2(L.rate * (tr && tr.rateMul || 1));
   if (L.splash) L.splash = r2(L.splash * (em.splash || 1));
+  if (L.goldHit) L.goldHit = Math.round(L.goldHit * (em.goldHit || 1) * ((tr && tr.rewardMul) || 1));
   if (L.chain) L.chain += em.chainAdd || 0;
   if (L.rampMax) L.rampMax = r2(L.rampMax + (em.rampAdd || 0));
   if (L.dot) L.dot = { ...L.dot, pct: L.dot.pct * (em.dotMul || 1) };
@@ -570,6 +571,10 @@ function fire(t, L, e) {
   if (L.beam) { if (t.beamTarget !== e.id) { t.beamTarget = e.id; t.heat = 0; } t.heat = Math.min(L.rampMax, (t.heat || 0) + 0.06); dmg *= 1 + t.heat; }
   if (L.perk === 'freeze' && !e.boss && Math.random() < 0.2) { e.frozenUntil = S.time + 1; addText(e.x, e.y - 34, '❄', '#81d4fa', 0.6); }
   damage(e, dmg, L, t);
+  if (L.goldHit) {   // Penambang Emas: setiap pukulan menghasilkan uang (teks digabung agar tidak ramai)
+    addCash(t.owner || S.me, L.goldHit); t.goldAcc = (t.goldAcc || 0) + L.goldHit;
+    if (S.time - (t.goldTxt || 0) > 0.6) { addText(t.x, t.y - 34, '+$' + t.goldAcc, '#ffd54f', 0.8); fxEmit(['x', t.x, t.y - 34, '+$' + t.goldAcc, '#ffd54f', 0.8]); t.goldAcc = 0; t.goldTxt = S.time; }
+  }
   if (L.dot && !e.dead) applyDot(e, L, t);
   if (L.splashHit) {      // semburan / racun mengenai musuh di sekitar target
     for (const o of S.enemies) {
@@ -586,7 +591,7 @@ const TRACER = {
   laser: { col: '#ff1744', w: 4, life: 0.11, sfx: 'shoot' }, poison: { col: '#76ff03', w: 4, life: 0.12, sfx: 'freeze' },
   railgun: { col: '#82b1ff', w: 6, life: 0.25, sfx: 'snipe' }, pistol: { col: '#ffe082', w: 2, life: 0.05, sfx: 'shoot' },
   archer: { col: '#d7ccc8', w: 2, life: 0.1, sfx: 'shoot' }, shotgun: { col: '#ffcc80', w: 4, life: 0.07, sfx: 'snipe' }, ninja: { col: '#cfd8dc', w: 2, life: 0.08, sfx: 'shoot' },
-  samurai: { col: '#ffffff', w: 5, life: 0.12, sfx: 'snipe' }, cosmic: { col: '#ea80fc', w: 4, life: 0.2, sfx: 'stun' }, wizard: { col: '#b388ff', w: 3, life: 0.16, sfx: 'stun' }, angel: { col: '#fff59d', w: 8, life: 0.3, sfx: 'snipe' },
+  samurai: { col: '#ffffff', w: 5, life: 0.12, sfx: 'snipe' }, cosmic: { col: '#ea80fc', w: 4, life: 0.2, sfx: 'stun' }, goldminer: { col: '#ffd54f', w: 3, life: 0.07, sfx: 'shoot' }, wizard: { col: '#b388ff', w: 3, life: 0.16, sfx: 'stun' }, angel: { col: '#fff59d', w: 8, life: 0.3, sfx: 'snipe' },
 };
 function tracer(x1, y1, x2, y2, col, w, life, type) {
   S.effects.push({ kind: 'tracer', x1, y1, x2, y2, life, max: 0.15, col, w });

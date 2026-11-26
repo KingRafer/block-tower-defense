@@ -78,5 +78,28 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   assert.strictEqual(r.body.vault.pass.tok, tokNow - 350);
   r = await act('passShopBuy', { id: 'legend' }); assert.strictEqual(r.status, 400, 'token kurang / stok');
   assert.strictEqual((await act('passShopBuy', { id: 'secret' })).status, 400, 'token kurang');
+  // kode Beta EARLYACC (bawaan, tanpa dibuat admin) → unit eksklusif, tidak bisa ditukar
+  r = await call('redeem', { token: P.token, body: { code: 'earlyacc' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  const gm = r.body.vault.units.find(u => u.type === 'goldminer');
+  assert(gm && gm.tradable === false, 'unit beta didapat & tidak bisa ditukar');
+  assert.strictEqual(SHARED.UNIT_RARITY.goldminer, 'beta');
+  assert.strictEqual((await call('redeem', { token: P.token, body: { code: 'EARLYACC' } })).status, 409, 'sekali per akun');
+  assert.strictEqual((await call('redeem', { token: AD.token, body: { code: 'EARLYACC' } })).status, 200, 'akun lain bisa');
+  // unit beta tidak pernah keluar dari summon
+  assert(!SHARED.RARITY_ORDER.includes('beta') && !('beta' in SHARED.GACHA.rates));
+  // auto jual
+  assert.strictEqual((await act('setAutoSell', { rarities: ['common', 'rare', 'mythic', 'x'] })).body.vault.autoSell.join(), 'common,rare', 'hanya kelangkaan yang diizinkan');
+  await call('admin.grant', { token: AD.token, body: { id: P.user.id, currency: 'diamonds', amount: 20000 } });
+  const before = (await call('eco.state', { method: 'GET', token: P.token })).body.vault;
+  r = await act('summon', { banner: 'std', count: 10 });
+  const res = r.body.result, kept = res.units.filter(u => !u.sold), soldU = res.units.filter(u => u.sold);
+  assert.strictEqual(r.body.vault.units.length, before.units.length + kept.length, 'unit terjual tidak masuk inventori');
+  soldU.forEach(u => assert(['common', 'rare'].includes(SHARED.UNIT_RARITY[u.type]), 'hanya rarity terpilih'));
+  if (soldU.length) assert(res.sold.coins > 0);
+  // jual (scrap) memberi koin
+  const c0 = r.body.vault.coins, sellId = r.body.vault.units.find(u => !u.lock && u.type !== 'goldminer').id;
+  r = await act('scrap', { unitIds: [sellId] }); assert(r.body.vault.coins > c0, 'jual memberi koin');
+  await act('setAutoSell', { rarities: [] });
   console.log('✅ Semua uji misi, season pass & kode redeem lulus');
 })().catch(e => { console.error('❌', e); process.exit(1); });

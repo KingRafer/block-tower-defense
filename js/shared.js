@@ -18,7 +18,10 @@
     legendary: { name: 'Legendaris', color: '#ffb300', rank: 3 },
     mythic:    { name: 'Mitos',      color: '#ff1744', rank: 4 },
     secret:    { name: 'Rahasia',    color: '#00e5ff', rank: 5 },
+    beta:      { name: 'Beta',       color: '#26c6da', rank: 3, exclusive: true },
   };
+  /* Kelangkaan eksklusif: tidak bisa didapat dari Summon */
+  const EXCLUSIVE = ['beta'];
   const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic', 'secret'];
 
   /* ---------------- UNIT ---------------- */
@@ -29,6 +32,7 @@
     rocketeer: 'legendary', railgun: 'legendary', warden: 'legendary', samurai: 'legendary', wizard: 'legendary',
     nuke: 'mythic', dragon: 'mythic', angel: 'mythic',
     reaper: 'secret', cosmic: 'secret',
+    goldminer: 'beta',
   };
   const UNIT_TYPES = Object.keys(UNIT_RARITY);
   const STARTER_UNITS = ['scout', 'sniper', 'demoman', 'farm'];
@@ -136,7 +140,9 @@
     const s = dayStr(now).split('-').reduce((a, x) => a * 31 + +x, 7);
     return pool[s % pool.length];
   }
-  const SCRAP = { common: { coins: 15 }, rare: { coins: 40 }, epic: { coins: 100, crystals: 1 }, legendary: { coins: 300, stones: 1 }, mythic: { coins: 1000, stones: 3 }, secret: { coins: 4000, stones: 8 } };
+  const SCRAP = { common: { coins: 15 }, rare: { coins: 40 }, epic: { coins: 100, crystals: 1 }, legendary: { coins: 300, stones: 1 }, mythic: { coins: 1000, stones: 3 }, secret: { coins: 4000, stones: 8 }, beta: { coins: 200 } };
+  /* Jual otomatis saat summon: hanya kelangkaan ini yang boleh di-auto-sell */
+  const AUTO_SELL_OK = ['common', 'rare', 'epic', 'legendary'];
 
   /* ---------------- HADIAH ---------------- */
   const MAP_STARS = { grass: 1, desert: 2, snow: 3, lava: 4 };
@@ -162,6 +168,7 @@
     if (v.diamonds == null) v.diamonds = 300;
     if (!Array.isArray(v.skills)) v.skills = [...new Set([...FREE_SKILLS, ...Object.keys(v.skillUses || {}).filter(k => v.skillUses[k] > 0)])];
     v.pity = { std: 0, feat: 0, lucky: 0, ...(v.pity || {}) };
+    if (!Array.isArray(v.autoSell)) v.autoSell = [];
     if (!v.missions || typeof v.missions !== 'object') v.missions = {};
     if (v.pass && typeof v.pass !== 'object') v.pass = null;
     return v;
@@ -295,7 +302,7 @@
       const lucky = banner === 'lucky', cfg = lucky ? LUCKY : GACHA;
       pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
       bumpMissions(v, ctx.now, { summons: n });
-      const featured = featuredUnit(ctx.now), out = [];
+      const featured = featuredUnit(ctx.now), out = [], sold = {};
       for (let i = 0; i < n; i++) {
         v.pity[banner] = (v.pity[banner] || 0) + 1;
         let r = weighted(ctx.rng, cfg.rates);
@@ -306,10 +313,18 @@
         let pool = unitsOfRarity(r), type = pool[Math.floor(ctx.rng() * pool.length)];
         if (banner === 'feat' && RARITY[r].rank >= 3 && ctx.rng() < 0.5) type = featured;
         const u = makeUnit(type, ctx.rng, ctx.now + i);
-        v.units.push(u); out.push(u);
+        // Auto-sell: jual langsung bila kelangkaan dipilih & jenis unit ini sudah dimiliki (unit baru tetap disimpan)
+        if ((v.autoSell || []).includes(r) && v.units.some(x => x.type === type)) {
+          for (const [k, q] of Object.entries(SCRAP[r] || {})) { v[k] = (v[k] || 0) + q; sold[k] = (sold[k] || 0) + q; }
+          out.push({ ...u, sold: true });
+        } else { v.units.push(u); out.push(u); }
       }
       v.pulls = (v.pulls || 0) + n;
-      return { units: out, pity: v.pity[banner] };
+      return { units: out, pity: v.pity[banner], sold };
+    },
+    setAutoSell(v, p) {
+      v.autoSell = (Array.isArray(p.rarities) ? p.rarities : []).filter(r => AUTO_SELL_OK.includes(r));
+      return { autoSell: v.autoSell };
     },
     rollTrait(v, p, ctx) {
       const u = findUnit(v, p.unitId);
@@ -504,6 +519,6 @@
     TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, STARTER_SKILLS, TOPUP, GACHA, LUCKY, CURRENCY, unitsOfRarity, featuredUnit, dayStr, SCRAP,
     MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
     newVault, makeUnit, fixVault, actions, SKILL_PRICES, FREE_SKILLS, EVENT, DEFAULTS, applyGlobal,
-    MISSIONS, missionProgress, rollMissions, PASS, PASS_SHOP, PASS_TOK, rollPass, passTier, passReward, seasonName, seasonStr, giveReward,
+    EXCLUSIVE, AUTO_SELL_OK, MISSIONS, missionProgress, rollMissions, PASS, PASS_SHOP, PASS_TOK, rollPass, passTier, passReward, seasonName, seasonStr, giveReward,
   };
 });

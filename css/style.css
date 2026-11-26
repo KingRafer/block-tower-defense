@@ -1272,3 +1272,92 @@ tr.click, td.click { cursor: pointer; } tr.click:hover { background: #ffffff10; 
   .lo-slots .ucard canvas { width: 34px; height: 34px; } .lo-slots .ucard.empty { min-height: 48px !important; }
   .lo-row > b, .lo-row > h4 { font-size: 13px; }
 }
+
+/* =========================================================
+ * v4.8 — Unit ringkas, jual, auto jual
+ * ========================================================= */
+.slot .ico { background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.12), rgba(0,0,0,.25)); border-width: 2px; padding: 0; }
+.ucard .uq { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 6px; font-style: normal; font: 800 13px/20px var(--font-h); text-align: center; cursor: pointer; z-index: 2;
+  background: rgba(10,14,30,.85); color: var(--gold-1); border: 1px solid rgba(255,217,119,.5); }
+.ucard .uq.on { background: #2e7d32; color: #fff; border-color: #81c784; }
+.ucard .uq:active { transform: scale(.9); }
+.ug-hint { display: block; margin: 2px 0 6px; font-size: 11px; }
+.ubar { gap: 6px; flex-wrap: wrap; }
+.ud-compact { display: flex; flex-direction: column; gap: 8px; border-top: 3px solid var(--rc); }
+.ud-head { display: flex; gap: 10px; align-items: center; } .ud-head canvas { width: 60px; height: 60px; flex: none; background: rgba(0,0,0,.25); border-radius: 12px; }
+.ud-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .ud-t > b { font: 700 17px var(--font-h); }
+.ud-t .tag { font-size: 10px; padding: 1px 6px; }
+.mbar.sm { height: 13px; } .mbar.sm span { font-size: 9px; }
+.ud-act { display: flex; gap: 6px; flex-wrap: wrap; } .ud-act .btn small { display: inline; font-size: 10px; margin-left: 3px; }
+.ud-desc { font-size: 12px; color: var(--ui-dim); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ud-tabs { display: flex; width: 100%; } .ud-tabs button { flex: 1; padding: 5px 4px; font-size: 12px; }
+.ud-body { display: flex; flex-direction: column; gap: 6px; font-size: 12px; } .ud-body table { font-size: 11px; width: 100%; }
+.ud-st { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .ud-st > div { background: #10162e; border-radius: 10px; padding: 6px 8px; } .ud-st small { color: var(--ui-dim); display: block; } .ud-st b { font-size: 12px; }
+.ud-body details summary { cursor: pointer; color: var(--gold-1); font-weight: 700; font-size: 12px; }
+.sellbox { margin-top: 8px; padding: 10px; border-radius: 14px; background: rgba(194,65,79,.08); border: 1px solid rgba(194,65,79,.45); display: flex; flex-direction: column; gap: 6px; }
+.sellbox .seg { flex-wrap: wrap; } .sellbox .seg button.on { background: var(--rc); color: #fff; }
+.chk { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; } .sellsum { font: 700 14px var(--font-h); color: var(--gold-1); }
+.aslist { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.asrow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: #10162e; border: 2px solid var(--ui-edge); color: var(--ui-text); cursor: pointer; text-align: left; }
+.asrow b { font: 700 15px var(--font-h); color: var(--rc); min-width: 90px; } .asrow small { color: var(--ui-dim); }
+.asrow.on { border-color: var(--rc); background: color-mix(in srgb, var(--rc) 12%, #10162e); }
+.asrow .tog { width: 38px; height: 22px; border-radius: 11px; background: #2a3358; position: relative; flex: none; }
+.asrow .tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #9aa3c7; transition: left .15s; }
+.asrow .tog.on { background: #2e7d32; } .asrow .tog.on::after { left: 19px; background: #fff; }
+.soldtag { display: block; font-style: normal; font: 700 11px var(--font-h); color: #fff; background: #c2414f; border-radius: 6px; padding: 1px 6px; margin-top: 3px; }
+.rar[style*="#26c6da"] { background: linear-gradient(90deg, #26c6da, #ffd54f) !important; color: #102030; }
+
+/* =========================================================
+ * v4.8 — Gameplay HP lanskap: map penuh setinggi layar
+ * kiri: statistik + skill • tengah: map • kanan: tombol + tower
+ * ========================================================= */
+.hud-stats, .hud-btns { display: contents; }
+@media (max-height: 560px) and (orientation: landscape) {
+  body { overflow: hidden; }
+  #wrap { position: fixed; inset: 0; max-width: none; padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); margin: 0;
+    display: grid; grid-template-columns: minmax(74px, 1fr) auto minmax(74px, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 0 6px; height: 100dvh; }
+  #hud, #bottom { display: contents; }
+  #hud > .spacer, #preview { display: none !important; }
+  .hud-stats { display: flex; flex-direction: column; gap: 4px; grid-column: 1; grid-row: 1; padding: 6px 0 0 6px; }
+  #abilities { grid-column: 1; grid-row: 2; display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; align-content: end; padding: 0 0 8px 6px; }
+  #stage { grid-column: 2; grid-row: 1 / 3; position: relative; height: 100dvh; display: flex; align-items: center; justify-content: center; margin: 0; }
+  canvas#game { width: auto !important; height: auto !important; max-width: calc(100vw - 156px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important; max-height: 100dvh !important; aspect-ratio: 960 / 576; border-width: 0 2px; border-radius: 0; box-shadow: none; }
+  #stage canvas#game { height: 100dvh !important; }
+  .hud-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; grid-column: 3; grid-row: 1; padding: 6px 6px 0 0; align-content: start; }
+  #bar { grid-column: 3; grid-row: 2; display: grid !important; grid-template-columns: 1fr 1fr; gap: 4px; align-content: start; padding: 6px 6px 8px 0; overflow-y: auto; }
+  /* statistik ringkas */
+  #hud .stat { min-height: 0; padding: 3px 6px; gap: 4px; font-size: 12px; border-width: 1px; border-radius: 9px; background: rgba(14,19,40,.92); }
+  #hud .stat .ic { font-size: 13px; } #hud .stat .sv b { font-size: 11px; } #hud .stat .bar { height: 4px; } #hud .stat.wave .sv, #hud .stat.hp .sv { min-width: 0; flex: 1; }
+  /* tombol: ikon saja */
+  .hud-btns .btn { padding: 4px 2px; font-size: 11px; min-width: 0; border-bottom-width: 3px; border-radius: 9px; display: flex; align-items: center; justify-content: center; gap: 2px; min-height: 30px; }
+  .hud-btns .btn .bl { display: none; } .hud-btns .btn .bi { font-size: 14px; }
+  #startBtn, #skipWaveBtn { grid-column: 1 / -1; } #startBtn .bl, #skipWaveBtn .bl { display: inline; font-size: 10px; }
+  #speedBtn { font-size: 11px; }
+  /* tower & skill */
+  #bar .slot { width: auto !important; padding: 2px 2px 3px; border-radius: 9px; border-bottom-width: 3px; min-height: 0; }
+  #bar .slot .ico { width: 30px; height: 30px; margin: 0 auto; } #bar .slot .nm { display: none; } #bar .slot .pr { font-size: 10px; } #bar .slot .key, #bar .slot .cnt, #bar .slot .tr { display: none; }
+  #abilities .abil { width: auto; height: 34px; border-radius: 10px; } #abilities .abil .ai { font-size: 16px; } #abilities .abil .ak { display: none; }
+  /* panel tower: kartu kecil melayang di sisi kanan map */
+  #panel { position: absolute !important; right: 6px; top: 6px; bottom: auto !important; left: auto !important; width: 196px !important; max-height: calc(100dvh - 12px); overflow-y: auto;
+    padding: 8px !important; font-size: 11px; border-radius: 12px !important; background: rgba(12,17,36,.94) !important; transform: none !important; }
+  #panel h3, #panel .ph b { font-size: 14px; } #panel .btn { font-size: 11px !important; padding: 4px 6px !important; min-width: 0 !important; }
+  #panel table, #panel .prow { font-size: 10px; }
+  #banner { font-size: 34px !important; }
+  #toasts { top: 6px !important; left: 50% !important; right: auto !important; transform: translateX(-50%); max-width: 60vw; }
+  #toasts .toast { font-size: 11px; padding: 5px 10px; }
+  #mpPlayers { top: 4px; left: 4px; transform: scale(.85); transform-origin: top left; }
+  #chat { bottom: 4px; left: 4px; max-width: 45%; }
+  #rotateHint { display: none !important; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  #panel.left { left: 6px !important; right: auto !important; }
+  #panel .row { margin: 1px 0; } #panel .btn { margin-top: 4px; }
+}
+canvas.pico { width: 44px !important; height: 44px !important; border-radius: 10px; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.12), rgba(0,0,0,.3)); border: 2px solid rgba(255,217,119,.3); flex: none; }
+/* HP potret: map selebar layar, kontrol rapat di bawah */
+@media (max-width: 760px) and (orientation: portrait) {
+  #wrap { padding: 4px; } canvas#game { width: 100% !important; max-height: none !important; border-radius: 8px; }
+  #hud { gap: 4px; padding: 4px; } #hud .stat { min-height: 0; padding: 3px 7px; font-size: 13px; }
+  .hud-btns .btn { padding: 4px 8px; font-size: 12px; min-height: 30px; } .hud-btns .btn .bl { font-size: 11px; }
+  #bar .slot .nm { font-size: 9px; } #panel { max-height: 46dvh !important; }
+}

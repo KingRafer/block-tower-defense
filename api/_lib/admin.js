@@ -224,10 +224,18 @@ const routes = {
   'admin.log': async (req, d) => ({ log: await d.collection('adminlog').find({}).sort({ at: -1 }).limit(60).toArray() }),
 };
 
+/** Kode bawaan (otomatis dibuat di database saat pertama dipakai) */
+const BUILTIN_CODES = {
+  EARLYACC: { rewards: { unit: 'goldminer', diamonds: 300 }, maxUses: 1e7, expiresAt: 0, note: 'Hadiah pemain Beta: unit eksklusif Penambang Emas', untradable: true },
+};
 /** Pemain menukar kode redeem (sekali per akun) */
 async function redeem(d, user, raw) {
   const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const c = code && await d.collection('codes').findOne({ _id: code });
+  let c = code && await d.collection('codes').findOne({ _id: code });
+  if (!c && BUILTIN_CODES[code]) {
+    try { await d.collection('codes').insertOne({ _id: code, ...BUILTIN_CODES[code], uses: 0, createdAt: Date.now(), by: 'system' }); } catch (e) { if (e.code !== 11000) throw e; }
+    c = await d.collection('codes').findOne({ _id: code });
+  }
   if (!c) throw err(404, 'Kode tidak valid');
   if (c.expiresAt && Date.now() > c.expiresAt) throw err(410, 'Kode sudah kedaluwarsa');
   const key = code + '|' + user._id;

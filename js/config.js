@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '4.7.0';
+const VERSION = '4.8.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
@@ -246,6 +246,17 @@ Object.assign(TOWERS, {
       {name:'Supernova',      cost:14000, dmg:250, range:5.8, rate:1.25,chain:9,  chainRange:2.6, slow:0.4,  hidden:true, pierceArmor:true, dot:{pct:0.6, dur:3, col:'burn'}, bossMul:1.4},
       {name:'Lubang Hitam',   cost:28000, dmg:460, range:6.3, rate:1.1, chain:12, chainRange:2.9, slow:0.45, hidden:true, pierceArmor:true, dot:{pct:0.7, dur:4, col:'burn'}, bossMul:1.8}]},
 });
+/* ---------------- UNIT EKSKLUSIF BETA (kode EARLYACC) ---------------- */
+Object.assign(TOWERS, {
+  goldminer: { name:'Penambang Emas', color:'#ffb300', limit:2, role:'Ekonomi • Beta',
+    desc:'Unit eksklusif pemain Beta. Setiap pukulan beliung menghasilkan emas — cocok untuk grinding di awal permainan.',
+    levels:[
+      {name:'Penambang Emas', cost:400,  dmg:2,  range:2.8, rate:0.8,  goldHit:4},
+      {name:'Beliung Baja',   cost:450,  dmg:3,  range:3.0, rate:0.7,  goldHit:7},
+      {name:'Lampu Tambang',  cost:900,  dmg:5,  range:3.2, rate:0.6,  goldHit:11, hidden:true},
+      {name:'Urat Emas',      cost:1800, dmg:8,  range:3.4, rate:0.55, goldHit:16, hidden:true},
+      {name:'Raja Tambang',   cost:3600, dmg:13, range:3.6, rate:0.5,  goldHit:24, hidden:true, pierceArmor:true}]},
+});
 const TOWER_ORDER = [...UNIT_TYPES].sort((a, b) => RARITY[UNIT_RARITY[a]].rank - RARITY[UNIT_RARITY[b]].rank);
 const DEFAULT_LOADOUT = [...STARTER_UNITS];
 /* Jenis proyektil (tower lain memakai tembakan langsung) */
@@ -390,6 +401,7 @@ const EVOS = {
   wizard:    { name:'Penyihir Waktu',color:'#311b92', perk:'freeze',   mul:{ dmg:1.35, chainAdd:2 }, desc:'Sihir 20% membekukan musuh 1 detik, +2 lompatan.' },
   reaper:    { name:'Dewa Kematian', color:'#000000', perk:null,       mul:{ dmg:1.5, slowAdd:0.1, range:1.15 }, desc:'Aura +50% damage, +10% perlambatan, +15% jangkauan.' },
   cosmic:    { name:'Pencipta Semesta', color:'#000051', perk:'crit', mul:{ dmg:1.45, chainAdd:3 }, desc:'Bintang melompat +3 dan 25% critical.' },
+  goldminer: { name:'Juragan Emas',  color:'#ff6f00', perk:null,       mul:{ dmg:1.3, goldHit:1.5 }, desc:'Emas per pukulan +50%.' },
   angel:     { name:'Serafim Emas',  color:'#ffd54f', perk:'crit',     mul:{ dmg:1.4, range:1.1 },  desc:'25% peluang sinar critical 3× damage.' },
 };
 

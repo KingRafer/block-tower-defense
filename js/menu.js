@@ -104,7 +104,7 @@ const Menu = {
       <canvas width="64" height="64" data-icon="${u.type}" data-skin="${u.skin || 'default'}" data-evo="${u.evo ? 1 : 0}"></canvas>
       <b>${this.unitName(u)}</b><small>M${unitLevel(u.xp)}${u.evo ? ' ★' : ''}</small>
       ${tr ? `<i class="utr" style="background:${RARITY[tr.rarity].color}" title="${tr.name}">${tr.icon}</i>` : ''}
-      ${inLo && !opts.noEquip ? '<i class="ueq">✔</i>' : ''}${u.lock ? '<i class="ulock">🔒</i>' : ''}${u.tradable === false && opts.showTrade ? '<i class="unt" title="Tidak bisa diperdagangkan">⛔</i>' : ''}</div>`;
+      ${opts.quick ? `<i class="uq ${inLo ? 'on' : ''}" data-act="${inLo ? 'unequip' : 'equip'}:${u.id}" title="${inLo ? 'Lepas' : 'Pasang'}">${inLo ? '✔' : '＋'}</i>` : inLo && !opts.noEquip ? '<i class="ueq">✔</i>' : ''}${u.lock ? '<i class="ulock">🔒</i>' : ''}${u.tradable === false && opts.showTrade ? '<i class="unt" title="Tidak bisa diperdagangkan">⛔</i>' : ''}</div>`;
   },
   avatar(u, size = 44) {
     const name = (u && u.name) || 'Tamu';
@@ -134,9 +134,9 @@ const Menu = {
     const sel = this.idxSel && TOWERS[this.idxSel] ? this.idxSel : null, total = UNIT_TYPES.length, got = UNIT_TYPES.filter(t => own[t]).length;
     const rateOf = (cfg, t) => { const r = UNIT_RARITY[t]; return (cfg.rates[r] || 0) / SHARED.unitsOfRarity(r).length; };
     const pct = x => x >= 1 ? x.toFixed(1) + '%' : x >= 0.1 ? x.toFixed(2) + '%' : x.toFixed(3) + '%';
-    const groups = RARITY_ORDER.slice().reverse().map(r => {
+    const groups = [...SHARED.EXCLUSIVE, ...RARITY_ORDER.slice().reverse()].map(r => {
       const list = SHARED.unitsOfRarity(r);
-      return `<div class="ix-group r-${r}" style="--rc:${RARITY[r].color}"><div class="ix-head"><b>${RARITY[r].name}</b><small>${list.filter(t => own[t]).length}/${list.length} • Summon ${GACHA.rates[r]}% • Lucky ${LUCKY.rates[r]}%</small></div>
+      return `<div class="ix-group r-${r}" style="--rc:${RARITY[r].color}"><div class="ix-head"><b>${RARITY[r].name}</b><small>${list.filter(t => own[t]).length}/${list.length} • ${RARITY[r].exclusive ? 'Eksklusif — tidak ada di Summon (kode redeem Beta)' : `Summon ${GACHA.rates[r]}% • Lucky ${LUCKY.rates[r]}%`}</small></div>
         <div class="ix-grid">${list.map(t => `<button class="ix-card ${own[t] ? 'own' : 'miss'} ${sel === t ? 'on' : ''}" data-act="idx:${t}">
           <canvas width="72" height="72" data-icon="${t}" data-skin="default" data-evo="0"></canvas><b>${TOWERS[t].name}</b>
           <small>${own[t] ? `✓ ×${own[t]}` : '🔒 Belum punya'}</small></button>`).join('')}</div></div>`;
@@ -152,7 +152,7 @@ const Menu = {
         <p>${d.desc}</p>
         <div class="ix-st"><div><small>Lv 0</small><b>${st(L0)}</b></div><div><small>Lv ${d.levels.length - 1}</small><b>${st(Lm)}</b></div></div>
         ${ev ? `<p class="dim">✨ Evolusi: ${ev.desc}</p>` : ''}
-        <div class="ix-rate"><span>Peluang per tarikan</span><b>Summon ${pct(rateOf(GACHA, sel))}</b><b>Lucky ${pct(rateOf(LUCKY, sel))}</b></div>
+        ${RARITY[r].exclusive ? '<div class="ix-rate"><span>Cara mendapatkan</span><b>Kode redeem EARLYACC (pemain Beta)</b></div>' : `<div class="ix-rate"><span>Peluang per tarikan</span><b>Summon ${pct(rateOf(GACHA, sel))}</b><b>Lucky ${pct(rateOf(LUCKY, sel))}</b></div>`}
         <small class="dim">${own[sel] ? `Kamu punya ${own[sel]} unit ini.` : 'Belum dimiliki — dapatkan lewat Summon' + (r === 'secret' ? ', Lucky Summon, atau Toko Pass.' : '.')}</small></div>`;
     }
     return `<div class="ix-top box"><b>📖 Koleksi ${got}/${total}</b><div class="mbar"><div style="width:${got / total * 100}%"></div></div><small class="dim">Unit 🔒 terlihat bentuknya, tapi harus didapat dari Summon.</small></div>
@@ -255,6 +255,13 @@ const Menu = {
           <button class="lh-coop" data-act="go:mabar"><span>🤝</span><div><b>MABAR</b><small>Co-op 2–4 pemain</small></div></button>
           <div class="lh-foot">v${VERSION} • ${Online.available ? '🟢 Online' : '⚪ Offline'}</div>
         </div>`;
+    },
+    autosell() {
+      const on = PROFILE.vault.autoSell || [];
+      return `${this.header('⚙️ Auto Jual')}<div class="box"><p>Unit hasil Summon dengan kelangkaan yang dipilih akan <b>langsung dijual</b> bila kamu <b>sudah punya jenis unit itu</b>. Unit jenis baru selalu disimpan.</p>
+        <div class="aslist">${SHARED.AUTO_SELL_OK.map(r => `<button class="asrow ${on.includes(r) ? 'on' : ''}" data-act="astog:${r}" style="--rc:${RARITY[r].color}"><span class="tog ${on.includes(r) ? 'on' : ''}"></span><b>${RARITY[r].name}</b><small>Jual: ${this.rw(SHARED.SCRAP[r])}</small></button>`).join('')}</div>
+        <small class="dim">Mitos & Rahasia tidak pernah dijual otomatis.</small></div>
+        <div class="row2"><button class="btn gray" data-act="go:units">← Kembali ke Unit</button></div>`;
     },
     more() {
       const u = Online.user, row = (act, ic, t, d) => `<button class="mrow" data-act="${act}"><span>${ic}</span><div><b>${t}</b><small>${d}</small></div><i>›</i></button>`;
@@ -469,14 +476,17 @@ const Menu = {
       if (!this.unitSel || !v.units.some(u => u.id === this.unitSel)) this.unitSel = (list[0] || v.units[0] || {}).id;
       const u = v.units.find(x => x.id === this.unitSel);
       const slots = Array.from({ length: LOADOUT_SIZE }, (_, i) => { const x = unitById(PROFILE.loadout[i]); return x ? this.unitCard(x, { act: 'unit:' + x.id, noEquip: true, cls: 'slotc' }) : '<div class="ucard empty">Kosong</div>'; }).join('');
-      const filters = [['all', 'Semua'], ['equip', 'Terpasang'], ...RARITY_ORDER.map(r => [r, RARITY[r].name])].reverse().reverse();
+      const have = r => v.units.some(x => UNIT_RARITY[x.type] === r);
+      const filters = [['all', 'Semua'], ['equip', 'Terpasang'], ...[...RARITY_ORDER, ...SHARED.EXCLUSIVE].filter(r => have(r) || !SHARED.EXCLUSIVE.includes(r)).map(r => [r, RARITY[r].name])];
       return `${this.header('Unit')}
         <div class="lo-row"><b>Loadout</b><div class="lo-slots">${slots}</div></div>
         <div class="unitwrap">
           <div class="box inv">
             <div class="tabs sm">${filters.map(([k, l]) => `<button class="tab ${f === k ? 'on' : ''}" data-act="ufilter:${k}">${l}</button>`).join('')}</div>
-            <div class="ugrid">${list.map(x => this.unitCard(x, { sel: x.id === this.unitSel })).join('') || '<p class="dim">Tidak ada unit</p>'}</div>
-            <div class="row2"><button class="btn gold" data-act="go:gacha">🎰 Summon unit baru</button></div>
+            <small class="dim ug-hint">Ketuk unit untuk detail • tombol <b>＋</b> di kartu = pasang cepat</small>
+            <div class="ugrid">${list.map(x => this.unitCard(x, { sel: x.id === this.unitSel, quick: true })).join('') || '<p class="dim">Tidak ada unit</p>'}</div>
+            <div class="row2 ubar"><button class="btn gold sm" data-act="go:gacha">🎰 Summon</button><button class="btn gray sm" data-act="sellpanel">💰 Jual Massal</button><button class="btn gray sm" data-act="autosell">⚙️ Auto Jual${(v.autoSell || []).length ? ' • ON' : ''}</button></div>
+            ${this.sellPanel ? this.sellPanelHtml() : ''}
           </div>
           ${u ? this.unitDetail(u) : '<div class="box">Pilih unit</div>'}
         </div>`;
@@ -810,7 +820,7 @@ const Menu = {
       case 'hpull': {
         const btn = document.querySelector(`[data-act="hpull:${arg}"]`); if (btn) btn.classList.add('busy');
         this.banner = 'feat';
-        Eco.act('summon', { banner: 'feat', count: +arg }).then(r => { this.show('gacha'); this.showPull(r.units); checkAchievements(null); })
+        Eco.act('summon', { banner: 'feat', count: +arg }).then(r => { this.show('gacha'); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })
           .catch(e => { if (btn) btn.classList.remove('busy'); sfx('error'); UI.toast('❌ ' + e.message); });
         break;
       }
@@ -845,7 +855,14 @@ const Menu = {
       case 'ulock': { const u = unitById(arg); this.eco('lock', { unitId: arg, lock: !(u && u.lock) }); break; }
       case 'scrap':
         if (this.scrapArm !== arg) { this.scrapArm = arg; this.show('units', true); break; }
-        this.scrapArm = null; this.eco('scrap', { unitIds: [arg] }, r => `♻️ Didapat: ${['coins', 'crystals', 'stones'].filter(k => r[k]).map(k => ({ coins: '🪙', crystals: '✨', stones: '🔮' })[k] + ' ' + r[k]).join(' ')}`); break;
+        this.scrapArm = null; this.eco('scrap', { unitIds: [arg] }, r => `💰 Terjual: ${this.rw(r)}`); break;
+      case 'udtab': this.udTab = arg; this.show('units', true); break;
+      case 'sellpanel': this.sellPanel = this.sellPanel ? null : { rars: ['common'], keep: true }; this.show('units', true); break;
+      case 'sellrar': { const r = this.sellPanel.rars; this.sellPanel.rars = r.includes(arg) ? r.filter(x => x !== arg) : [...r, arg]; this.show('units', true); break; }
+      case 'sellkeep': this.sellPanel.keep = !this.sellPanel.keep; this.show('units', true); break;
+      case 'sellgo': this.sellBulk(); break;
+      case 'autosell': this.go('autosell'); break;
+      case 'astog': { const cur = PROFILE.vault.autoSell || [], nx = cur.includes(arg) ? cur.filter(x => x !== arg) : [...cur, arg]; this.eco('setAutoSell', { rarities: nx }, () => 'Auto Jual: ' + (nx.length ? nx.map(r => RARITY[r].name).join(', ') : 'mati')); break; }
       case 'roll': {
         const u = unitById(arg); if (!u) break;
         if (u.trait && RARITY[TRAITS[u.trait].rarity].rank >= 2 && this.rollArm !== arg) { this.rollArm = arg; this.show('units', true); break; }
@@ -866,7 +883,7 @@ const Menu = {
       case 'topup': this.topup(arg); break;
       case 'banner': this.banner = arg; this.show('gacha', true); break;
       case 'pull':
-        Eco.act('summon', { banner: this.banner || 'std', count: +arg }).then(r => { this.show('gacha', true); this.showPull(r.units); checkAchievements(null); })
+        Eco.act('summon', { banner: this.banner || 'std', count: +arg }).then(r => { this.show('gacha', true); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })
           .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
         break;
       case 'idx': this.idxSel = arg; this.show('gacha', true); break;
@@ -929,49 +946,63 @@ const Menu = {
     this.show(this.screen, true);
     const n = $('lobbyIn'); if (n) { n.value = val; if (focused) { n.focus(); n.setSelectionRange(val.length, val.length); } }
   },
+  /** Nilai jual sebuah unit */
+  sellVal(type) { return SHARED.SCRAP[UNIT_RARITY[type]] || {}; },
+  /** Kandidat jual massal: tidak terkunci, tidak di loadout, belum evolusi; sisakan 1 terbaik per jenis */
+  sellCandidates(rars, keepOne) {
+    const v = PROFILE.vault, byType = {};
+    v.units.forEach(u => (byType[u.type] = byType[u.type] || []).push(u));
+    const out = [];
+    for (const [t, arr] of Object.entries(byType)) {
+      if (!rars.includes(UNIT_RARITY[t])) continue;
+      const sorted = arr.slice().sort((a, b) => (PROFILE.loadout.includes(b.id) - PROFILE.loadout.includes(a.id)) || b.evo - a.evo || (b.trait ? 1 : 0) - (a.trait ? 1 : 0) || b.xp - a.xp);
+      sorted.slice(keepOne ? 1 : 0).forEach(u => { if (!u.lock && !u.evo && !PROFILE.loadout.includes(u.id)) out.push(u); });
+    }
+    return out;
+  },
+  sellPanelHtml() {
+    const sp = this.sellPanel, list = this.sellCandidates(sp.rars, sp.keep), tot = {};
+    list.forEach(u => { for (const [k, n] of Object.entries(this.sellVal(u.type))) tot[k] = (tot[k] || 0) + n; });
+    return `<div class="sellbox"><b>💰 Jual Massal</b><div class="seg">${SHARED.AUTO_SELL_OK.map(r => `<button class="${sp.rars.includes(r) ? 'on' : ''}" data-act="sellrar:${r}" style="--rc:${RARITY[r].color}">${RARITY[r].name}</button>`).join('')}</div>
+      <label class="chk"><input type="checkbox" ${sp.keep ? 'checked' : ''} data-act="sellkeep"> Sisakan 1 unit terbaik per jenis</label>
+      <small class="dim">Unit terkunci 🔒, terpasang & hasil evolusi tidak ikut dijual.</small>
+      <div class="sellsum">${list.length} unit → ${this.rw(tot) || '—'}</div>
+      <div class="row2"><button class="btn red sm" data-act="sellgo" ${list.length ? '' : 'disabled'}>Jual ${list.length} unit</button><button class="btn gray sm" data-act="sellpanel">Tutup</button></div></div>`;
+  },
   unitDetail(u) {
     const d = TOWERS[u.type], ev = EVOS[u.type], es = evoStatus(u), lv = unitLevel(u.xp), lo = unitXpFor(lv), hi = unitXpFor(lv + 1);
     const mpct = lv >= UNIT_MAX_LV ? 100 : Math.min(100, (u.xp - lo) / (hi - lo) * 100), tr = u.trait && TRAITS[u.trait];
-    const inLo = PROFILE.loadout.includes(u.id), v = PROFILE.vault;
-    const rows = d.levels.map((_, i) => { const L = computeL(u.type, i, u); return `<tr><td>${i}</td><td>${esc(L.name)}</td><td>$${Math.round(d.levels[i].cost * ((tr && tr.costMul) || 1))}</td><td>${
-      L.dmg ? `${L.dmg} dmg • ${L.range}r • ${L.rate}s` : L.income ? `$${L.income}/wave` : `+${Math.round(L.buff * 100)}% • ${L.range}r`}${
-      L.hidden ? ' • 👁' : ''}${L.pierceArmor ? ' • 🛡' : ''}${L.splash || L.splashHit ? ' • 💥' : ''}${L.slow ? ' • ❄' : ''}${L.chain ? ' • ⚡' + L.chain : ''}${L.dot ? ' • 🔥' : ''}${L.line ? ' • ➖' : ''}</td></tr>`; }).join('');
+    const inLo = PROFILE.loadout.includes(u.id), v = PROFILE.vault, tab = this.udTab || 'stat';
+    const L0 = computeL(u.type, 0, u), Lm = computeL(u.type, d.levels.length - 1, u);
+    const st = L => L.dmg ? `⚔️ ${fmtNum(L.dmg)} • ⏱ ${L.rate}s • 🎯 ${L.range}${L.goldHit ? ` • 💰 +$${L.goldHit}/hit` : ''}` : L.income ? `💰 $${L.income}/wave` : `▲ +${Math.round(L.buff * 100)}% • 🎯 ${L.range}`;
+    const rows = d.levels.map((_, i) => { const L = computeL(u.type, i, u); return `<tr><td>${i}</td><td>${esc(L.name)}</td><td>$${Math.round(d.levels[i].cost * ((tr && tr.costMul) || 1))}</td><td>${st(L)}${L.hidden ? ' • 👁' : ''}${L.pierceArmor ? ' • 🛡' : ''}${L.splash || L.splashHit ? ' • 💥' : ''}${L.slow ? ' • ❄' : ''}${L.chain ? ' • ⚡' + L.chain : ''}${L.dot ? ' • 🔥' : ''}</td></tr>`; }).join('');
     const req = (ok, txt) => `<li class="${ok ? 'ok' : ''}">${ok ? '✅' : '⬜'} ${txt}</li>`;
     const sameType = PROFILE.loadout.map(unitById).find(x => x && x.type === u.type && x.id !== u.id);
-    return `<div class="udetail">
-      <div class="box">
-        <div class="ph"><canvas width="72" height="72" data-icon="${u.type}" data-skin="${u.skin || 'default'}" data-evo="${u.evo ? 1 : 0}"></canvas>
-          <div><h3>${this.unitName(u)} ${u.evo ? `<small class="dim">(${d.name})</small>` : ''}</h3>${this.rarityTag(u.type)} <span class="tag">${d.role}</span>
-          ${u.tradable === false ? '<span class="tag gray" title="Unit awal/impor">⛔ Tidak bisa ditukar</span>' : ''}</div></div>
-        <p>${u.evo ? '★ ' + ev.desc : d.desc}</p>
-        <div class="mastery"><b>Mastery Lv ${lv}</b> <small class="dim">+${Math.round((lv - 1) * MASTERY_BONUS * 100)}% damage</small>
-          <div class="mbar"><div style="width:${mpct}%"></div><span>${lv >= UNIT_MAX_LV ? 'MAKS' : `${u.xp - lo} / ${hi - lo} XP`}</span></div></div>
-        <table><tr><th>Lv</th><th>Upgrade</th><th>Harga</th><th>Statistik</th></tr>${rows}</table>
-        <div class="row2">
-          ${inLo ? `<button class="btn red" data-act="unequip:${u.id}" ${PROFILE.loadout.length <= 1 ? 'disabled' : ''}>Lepas dari loadout</button>`
-                 : `<button class="btn" data-act="equip:${u.id}">${sameType ? 'Ganti ' + this.unitName(sameType) : PROFILE.loadout.length >= LOADOUT_SIZE ? 'Loadout penuh' : 'Pasang ke loadout'}</button>`}
-          <button class="btn sm gray" data-act="ulock:${u.id}">${u.lock ? '🔓 Buka kunci' : '🔒 Kunci'}</button>
-          <button class="btn sm red" data-act="scrap:${u.id}" ${u.lock || inLo ? 'disabled' : ''} title="Hancurkan untuk material">♻️ ${this.scrapArm === u.id ? 'Yakin?' : 'Hancurkan'}</button>
-        </div>
+    const sv = this.rw(this.sellVal(u.type));
+    const tabs = [['stat', '📊 Statistik'], ['trait', '🎲 Trait'], ['evo', '🧬 Evolusi'], ['skin', '🎨 Skin']];
+    let body = '';
+    if (tab === 'stat') body = `<div class="ud-st"><div><small>Lv 0</small><b>${st(L0)}</b></div><div><small>Lv ${d.levels.length - 1}</small><b>${st(Lm)}</b></div></div>
+        <details><summary>Semua level upgrade</summary><table>${rows}</table></details>`;
+    else if (tab === 'trait') body = `<div class="trait-cur" id="traitCur">${tr ? `<span class="ticon">${tr.icon}</span><div><b style="color:${RARITY[tr.rarity].color}">${tr.name}</b> <small>${tr.desc}</small></div>` : '<span class="dim">Belum ada trait</span>'}</div>
+        <button class="btn sm purple" data-act="roll:${u.id}" ${v.crystals < 1 ? 'disabled' : ''}>${this.rollArm === u.id ? '⚠️ Yakin? Trait ini akan hilang' : '🎲 Roll Trait — ✨ 1'}</button>
+        <details><summary>Peluang trait</summary><div class="odds">${RARITY_ORDER.map(rk => { const r = RARITY[rk], list = Object.values(TRAITS).filter(t => t.rarity === rk), pct = list.reduce((a, t) => a + t.w, 0);
+          return list.length ? `<div><b style="color:${r.color}">${r.name} ${pct}%</b><small>${list.map(t => `${t.icon} ${t.name}: ${t.desc}`).join('<br>')}</small></div>` : ''; }).join('')}</div></details>`;
+    else if (tab === 'evo') body = `<p><small><b>${ev.name}</b> — ${ev.desc}</small></p>${u.evo ? '<div class="evo-ok">★ Sudah berevolusi</div>' : `<ul class="reqs">${req(es.lvOk, `Mastery Lv ${EVO_REQ.level} (sekarang ${lv})`)}${req(es.stonesOk, `🔮 ${EVO_REQ.stones} Batu Evolusi (punya ${v.stones})`)}${req(es.coinsOk, `🪙 ${EVO_REQ.coins} koin`)}</ul>
+        <button class="btn sm gold" data-act="evo:${u.id}" ${es.lvOk && es.stonesOk && es.coinsOk ? '' : 'disabled'}>🧬 EVOLUSI</button>`}`;
+    else body = `<div class="skinpick">${v.skins.map(k => `<button class="skb ${u.skin === k || (!u.skin && k === 'default') ? 'on' : ''}" data-act="setskin:${u.id}:${k}" title="${SKINS[k].name}">${SKINS[k].icon}</button>`).join('')}<button class="skb more" data-act="shoptab:skin" title="Beli skin">＋</button></div>`;
+    return `<div class="udetail box ud-compact" style="--rc:${RARITY[UNIT_RARITY[u.type]].color}">
+      <div class="ud-head"><canvas width="60" height="60" data-icon="${u.type}" data-skin="${u.skin || 'default'}" data-evo="${u.evo ? 1 : 0}"></canvas>
+        <div class="ud-t"><b>${this.unitName(u)}${u.evo ? ' ★' : ''}</b><div>${this.rarityTag(u.type)} <span class="tag">${d.role}</span>${tr ? ` <span class="tag" style="border-color:${RARITY[tr.rarity].color}">${tr.icon} ${tr.name}</span>` : ''}${u.tradable === false ? ' <span class="tag gray" title="Tidak bisa ditukar">⛔</span>' : ''}</div>
+          <div class="mbar sm"><div style="width:${mpct}%"></div><span>Mastery ${lv}${lv >= UNIT_MAX_LV ? ' • MAKS' : ` • ${u.xp - lo}/${hi - lo}`}</span></div></div></div>
+      <div class="ud-act">
+        ${inLo ? `<button class="btn sm red" data-act="unequip:${u.id}" ${PROFILE.loadout.length <= 1 ? 'disabled' : ''}>✕ Lepas</button>`
+               : `<button class="btn sm" data-act="equip:${u.id}">${sameType ? '⇄ Ganti' : PROFILE.loadout.length >= LOADOUT_SIZE ? 'Penuh' : '＋ Pasang'}</button>`}
+        <button class="btn sm gray" data-act="ulock:${u.id}">${u.lock ? '🔓' : '🔒'}</button>
+        <button class="btn sm gray" data-act="scrap:${u.id}" ${u.lock || inLo ? 'disabled' : ''} title="Jual unit">💰 ${this.scrapArm === u.id ? 'Yakin?' : 'Jual'} <small>${sv}</small></button>
       </div>
-      <div class="box2">
-        <div class="box trait-box" style="${tr ? `border-color:${RARITY[tr.rarity].color}` : ''}">
-          <h4>🎲 Trait</h4>
-          <div class="trait-cur" id="traitCur">${tr ? `<span class="ticon">${tr.icon}</span><div><b style="color:${RARITY[tr.rarity].color}">${tr.name}</b> <span class="rar" style="background:${RARITY[tr.rarity].color}">${RARITY[tr.rarity].name}</span><small>${tr.desc}</small></div>` : '<span class="dim">Belum ada trait</span>'}</div>
-          <button class="btn purple" data-act="roll:${u.id}" ${v.crystals < 1 ? 'disabled' : ''}>${this.rollArm === u.id ? '⚠️ Yakin? Trait ini akan hilang' : '🎲 Roll Trait — ✨ 1'}</button>
-          <details><summary>Peluang trait</summary><div class="odds">${Object.entries(RARITY).map(([rk, r]) => {
-            const list = Object.values(TRAITS).filter(t => t.rarity === rk), pct = list.reduce((a, t) => a + t.w, 0);
-            return `<div><b style="color:${r.color}">${r.name} ${pct}%</b><small>${list.map(t => `${t.icon} ${t.name}: ${t.desc}`).join('<br>')}</small></div>`; }).join('')}</div></details>
-        </div>
-        <div class="box evo-box ${u.evo ? 'done' : ''}">
-          <h4>🧬 Evolusi → ${ev.name}</h4>
-          <p><small>${ev.desc}</small></p>
-          ${u.evo ? '<div class="evo-ok">★ Sudah berevolusi</div>' : `<ul class="reqs">${req(es.lvOk, `Mastery Lv ${EVO_REQ.level} (sekarang ${lv})`)}${req(es.stonesOk, `🔮 ${EVO_REQ.stones} Batu Evolusi (punya ${v.stones})`)}${req(es.coinsOk, `🪙 ${EVO_REQ.coins} koin`)}</ul>
-            <button class="btn gold" data-act="evo:${u.id}" ${es.lvOk && es.stonesOk && es.coinsOk ? '' : 'disabled'}>🧬 EVOLUSI</button>`}
-        </div>
-        <div class="box"><h4>🎨 Skin</h4><div class="skinpick">${v.skins.map(k => `<button class="skb ${u.skin === k || (!u.skin && k === 'default') ? 'on' : ''}" data-act="setskin:${u.id}:${k}" title="${SKINS[k].name}">${SKINS[k].icon}</button>`).join('')}
-          <button class="skb more" data-act="shoptab:skin" title="Beli skin">＋</button></div></div>
-      </div>
+      <p class="ud-desc">${u.evo ? '★ ' + ev.desc : d.desc}</p>
+      <div class="seg ud-tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="udtab:${k}">${l}</button>`).join('')}</div>
+      <div class="ud-body">${body}</div>
     </div>`;
   },
   topupBody() {
@@ -987,7 +1018,7 @@ const Menu = {
     const el = $('pullResult'); if (!el) return;
     const best = Math.max(...units.map(u => RARITY[UNIT_RARITY[u.type]].rank));
     el.innerHTML = `<div class="pullov ${best >= 3 ? 'gold' : ''}" data-act="pullclose"><div class="pullcards">${units.map((u, i) => `<div class="pcardx r-${UNIT_RARITY[u.type]}" style="--d:${i * 0.18}s">
-      <div class="back">?</div><div class="front"><canvas width="80" height="80" data-icon="${u.type}" data-skin="default" data-evo="0"></canvas><b>${TOWERS[u.type].name}</b>${this.rarityTag(u.type)}</div></div>`).join('')}</div>
+      <div class="back">?</div><div class="front"><canvas width="80" height="80" data-icon="${u.type}" data-skin="default" data-evo="0"></canvas><b>${TOWERS[u.type].name}</b>${this.rarityTag(u.type)}${u.sold ? '<i class="soldtag">💰 Dijual</i>' : ''}</div></div>`).join('')}</div>
       <small>Klik untuk menutup</small></div>`;
     this.drawIcons(el);
     units.forEach((u, i) => setTimeout(() => sfx(RARITY[UNIT_RARITY[u.type]].rank >= 3 ? 'win' : RARITY[UNIT_RARITY[u.type]].rank >= 2 ? 'achieve' : 'coin'), 300 + i * 180));
@@ -998,6 +1029,19 @@ const Menu = {
     catch (e) { UI.toast('❌ ' + e.message); }
   },
   /** Jalankan aksi ekonomi lalu tampilkan ulang layar */
+  soldToast(r) { const n = (r.units || []).filter(u => u.sold).length; if (n) setTimeout(() => UI.toast(`💰 Auto Jual: ${n} unit duplikat terjual → ${this.rw(r.sold || {})}`, 'gold', 3500), 900); },
+  async sellBulk() {
+    const sp = this.sellPanel; if (!sp) return;
+    const list = this.sellCandidates(sp.rars, sp.keep).map(u => u.id);
+    if (!list.length) return;
+    if (!confirm(`Jual ${list.length} unit? Tindakan ini tidak bisa dibatalkan.`)) return;
+    const tot = {};
+    for (let i = 0; i < list.length; i += 50) {
+      try { const r = await Eco.act('scrap', { unitIds: list.slice(i, i + 50) }); for (const k in r) tot[k] = (tot[k] || 0) + r[k]; }
+      catch (e) { UI.toast('❌ ' + e.message); break; }
+    }
+    this.sellPanel = null; sfx('coin'); UI.toast(`💰 ${list.length} unit terjual: ${this.rw(tot)}`, 'gold'); this.show('units', true);
+  },
   async eco(action, payload, okMsg) {
     const btn = this.lastBtn; if (btn) btn.classList.add('busy');
     try { const r = await Eco.act(action, payload); if (okMsg) UI.toast(typeof okMsg === 'function' ? okMsg(r) : okMsg, 'gold'); this.show(this.screen, true); return r; }

@@ -50,10 +50,11 @@ const UI = {
       const d = TOWERS[k], c = costOf(k, 0), u = unitOf(k), tr = u.trait && TRAITS[u.trait];
       return `<div class="slot ${S.placing === k ? 'sel' : ''} ${u.evo ? 'evo' : ''}" data-k="${k}" data-i="${i}" ${tr ? `style="--rc:${RARITY[tr.rarity].color}"` : ''}>
         <span class="key">${i + 1}</span>${tr ? `<span class="tr" title="${tr.name}">${tr.icon}</span>` : ''}
-        <div class="ico" style="background:${towerColor(k)}">${u.evo ? '★' : ''}</div>
+        <canvas class="ico" width="64" height="64" data-k="${k}"></canvas>
         <div class="nm">${towerName(k)}</div><div class="pr">$${c}</div>
         <div class="cnt" data-cnt="${k}">${countType(k)}/${d.limit}</div></div>`;
     }).join('');
+    $('bar').querySelectorAll('canvas.ico').forEach(c => { const u = unitOf(c.dataset.k); drawUnitIcon(c, c.dataset.k, u.skin, !!u.evo); });
     $('bar').querySelectorAll('.slot').forEach(el => {
       el.onclick = () => this.selectPlace(el.dataset.k);
       el.onmouseenter = () => this.tooltip(el, el.dataset.k);
@@ -112,7 +113,7 @@ const UI = {
     const tr = t.trait && TRAITS[t.trait];
     const st = (lab, a, b) => `<div class="row"><span>${lab}</span><span>${a}${b !== undefined && b !== a ? ` → <b class="up">${b}</b>` : ''}</span></div>`;
     const yn = v => v ? '✅' : '❌';
-    let h = `<div class="ph"><div class="pico" style="background:${tColor}">${t.evo ? '★' : ''}</div><div><h3>${tName}</h3>
+    let h = `<div class="ph"><canvas class="pico" width="64" height="64" data-pk="1"></canvas><div><h3>${tName}</h3>
       <small>Lv ${t.level} • ${esc(L.name)} • M${unitLevel(unit.xp || 0)}</small></div><button class="x" id="pClose">✕</button></div>`;
     if (isMP()) h += `<div class="owner" style="--pc:${playerColor(t.owner)}">👤 ${esc(playerName(t.owner))}</div>`;
     if (tr || t.evo) h += `<div class="ptags">${tr ? `<span class="tag" style="background:${RARITY[tr.rarity].color}" title="${tr.desc}">${tr.icon} ${tr.name}</span>` : ''}${t.evo ? `<span class="tag gold" title="${EVOS[t.type].desc}">★ Evolusi</span>` : ''}</div>`;
@@ -139,6 +140,7 @@ const UI = {
       h += `<button class="btn red" id="sellBtn">Jual $${Math.floor(t.spent * SELL_RATE).toLocaleString('id-ID')} <kbd>X</kbd></button>`;
     } else h += `<div class="dim" style="text-align:center;margin-top:6px">Tower milik pemain lain</div>`;
     const p = $('panel'); p.innerHTML = h; p.style.display = 'block'; p.dataset.lv = t.level + ':' + t.id;
+    const pc = p.querySelector('canvas.pico'); if (pc) drawUnitIcon(pc, t.type, t.skin, !!t.evo);
     const left = t.x > W / 2;            // panel di sisi berlawanan dari tower
     p.classList.toggle('left', left);
     p.classList.toggle('bottom', !left && exitRow() < ROWS / 2); // hindari menutupi base

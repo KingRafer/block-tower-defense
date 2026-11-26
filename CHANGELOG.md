@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.8.0] — 2026-11-26
+### Ditambahkan
+- **Jual unit**: jual satuan (💰 Jual, nilai sesuai kelangkaan) & **Jual Massal** per kelangkaan (opsi sisakan 1 terbaik per jenis; unit terkunci, terpasang & hasil evolusi tidak ikut).
+- **Auto Jual** (Unit → ⚙️ Auto Jual): unit hasil Summon dengan kelangkaan terpilih (Biasa/Langka/Epik/Legendaris) langsung dijual bila jenisnya sudah dimiliki. Unit jenis baru selalu disimpan; Mitos & Rahasia tidak pernah dijual otomatis.
+- **Unit eksklusif Beta: Penambang Emas** — kode redeem `EARLYACC` (sekali per akun, + 💎300). Setiap pukulan beliung menghasilkan emas (+$4 → +$24 per hit), cocok untuk grinding awal. Tidak bisa didapat dari Summon & tidak bisa ditukar.
+- Ikon tower di bar permainan & panel tower kini memakai gambar karakter unit.
+### Diubah
+- **Detail unit lebih ringkas**: header kecil + tombol Pasang/Kunci/Jual di atas, statistik/trait/evolusi/skin dalam tab. Tombol **＋** di setiap kartu untuk pasang/lepas loadout cepat.
+- **Gameplay HP (lanskap)**: map penuh setinggi layar; statistik & skill di kolom kiri, tombol & tower di kolom kanan; panel tower jadi kartu kecil di sisi map.
+
 ## [4.7.0] — 2026-11-26
 ### Diperbaiki
 - **Auto skip**: mode Auto sekarang memulai wave otomatis (termasuk wave pertama) **dan** men-skip otomatis 1,5 detik setelah semua musuh wave keluar (bonus skip tetap didapat). Hitung mundur tampil di layar. Host mabar juga bisa memakai Auto.

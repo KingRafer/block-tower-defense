@@ -32,11 +32,12 @@ const CHARS = {
   angel:     { shirt: '#fffde7', pants: '#fff8e1', hat: 'halo', hatC: '#ffd54f', face: 'serene', outfit: ['robe', 'goldtrim'], back: 'wings', weapon: 'holyspear', robe: true },
   reaper:    { shirt: '#1a1033', pants: '#0d0820', hat: 'reaperhood', hatC: '#120b26', face: 'skull', outfit: ['robe', 'voidchain'], back: 'voidaura', weapon: 'scythe', robe: true },
   cosmic:    { shirt: '#1a237e', pants: '#0d1240', hat: 'galaxycrown', hatC: '#ffd54f', face: 'starface', outfit: ['robe', 'stars'], back: 'starcape', weapon: 'starorb', robe: true },
+  goldminer: { shirt: '#8d6e63', pants: '#1e5aa8', hat: 'minerhat', hatC: '#ffc107', face: 'beard', faceC: '#6d4c41', outfit: ['overalls'], back: 'goldsack', weapon: 'pickaxe' },
   nuke:      { special: true },
   dragon:    { special: true },
 };
 /* Tinggi penutup kepala (untuk mahkota evolusi) */
-const HAT_TOP = { reaperhood: 34, galaxycrown: 40,  cowboy: 37, wizard: 50, kabuto: 40, officer: 34, mad: 33, plague: 36, robin: 36, halo: 40, chrono: 33, beanie: 35, ninja: 32 };
+const HAT_TOP = { minerhat: 34,  reaperhood: 34, galaxycrown: 40,  cowboy: 37, wizard: 50, kabuto: 40, officer: 34, mad: 33, plague: 36, robin: 36, halo: 40, chrono: 33, beanie: 35, ninja: 32 };
 
 /* ---------- helper gambar ---------- */
 const OL = 'rgba(0,0,0,.55)';
@@ -63,6 +64,8 @@ function drawBack(sp, x, y, shirt, sk) {
     case 'voidaura': { for (let i = 0; i < 5; i++) { const a = tt * 1.5 + i * 1.26, r = 15 + Math.sin(tt * 3 + i) * 2; ctx.save(); ctx.globalAlpha *= 0.45; C(x + Math.cos(a) * r, y - 8 + Math.sin(a) * r * 0.6, 3 + (i % 2), '#7c4dff', false); ctx.restore(); } break; }
     case 'starcape': { const w = Math.sin(tt * 2.5) * 2; P([x - 9, y - 9, x + 5, y - 9, x + 2 + w, y + 11, x - 16 + w, y + 10], '#0d1240');
       for (let i = 0; i < 6; i++) { const tw = 0.5 + Math.sin(tt * 4 + i * 1.7) * 0.5; ctx.save(); ctx.globalAlpha *= tw; C(x - 12 + (i * 5) % 14 + w * 0.5, y - 5 + (i * 7) % 14, 0.9, '#fff', false); ctx.restore(); } break; }
+    case 'goldsack': { R(x - 17, y - 9, 9, 12, '#a1887f'); R(x - 17, y - 9, 9, 2, '#6d4c41', false); outlinedText('$', x - 12.5, y + 1, 8, '#ffd54f');
+      for (let i = 0; i < 3; i++) C(x - 15 + i * 3, y - 10, 1.4, '#ffca28', false); break; }
     case 'wings': {
       const fl = Math.sin(tt * 4) * 3;
       for (const s of [-1, 1]) {
@@ -109,6 +112,7 @@ function drawBody(sp, x, y, shirt, pants, skin) {
       case 'goldtrim': R(x - 9, y - 8, 18, 1.5, '#ffd54f', false); R(x - 12, y + 8, 24, 2, '#ffd54f', false); break;
       case 'voidchain': ctx.strokeStyle = '#9575cd'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 1.5]); ctx.beginPath(); ctx.moveTo(x - 8, y - 7); ctx.lineTo(x + 8, y + 3); ctx.stroke(); ctx.setLineDash([]); C(x - 1, y - 2, 1.8, '#b388ff', false); break;
       case 'stars': { const tt = time(); for (let i = 0; i < 5; i++) { const tw = 0.4 + Math.abs(Math.sin(tt * 3 + i * 2)) * 0.6; ctx.save(); ctx.globalAlpha *= tw; C(x - 7 + (i * 4.3) % 14, y - 6 + (i * 5.1) % 15, 0.9, i % 2 ? '#fff59d' : '#ffffff', false); ctx.restore(); } R(x - 9, y - 1, 18, 1.5, '#ffd54f', false); break; }
+      case 'overalls': R(x - 7, y - 4, 14, 9, '#1e5aa8'); R(x - 6, y - 8, 2.5, 5, '#1e5aa8', false); R(x + 3.5, y - 8, 2.5, 5, '#1e5aa8', false); C(x - 4.8, y - 4, 1, '#ffd54f', false); C(x + 4.8, y - 4, 1, '#ffd54f', false); R(x - 3, y - 2, 6, 3, '#174a8b', false); break;
       case 'samuraiArmor': for (let i = 0; i < 3; i++) R(x - 9, y - 7 + i * 3.6, 18, 2.6, i % 2 ? '#212121' : '#d32f2f', false); R(x - 13, y - 9, 6, 7, '#212121'); R(x + 7, y - 9, 6, 7, '#212121'); R(x - 13, y - 9, 6, 2, '#d32f2f', false); R(x + 7, y - 9, 6, 2, '#d32f2f', false); break;
     }
   }
@@ -172,6 +176,8 @@ function drawHat(sp, x, y, sk) {
     case 'reaperhood': P([x - 12, y - 7, x - 11, y - 29, x, y - 36, x + 11, y - 29, x + 12, y - 7, x + 9, y - 7, x + 9, y - 26, x - 9, y - 26, x - 9, y - 7], c); R(x - 9, y - 27, 18, 2, '#4a148c', false); break;
     case 'galaxycrown': { R(x - 9, y - 30, 18, 5, c); for (let i = 0; i < 4; i++) P([x - 9 + i * 6, y - 30, x - 6 + i * 6, y - 37, x - 3 + i * 6, y - 30], c); C(x, y - 33, 1.8, '#e040fb', false);
       for (let i = 0; i < 3; i++) { const a = tt * 1.8 + i * 2.09; C(x + Math.cos(a) * 14, y - 36 + Math.sin(a) * 4, 1.8 + (i === 0 ? 0.8 : 0), ['#4fc3f7', '#ff8a65', '#aed581'][i]); } break; }
+    case 'minerhat': { R(x - 10, y - 31, 20, 7, c); R(x - 12, y - 26, 24, 2.5, d); R(x - 3, y - 32, 6, 2, l, false); C(x + 5, y - 28.5, 2.6, '#fff59d');
+      const g = 0.35 + Math.sin(tt * 3) * 0.15; ctx.save(); ctx.globalAlpha *= g; P([x + 7, y - 30, x + 26, y - 36, x + 26, y - 20, x + 7, y - 27], '#fff59d', false); ctx.restore(); break; }
     case 'halo': { R(x - 9, y - 27, 18, 4, '#ffe082', false); const h = Math.sin(tt * 2.5) * 1.5; ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(x, y - 34 + h, 10, 3, 0, 0, 7); ctx.stroke(); ctx.strokeStyle = 'rgba(255,245,157,.5)'; ctx.lineWidth = 5; ctx.stroke(); break; }
   }
 }
@@ -215,6 +221,9 @@ function drawWeapon(sp, t, shirt, skin, sk) {
     case 'starorb': { R(-2, -2, 8, 4, shirt); const tt2 = time(), bob = Math.sin(tt2 * 3) * 1.5; ctx.save(); ctx.globalAlpha *= 0.35; C(14, -6 + bob, 9, '#7c4dff', false); ctx.restore();
       C(14, -6 + bob, 5, '#311b92'); C(13, -7 + bob, 3, '#7c4dff', false); C(12, -8 + bob, 1.2, '#fff', false);
       for (let i = 0; i < 4; i++) { const a = tt2 * 2.5 + i * 1.57; C(14 + Math.cos(a) * 9, -6 + bob + Math.sin(a) * 5, 1, i % 2 ? '#fff59d' : '#ffffff', false); } break; }
+    case 'pickaxe': { const sw = (t.recoil || 0) > 0.05 ? -t.recoil * 1.8 : 0; ctx.rotate(sw - 0.5); R(-4, -1.3, 26, 2.6, '#8d6e63'); R(-4, -1.3, 26, 0.8, '#bcaaa4', false);
+      P([20, -1, 22, -9, 26, -10, 24, -2, 29, 6, 24, 4, 21, 1], g || '#b0bec5'); R(19, -2.5, 4, 5, '#5d4037');
+      if ((t.recoil || 0) > 0.4) for (let i = 0; i < 4; i++) C(27 + Math.cos(i * 1.6) * 6, 4 + Math.sin(i * 1.6) * 6, 1.2, '#ffd54f', false); break; }
     case 'holyspear': { R(-8, -1.3, 34, 2.6, g || '#ffd54f'); R(-8, -1.3, 34, 0.8, '#fff8e1', false); P([26, -3.5, 36, 0, 26, 3.5], '#fffde7'); R(24, -4, 2, 8, '#ffb300');
       const p = 0.6 + Math.sin(tt * 3) * 0.4; ctx.globalAlpha *= 0.4 * p; C(33, 0, 6, '#fff59d', false); ctx.globalAlpha /= 0.4 * p; break; }
   }

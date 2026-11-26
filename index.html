@@ -25,17 +25,21 @@
 <body>
   <div id="wrap">
     <header id="hud">
+      <div class="hud-stats">
       <div class="stat cash"><span class="ic">💰</span><b id="hudCash">$0</b></div>
       <div class="stat wave"><span class="ic">🌊</span><div class="sv"><b>Wave <span id="hudWave">0/30</span></b><div class="bar"><div id="hudWaveBar"></div></div></div></div>
       <div class="stat hp"><span class="ic">❤️</span><div class="sv"><b id="hudHp">100</b><div class="bar"><div id="hudHpBar"></div></div></div></div>
       <div class="stat"><span class="ic">🧟</span><b id="hudEnemies">0</b></div>
+      </div>
       <div class="spacer"></div>
+      <div class="hud-btns">
       <button class="btn" id="startBtn">▶ Mulai Wave</button>
       <button class="btn gold" id="skipWaveBtn" style="display:none" title="Mulai wave berikutnya sekarang">⏭ Skip</button>
-      <button class="btn gray" id="skipBtn" title="Auto: mulai wave title="Mulai wave berikutnya otomatis" skip otomatis">Auto: OFF</button>
+      <button class="btn gray" id="skipBtn" title="Auto: mulai wave &amp; skip otomatis">Auto: OFF</button>
       <button class="btn blue" id="speedBtn" title="Kecepatan (F)">⏩ 1x</button>
       <button class="btn gray" id="fsBtn" title="Layar penuh">⛶</button>
       <button class="btn gray" id="pauseBtn" title="Pause (Esc)">⏸</button>
+      </div>
     </header>
     <div id="preview"></div>
     <main id="stage">
