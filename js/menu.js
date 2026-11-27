@@ -332,7 +332,6 @@ const Menu = {
       const sky = hour >= 5 && hour < 8 ? 'dawn' : hour < 16 ? 'day' : hour < 19 ? 'dusk' : 'night';
       const tile = (act, ic, label, cls, badge = '') => `<button class="ltile ${cls}" data-act="${act}"><span class="lt-ic">${pxi(ic)}</span><b>${label}</b>${badge}</button>`;
       // unggulan
-      const feat = SHARED.featuredUnit(now), fr = RARITY[UNIT_RARITY[feat]], pityLeft = Math.max(1, GACHA.pity - ((v.pity || {}).feat || 0));
       // showcase loadout
       const lo4 = (PROFILE.loadout || []).map(id => unitById(id)).filter(Boolean).slice(0, 6);
       const show = lo4.map((x, i) => {
@@ -369,13 +368,6 @@ const Menu = {
             ${tile('go:friends', 'friend', 'Teman', 'c-blue', `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`)}${tile('go:more', 'menu', 'Lainnya', 'c-gray')}
           </nav>
           <section class="lh-center">
-            <div class="feat-ban" style="--rc:${fr.color}">
-              <div class="fb-art"><canvas width="110" height="110" data-icon="${feat}" data-skin="default" data-evo="0"></canvas></div>
-              <div class="fb-info"><small class="fb-tag">★ UNIT UNGGULAN</small><b>${TOWERS[feat].name}</b>
-                <div>${this.rarityTag(feat)} <span class="fb-cd">⏳ <span data-cd="${nextDay}"></span></span></div>
-                <div class="fb-btns"><button class="fbb" data-act="hpull:1">Summon ×1<small>💎 ${GACHA.cost1}</small></button><button class="fbb x10" data-act="hpull:10">Summon ×10<small>💎 ${GACHA.cost10}</small></button></div>
-                <small class="fb-pity">Legendaris+ dijamin dalam ${pityLeft} tarikan</small></div>
-            </div>
             <div class="showcase">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
           </section>
           <aside class="lh-right">

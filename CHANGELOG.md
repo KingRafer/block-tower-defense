@@ -1,5 +1,9 @@
 # Changelog
 
+## [6.2.1] — 2026-11-27
+### Diubah
+- Banner **Unit Unggulan** dihapus dari lobby agar panggung tim & pemandangan kastil lebih lega (unit unggulan tetap ada di menu Summon).
+
 ## [6.2.0] — 2026-11-27
 ### Diubah — tata letak lobby
 - **Desktop**: menu kiri jadi satu kolom ramping (ikon + nama), papan Unit Unggulan lebih ringkas di atas panggung tim, panggung & unit lebih besar, tombol "Atur tim" di tengah bawah panggung.
