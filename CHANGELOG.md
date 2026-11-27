@@ -1,5 +1,11 @@
 # Changelog
 
+## [6.4.0] — 2026-11-27
+### Baru & diubah — lobby
+- **Satu tata letak lanskap untuk semua layar** (desktop, tablet, HP miring): rel ikon kiri, panggung tim besar di tengah, kartu kanan, slot peti + Misi Harian di kanan bawah, MAIN & MABAR berdampingan — ukuran menyesuaikan tinggi layar.
+- **Bilah akses cepat** di lobby: 🏆 Peringkat, 🔁 Trading, 🎁 Redeem, 🏅 Pencapaian, 📜 Update Log (ikon pixel baru).
+- **Banner event lebih besar**: latar salju berkilau, ikon besar bergerak, pita "EVENT".
+
 ## [6.3.1] — 2026-11-27
 ### Diubah
 - **Karakter di panggung lobby diperbesar** (desktop ±1,5×, HP potret ±1,6×, HP lanskap ±1,5×) dengan panggung lebih lebar.

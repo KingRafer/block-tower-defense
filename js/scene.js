@@ -188,6 +188,9 @@ const LobbyScene = {
 const PXI_PAL = { k: '#1c1712', w: '#fff4d6', y: '#f2c14e', Y: '#b8862b', r: '#d0503e', R: '#8f2f25', b: '#5a9ad8', B: '#2f5f99',
   s: '#c6ccd1', S: '#8b969e', o: '#a8703e', O: '#6e4524', g: '#6cc04a', G: '#3d7f2c', p: '#a77ad8', P: '#6a3fa0', c: '#8ee6ff', C: '#2fa3d6' };
 const PXI = {
+  swap: ['......k.....', '......kk....', 'kkkkkkkgk...', 'kggggggggk..', 'kGGGGGGGk...', '......kk....', '....kk......', '...kbk......', '..kbbbbbbbbk', '...kBBBBBBBk', '....kk......', '.....k......'],
+  scroll: ['..kkkkkkkk..', '.kwwwwwwwwk.', '.kokkkkkkok.', '..kwwwwwwk..', '..kwkkkkwk..', '..kwwwwwwk..', '..kwkkkwwk..', '..kwwwwwwk..', '..kwkkkkwk..', '.kokkkkkkok.', '.kwwwwwwwwk.', '..kkkkkkkk..'],
+  medal: ['.kkk....kkk.', '.krrk..kbbk.', '..krrkkbbk..', '...krrbbk...', '....kkkk....', '...kyyyyk...', '..kyywwyyk..', '..kywyyyYk..', '..kyyyyyYk..', '..kYyyyYYk..', '...kYYYYk...', '....kkkk....'],
   chest: ['......', '.kkkkk', 'kooooo', 'kOOOOO', 'kkkkky', 'kyoooy', 'kooook', 'kOOOOO', 'kooooo', 'kOOOOO', 'kkkkkk', '......'],
   tower: ['.....k', '....kr', '...krr', '..krrr', '.kRRRR', '..ksss', '..kssk', '..ksss', '..ksSs', '.kssss', 'kSSSSS', 'kkkkkk'],
   bolt: ['......kkkk..', '.....kyyyk..', '....kyyyk...', '...kyyyk....', '..kyyyykkk..', '..kyyyyyyk..', '..kkkkyyk...', '....kyyk....', '...kyyk.....', '..kyyk......', '..kyk.......', '..kk........'],

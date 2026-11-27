@@ -1978,3 +1978,113 @@ canvas#game { border: 5px solid #5d4037 !important; outline: 3px solid #1a110a; 
   .lh .sc-unit canvas { width: clamp(64px, 24vh, 100px) !important; height: clamp(64px, 24vh, 100px) !important; }
   .lh .showcase { gap: 0 !important; }
 }
+
+/* =========================================================
+ * v6.4 — satu tata letak lanskap untuk semua layar (desktop, tablet, HP miring)
+ * + bilah akses cepat (Peringkat, Trading, Redeem, Pencapaian, Update)
+ * + banner event lebih besar
+ * ========================================================= */
+.lh-quick { grid-area: quick; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.qb { display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 7px; border: 2px solid var(--k-ink); border-radius: 7px; cursor: pointer;
+  background: rgba(30, 40, 48, .78); backdrop-filter: blur(3px); color: var(--k-text); font: 700 12px var(--font-h);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.08), 0 3px 0 rgba(0,0,0,.35); }
+.qb:hover { background: rgba(48, 62, 72, .92); border-color: var(--k-gold); }
+.qb:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.qb .pxi { width: 22px; height: 22px; }
+/* banner event besar */
+.lh .lh-right .r-limited { position: relative; overflow: hidden; min-height: 96px; padding: 10px 12px !important; align-items: center;
+  background: radial-gradient(circle at 85% 20%, rgba(255,255,255,.18) 0 2px, transparent 3px) 0 0 / 34px 30px,
+    radial-gradient(circle at 30% 70%, rgba(255,255,255,.14) 0 1.5px, transparent 2.5px) 0 0 / 26px 24px,
+    linear-gradient(135deg, #2d6f96 0%, #1a4562 55%, #102c40 100%) !important;
+  border: 3px solid #8ee6ff !important; box-shadow: inset 0 0 0 2px rgba(255,255,255,.15), 0 0 16px rgba(79,195,247,.35), 0 4px 0 rgba(0,0,0,.4) !important; }
+.lh .lh-right .r-limited::after { content: 'EVENT'; position: absolute; top: 6px; right: -26px; transform: rotate(35deg); background: #f2c14e; color: #2a1a08;
+  font: 800 9px var(--font-h); padding: 2px 30px; letter-spacing: 1px; }
+.lh .lh-right .r-limited .rc-ic { width: 54px !important; height: 54px !important; background: rgba(255,255,255,.12) !important; border-radius: 8px; }
+.lh .lh-right .r-limited .rc-ic .pxi { width: 40px !important; height: 40px !important; animation: bob 2.4s ease-in-out infinite; }
+.lh .lh-right .r-limited b { font-size: 17px !important; color: #e8f8ff !important; text-shadow: 0 2px 0 #0b2233 !important; line-height: 1.1; }
+.lh .lh-right .r-limited small { color: #bfe9ff !important; font-size: 11.5px !important; display: block !important; }
+
+@media (orientation: landscape) and (min-width: 600px) {
+  .lh { height: 100dvh !important; min-height: 0 !important; overflow: hidden !important;
+    --rail: clamp(56px, 7vw, 84px); --rw: clamp(190px, 22vw, 268px);
+    gap: clamp(4px, 1.2dvh, 10px) clamp(8px, 1.2vw, 14px) !important; padding: clamp(5px, 1.6dvh, 12px) clamp(8px, 1.4vw, 18px) !important;
+    grid-template-columns: var(--rail) minmax(0, 1fr) minmax(0, 1fr) var(--rw) !important;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto !important;
+    grid-template-areas: "top top top top" "left quick quick right" "left center center right" "left center center chest" "left play coop mis" !important; }
+  .lh > .announce { display: none !important; }
+  .lh-top { flex-wrap: nowrap !important; } .lh-cur { order: 0 !important; flex: 1 !important; flex-basis: auto !important; }
+  /* rel ikon kiri */
+  .lh-left { display: flex !important; flex-direction: column; gap: clamp(3px, .8dvh, 6px) !important; overflow: hidden; }
+  .lh-left .ltile { width: auto !important; height: clamp(34px, calc((100dvh - 110px) / 8 - 5px), 64px) !important; aspect-ratio: auto !important;
+    flex-direction: column !important; justify-content: center !important; gap: 1px !important; padding: 2px !important; border-radius: 7px !important; }
+  .lh-left .ltile .lt-ic { width: auto !important; font-size: 18px !important; } .lh-left .ltile .lt-ic .pxi { width: clamp(16px, 3.6dvh, 26px); height: clamp(16px, 3.6dvh, 26px); }
+  .lh-left .ltile b { font-size: clamp(8.5px, 1.7dvh, 11px) !important; }
+  .lh-left .ltile .badge, .lh-left .ltile .badge-dot { top: 1px; right: 1px; left: auto; transform: none; }
+  /* tengah */
+  .lh-center { justify-content: flex-end !important; gap: 4px !important; min-height: 0; }
+  .lh .showcase { flex: 1 1 auto !important; height: auto !important; min-height: 0 !important; padding-bottom: clamp(14px, 3dvh, 30px) !important; gap: 0 !important; }
+  .lh .sc-unit canvas { width: clamp(64px, 24dvh, 180px) !important; height: clamp(64px, 24dvh, 180px) !important; }
+  .lh .sc-plat { width: min(98%, 760px) !important; height: clamp(26px, 6dvh, 56px) !important; }
+  .lh .sc-edit { display: block !important; right: 50% !important; transform: translateX(50%) !important; bottom: -4px !important; font-size: clamp(9px, 1.6dvh, 11px) !important; padding: 2px 8px !important; }
+  .lh .sc-tip { display: none; }
+  /* kanan */
+  .lh-right { display: flex !important; flex-direction: column !important; gap: clamp(4px, .9dvh, 7px) !important; overflow: hidden; align-content: start; }
+  .lh-right .rcard { display: flex !important; flex-direction: row !important; text-align: left !important; padding: clamp(4px, 1dvh, 7px) 10px !important; gap: 9px !important; min-height: 0 !important; }
+  .lh-right .rcard > div { width: auto; } .lh-right .rc-ic { width: clamp(24px, 5dvh, 34px) !important; height: clamp(24px, 5dvh, 34px) !important; background: rgba(0,0,0,.2) !important; }
+  .lh-right .rcard b { font-size: clamp(10px, 2dvh, 13px) !important; } .lh-right .rcard small { display: block !important; font-size: clamp(9px, 1.6dvh, 10.5px) !important; }
+  .lh-right .rcard small.dim { display: none !important; } .lh-right .rc-bar { display: block !important; }
+  .lh-right .r-event { display: flex !important; }
+  .lh-right:has(.r-limited) .r-daily { display: flex !important; }
+  /* peti + misi */
+  .lh-chests { position: static !important; grid-area: chest; display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 4px !important; align-self: end; }
+  .lhc { width: auto !important; height: clamp(32px, 7dvh, 52px) !important; flex-direction: column !important; gap: 0 !important; padding: 1px !important; }
+  .lhc .pxi { width: clamp(16px, 3.2dvh, 22px) !important; height: clamp(16px, 3.2dvh, 22px) !important; } .lhc small { font-size: clamp(7.5px, 1.4dvh, 8.5px) !important; }
+  .lhc.empty { opacity: .6; border-style: dashed !important; } .lhc.empty .pxi { filter: grayscale(1) brightness(.6); }
+  .lh-mis { display: flex !important; grid-area: mis; align-self: stretch; justify-content: center; padding: clamp(4px, 1dvh, 7px) 10px !important; gap: 2px !important; }
+  .lh-mis > b { font-size: clamp(10px, 2dvh, 14px) !important; } .lh-mis .mw-row:nth-child(n+3) { display: none; }
+  /* tombol main */
+  .lh-play { justify-content: flex-end !important; align-self: end; flex-direction: row !important; }
+  .lh-play .bigplay { width: min(100%, 300px) !important; min-width: 0 !important; padding: clamp(3px, .8dvh, 6px) 18px clamp(4px, 1dvh, 8px) 6px !important; gap: 10px !important; border-radius: 10px !important; }
+  .lh-play .bigplay .bp-ic { width: clamp(30px, 6.4dvh, 46px) !important; height: clamp(30px, 6.4dvh, 46px) !important; }
+  .lh-play .bigplay b { font-size: clamp(20px, 4.2dvh, 30px) !important; } .lh-play .bigplay small { display: block !important; font-size: clamp(8.5px, 1.6dvh, 11px) !important; }
+  .lh-play .bp-side { display: none !important; }
+  .lh-coop { justify-self: start !important; align-self: stretch !important; width: min(100%, 230px) !important; max-height: 70px !important; padding: 4px 12px !important; border-radius: 10px !important; justify-content: center; }
+  .lh-coop b { font-size: clamp(16px, 3.4dvh, 24px) !important; } .lh-coop small { display: block !important; font-size: clamp(8.5px, 1.6dvh, 11px) !important; }
+  .lh-coop span .pxi { width: clamp(20px, 4dvh, 30px); height: clamp(20px, 4dvh, 30px); }
+  /* akses cepat */
+  .lh-quick { gap: clamp(4px, .6vw, 7px); } .qb { padding: clamp(2px, .6dvh, 5px) 10px clamp(2px, .6dvh, 5px) 6px; font-size: clamp(9.5px, 1.8dvh, 12px); }
+  .qb .pxi { width: clamp(16px, 3.4dvh, 22px); height: clamp(16px, 3.4dvh, 22px); }
+  .lh .lh-right .r-limited { min-height: clamp(62px, 14dvh, 100px); }
+  .lh .lh-right .r-limited .rc-ic { width: clamp(38px, 8dvh, 54px) !important; height: clamp(38px, 8dvh, 54px) !important; }
+  .lh .lh-right .r-limited .rc-ic .pxi { width: clamp(28px, 6dvh, 40px) !important; height: clamp(28px, 6dvh, 40px) !important; }
+  .lh .lh-right .r-limited b { font-size: clamp(12px, 2.6dvh, 17px) !important; }
+  .lh-foot { display: none !important; }
+}
+/* layar lanskap pendek (HP miring): sembunyikan teks kecil kartu biasa */
+@media (orientation: landscape) and (min-width: 600px) and (max-height: 520px) {
+  .lh-right .rcard:not(.r-limited) small, .lh-right .rc-bar { display: none !important; }
+  .lh-prof .lvrow { display: none !important; } .lh-prof .av { width: 30px !important; height: 30px !important; }
+  .sysb { width: 32px !important; height: 32px !important; } .lh-cur .cur { padding: 2px 7px !important; font-size: 11px !important; }
+  .qb small { display: none; } .qb { padding: 3px 6px; }
+}
+/* potret: akses cepat jadi baris ikon */
+@media (orientation: portrait), (max-width: 599px) {
+  .lh { grid-template-areas: "top top" "ann ann" "right right" "quick quick" "chest chest" "center center" "play coop" "left left" !important;
+    grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto auto !important; }
+  .lh-quick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .qb { flex-direction: column; gap: 1px; padding: 3px 2px; font-size: 9px; justify-content: center; } .qb .pxi { width: 18px; height: 18px; }
+  .lh .lh-right .r-limited { min-height: 0; grid-column: 1 / -1; flex-direction: row !important; text-align: left !important; padding: 6px 10px !important; }
+  .lh .lh-right .r-limited small { display: block !important; font-size: 10px !important; } .lh .lh-right .r-limited b { font-size: 14px !important; }
+  .lh .lh-right .r-limited .rc-ic { width: 38px !important; height: 38px !important; } .lh .lh-right .r-limited .rc-ic .pxi { width: 28px !important; height: 28px !important; }
+  .lh-right .rcard:not(.r-limited) { grid-column: auto; }
+  .lh-right { grid-template-columns: repeat(3, 1fr) !important; }
+}
+@media (orientation: landscape) and (min-width: 600px) {
+  .lh .lh-right .r-limited { padding-right: 30px !important; }
+  .lh .lh-right .r-limited small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lh .lh-right .r-limited > div { min-width: 0; }
+  .lh-coop { align-self: end !important; height: auto !important; padding: clamp(4px, 1dvh, 8px) 12px !important; }
+  .lh-mis .mw-row small { font-size: clamp(9px, 1.7dvh, 11px) !important; } .lh-mis .mbar { height: clamp(9px, 1.8dvh, 12px) !important; } .lh-mis .mbar span { font-size: clamp(8px, 1.5dvh, 10px) !important; }
+}
+@media (orientation: portrait), (max-width: 599px) { .lh-quick .qb small { font-size: 9px !important; font-weight: 700; } }
+.lh-quick .qb small { font-size: inherit; }

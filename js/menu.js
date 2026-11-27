@@ -370,6 +370,13 @@ const Menu = {
           <section class="lh-center">
             <div class="showcase">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
           </section>
+          <nav class="lh-quick">
+            <button class="qb" data-act="go:scores" title="Papan Skor">${pxi('trophy')}<small>Peringkat</small></button>
+            <button class="qb" data-act="go:trade" title="Trading">${pxi('swap')}<small>Trading</small></button>
+            <button class="qb" data-act="go:redeem" title="Kode Redeem">${pxi('gift')}<small>Redeem</small></button>
+            <button class="qb" data-act="go:achievements" title="Pencapaian">${pxi('medal')}<small>Pencapaian</small></button>
+            <button class="qb" data-act="go:updates" title="Update Log">${pxi('scroll')}<small>Update</small></button>
+          </nav>
           <aside class="lh-right">
             ${SHARED.limitedActive(now) ? `<button class="rcard r-limited" data-act="go:event"><span class="rc-ic">${pxi('snow')}</span><div><b>${esc(SHARED.LIMITED.name.toUpperCase())}</b><small>${SHARED.LIMITED.icon} ${((v.ev && v.ev.id === SHARED.LIMITED.id && v.ev.lan) || 0).toLocaleString('id-ID')} • sisa <span data-cd="${SHARED.limitedEndsAt()}"></span></small></div>${this.badge(eventReady())}</button>` : ''}
             ${evOn ? `<button class="rcard r-event" data-act="go:play"><span class="rc-ic">${pxi('star')}</span><div><b>EVENT AKTIF</b><small>${ev.rewardMul > 1 ? `🪙 ×${ev.rewardMul} ` : ''}${ev.diamondMul > 1 ? `💎 ×${ev.diamondMul}` : ''} hadiah bermain</small></div></button>` : ''}
