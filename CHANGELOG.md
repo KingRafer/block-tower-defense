@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.0.0] — 2026-11-27
+### Diubah — tampilan arena permainan
+- **Medan baru bergaya pixel-art** di semua map: rumput bertekstur dengan jumbai & bunga liar (tanpa pola papan catur), pasir dengan jejak angin,
+  salju berkilau, retakan lava menyala, danau beku (Lembah Beku).
+- **Jalan tanah berlis**: kerikil, tepi gelap, dan rumput yang menjorok ke jalan.
+- **Dekorasi baru**: pohon rimbun & pinus berlapis (bersalju di map salju), kaktus bercabang berbunga, batu vulkanik dengan retakan lava, batu berlumut — semua berbayangan.
+- **Base jadi kastil** dengan menara, gerbang, jendela menyala, dan bendera berkibar yang berubah warna & berasap saat nyawa base menipis.
+- **Portal musuh** berputar di titik muncul.
+- **Cuaca & suasana**: bayangan awan bergerak, daun beterbangan (padang rumput), badai pasir (gurun), salju turun (kutub & Lembah Beku), bara api naik (lava), vinyet tepi.
+- **Zombie digambar ulang**: kaki melangkah, tangan menjulur ke arah jalan, kepala berwarna kulit zombie, mata merah menyala, baju robek.
+- Arena berbingkai kayu dan latar halaman memakai pemandangan lobby.
+
 ## [5.6.2] — 2026-11-27
 ### Diubah
 - **Latar di belakang unit kini sesuai tier**: gradien warna kelangkaan (Biasa abu-abu, Langka biru, Epik ungu, Legendaris emas, Mitos merah,
