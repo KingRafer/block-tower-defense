@@ -1,5 +1,15 @@
 # Changelog
 
+## [7.2.0] — 2026-11-27
+### Diubah — visual semua layar menu
+- **Latar menu hidup**: aurora berwarna yang berputar pelan + bintang berkelip.
+- **Header layar** jadi plakat kayu berlis emas dengan judul emas berkilau & ornamen permata.
+- **Panel berbingkai emas**, judul panel emas, transisi layar lebih halus.
+- **Kartu unit bercahaya sesuai tier**; Legendaris ke atas punya kilau hologram, Ilahi berkilau emas.
+- **Bar progres emas bergerak**, misi selesai bercahaya hijau, kartu misi lebih rapi.
+- **Pencapaian** jadi grid kartu; yang sudah didapat bercahaya emas.
+- Tab aktif bercahaya, tombol terangkat saat disentuh, scrollbar bertema.
+
 ## [7.1.0] — 2026-11-27
 ### Diubah — visual menu
 - **Panggung banner Summon**: unit andalan banner (Ilahi & Rahasia di Banner Standar; Naga, Malaikat Maut, Malaikat Agung di Lucky) berdiri di panggung bercahaya dengan sinar berputar — klik untuk lihat di Index.
