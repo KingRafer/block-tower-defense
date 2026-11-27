@@ -1964,3 +1964,17 @@ canvas#game { border: 5px solid #5d4037 !important; outline: 3px solid #1a110a; 
   .lh-play .bigplay { padding: 3px 12px 4px 4px !important; } .lh-play .bigplay b { font-size: 22px !important; } .lh-play .bigplay .bp-ic { width: 32px !important; height: 32px !important; }
   .lh-coop b { font-size: 17px !important; }
 }
+/* v6.3.1 — karakter lobby lebih besar */
+@media (min-width: 1101px) and (min-height: 600px) {
+  .lh .sc-unit canvas { width: clamp(110px, 22vh, 180px) !important; height: clamp(110px, 22vh, 180px) !important; }
+  .lh .showcase { gap: 0 !important; } .lh .sc-plat { width: min(98%, 760px) !important; height: 56px !important; }
+}
+@media (min-width: 761px) and (max-width: 1100px) and (min-height: 600px) { .lh .sc-unit canvas { width: 104px !important; height: 104px !important; } }
+@media (max-width: 760px) {
+  .lh .sc-unit canvas { width: clamp(70px, 22vw, 96px) !important; height: clamp(70px, 22vw, 96px) !important; }
+  .lh .showcase { gap: 0 !important; } .lh .sc-plat { height: 30px !important; }
+}
+@media (min-width: 761px) and (max-height: 599px) {
+  .lh .sc-unit canvas { width: clamp(64px, 24vh, 100px) !important; height: clamp(64px, 24vh, 100px) !important; }
+  .lh .showcase { gap: 0 !important; }
+}

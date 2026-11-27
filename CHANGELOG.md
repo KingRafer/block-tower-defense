@@ -1,5 +1,9 @@
 # Changelog
 
+## [6.3.1] — 2026-11-27
+### Diubah
+- **Karakter di panggung lobby diperbesar** (desktop ±1,5×, HP potret ±1,6×, HP lanskap ±1,5×) dengan panggung lebih lebar.
+
 ## [6.3.0] — 2026-11-27
 ### Diubah — lobby lebih ringkas & lega
 - Semua panel lobby sedikit **tembus pandang** agar pemandangan kastil tetap terlihat.
