@@ -157,6 +157,37 @@ const Menu = {
     return `${sw}<div class="ix-top box"><b>📖 ${src === 'winter' ? 'Index Banner Winter' : 'Koleksi'} ${got}/${total}</b><div class="mbar"><div style="width:${got / total * 100}%"></div></div><small class="dim">Unit 🔒 terlihat bentuknya, tapi harus didapat dari Summon.</small></div>
       <div class="ix-wrap"><div class="ix-list">${groups}</div>${det}</div>`;
   },
+  /** Daftar perubahan statistik evolusi */
+  evoChanges(type) {
+    const ev = EVOS[type]; if (!ev) return [];
+    const m = ev.mul || {}, pc = x => `+${Math.round((x - 1) * 100)}%`, out = [];
+    if (m.dmg) out.push(['⚔️ Damage', pc(m.dmg)]); if (m.range) out.push(['🎯 Jangkauan', pc(m.range)]); if (m.splash) out.push(['💥 Area ledakan', pc(m.splash)]);
+    if (m.income) out.push(['💰 Pendapatan', pc(m.income)]); if (m.buffAdd) out.push(['▲ Buff', `+${Math.round(m.buffAdd * 100)}%`]);
+    if (m.chainAdd) out.push(['⚡ Lompatan', `+${m.chainAdd}`]); if (m.rampAdd) out.push(['🔥 Panas maks', `+${Math.round(m.rampAdd * 100)}%`]);
+    if (m.dotMul) out.push(['☠️ Damage berkala', `×${m.dotMul}`]); if (m.slowAdd) out.push(['❄️ Perlambatan', `+${Math.round(m.slowAdd * 100)}%`]); if (m.goldHit) out.push(['🪙 Emas per pukulan', pc(m.goldHit)]);
+    const PERK = { triple: 'Tembakan ke-4 = 3× damage', crit: '25% critical 3× damage', burn: 'Ledakan membakar musuh', freeze: '20% membekukan musuh 1 detik',
+      interest: 'Bunga 2% dari uang tiap wave', ramp: 'Damage naik hingga +80% saat terus menembak', marshal: 'Buff lebih kuat & luas', double: 'Menembak 2× sekaligus' };
+    if (ev.perk && PERK[ev.perk]) out.push(['✨ Kemampuan baru', PERK[ev.perk]]);
+    out.push(['👑 Tampilan', 'Kostum & senjata baru, mahkota, aura rune']);
+    return out;
+  },
+  evoPreview(type, skin) {
+    return `<div class="evo-pv"><div><canvas width="96" height="96" data-icon="${type}" data-skin="${skin || 'default'}" data-evo="0"></canvas><small>${TOWERS[type].name}</small></div>
+      <span class="evo-arrow">➜</span><div class="ev-after" style="--ac:${typeof evoAccent === 'function' ? evoAccent(type) : '#ffd54f'}"><canvas width="96" height="96" data-icon="${type}" data-skin="${skin || 'default'}" data-evo="1"></canvas><small>${EVOS[type].name}</small></div></div>`;
+  },
+  /** Animasi evolusi: kilat cahaya lalu bentuk baru + daftar perubahan */
+  evoReveal(u) {
+    const old = document.querySelector('.evomodal'); if (old) old.remove();
+    const el = document.createElement('div'); el.className = 'evomodal';
+    el.innerHTML = `<div class="evm-box" style="--ac:${evoAccent(u.type)}"><small class="ph-k">EVOLUSI BERHASIL</small>
+      <div class="evm-stage"><canvas class="evm-old" width="160" height="160" data-icon="${u.type}" data-skin="${u.skin || 'default'}" data-evo="0"></canvas>
+        <canvas class="evm-new" width="160" height="160" data-icon="${u.type}" data-skin="${u.skin || 'default'}" data-evo="1"></canvas><i class="evm-flash"></i></div>
+      <h2>${TOWERS[u.type].name} ➜ ${EVOS[u.type].name}</h2><p class="dim">${EVOS[u.type].desc}</p>
+      <div class="evm-list">${this.evoChanges(u.type).map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+      <button class="btn big">Mantap!</button></div>`;
+    document.body.appendChild(el); this.drawIcons(el);
+    const close = () => el.remove(); el.querySelector('.btn').onclick = close; el.addEventListener('click', e => { if (e.target === el) close(); });
+  },
   /** Ikon besar hadiah (unit → gambar unit, skin → palet, lainnya → ikon mata uang) + label singkat */
   rwBig(rw) {
     if (rw.unit) { const t = rw.unit.type || rw.unit; return [`<canvas width="44" height="44" data-icon="${t}" data-skin="default" data-evo="0"></canvas>`, TOWERS[t] ? TOWERS[t].name : t]; }
@@ -1055,7 +1086,7 @@ const Menu = {
         break;
       }
       case 'evo':
-        Eco.act('evolve', { unitId: arg }).then(() => { const u = unitById(arg); sfx('win'); UI.toast(`🧬 Berevolusi menjadi ${EVOS[u.type].name}!`, 'gold', 4000); this.show('units', true); checkAchievements(null); })
+        Eco.act('evolve', { unitId: arg }).then(() => { const u = unitById(arg); sfx('win'); this.show('units', true); this.evoReveal(u); checkAchievements(null); })
           .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
         break;
       case 'setskin': { const [, id, skin] = a.split(':'); this.eco('setSkin', { unitId: id, skin }); break; }
@@ -1182,7 +1213,9 @@ const Menu = {
         <button class="btn sm purple" data-act="roll:${u.id}" ${v.crystals < 1 ? 'disabled' : ''}>${this.rollArm === u.id ? '⚠️ Yakin? Trait ini akan hilang' : '🎲 Roll Trait — ✨ 1'}</button>
         <details><summary>Peluang trait</summary><div class="odds">${RARITY_ORDER.map(rk => { const r = RARITY[rk], list = Object.values(TRAITS).filter(t => t.rarity === rk), pct = list.reduce((a, t) => a + t.w, 0);
           return list.length ? `<div><b style="color:${r.color}">${r.name} ${pct}%</b><small>${list.map(t => `${t.icon} ${t.name}: ${t.desc}`).join('<br>')}</small></div>` : ''; }).join('')}</div></details>`;
-    else if (tab === 'evo') body = `<p><small><b>${ev.name}</b> — ${ev.desc}</small></p>${u.evo ? '<div class="evo-ok">★ Sudah berevolusi</div>' : `<ul class="reqs">${req(es.lvOk, `Mastery Lv ${EVO_REQ.level} (sekarang ${lv})`)}${req(es.stonesOk, `🔮 ${EVO_REQ.stones} Batu Evolusi (punya ${v.stones})`)}${req(es.coinsOk, `🪙 ${EVO_REQ.coins} koin`)}</ul>
+    else if (tab === 'evo') body = `${this.evoPreview(u.type, u.skin)}<p><small><b>${ev.name}</b> — ${ev.desc}</small></p>
+        <div class="evm-list sm">${this.evoChanges(u.type).map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+        ${u.evo ? '<div class="evo-ok">★ Sudah berevolusi</div>' : `<ul class="reqs">${req(es.lvOk, `Mastery Lv ${EVO_REQ.level} (sekarang ${lv})`)}${req(es.stonesOk, `🔮 ${EVO_REQ.stones} Batu Evolusi (punya ${v.stones})`)}${req(es.coinsOk, `🪙 ${EVO_REQ.coins} koin`)}</ul>
         <button class="btn sm gold" data-act="evo:${u.id}" ${es.lvOk && es.stonesOk && es.coinsOk ? '' : 'disabled'}>🧬 EVOLUSI</button>`}`;
     else body = `<div class="skinpick">${v.skins.map(k => `<button class="skb ${u.skin === k || (!u.skin && k === 'default') ? 'on' : ''}" data-act="setskin:${u.id}:${k}" title="${SKINS[k].name}">${SKINS[k].icon}</button>`).join('')}<button class="skb more" data-act="shoptab:skin" title="Beli skin">＋</button></div>`;
     return `<div class="udetail box ud-compact" style="--rc:${RARITY[UNIT_RARITY[u.type]].color}">

@@ -48,6 +48,62 @@ const CHARS = {
   yeti:      { special: true },
   dragon:    { special: true },
 };
+/* Penampilan setelah evolusi: perlengkapan baru + warna aksen (aura, rune, senjata bercahaya) */
+const EVO_LOOK = {
+  scout:     { hat: 'officer', hatC: '#1b5e20', back: 'cape', backC: '#ffd54f', outfit: ['belt', 'pockets', 'medals'], accent: '#ffd54f' },
+  sniper:    { hat: 'visorhelm', hatC: '#3e2723', face: 'visor', faceC: '#ff1744', accent: '#ff5252' },
+  pistol:    { back: 'cape', backC: '#4e342e', accent: '#ffd54f' },
+  archer:    { hatC: '#ffd54f', outfit: ['belt', 'strap'], accent: '#a5d6a7' },
+  demoman:   { hat: 'helmet', hatC: '#b71c1c', back: 'fueltanks', accent: '#ff7043' },
+  freezer:   { hatC: '#e1f5fe', back: 'cape', backC: '#01579b', accent: '#80deea' },
+  cannon:    { hat: 'officer', hatC: '#212121', back: 'cape', backC: '#263238', accent: '#ff8a65' },
+  flamer:    { back: 'jetpack', accent: '#ffab40' },
+  mortar:    { hat: 'officer', hatC: '#33691e', accent: '#c5e1a5' },
+  minigun:   { hat: 'visorhelm', hatC: '#212121', face: 'visor', faceC: '#ff1744', accent: '#ff5252' },
+  commander: { hat: 'galaxycrown', hatC: '#ffd54f', accent: '#ffd54f' },
+  tesla:     { face: 'glow', faceC: '#18ffff', back: 'voidaura', accent: '#18ffff' },
+  laser:     { back: 'jetpack', accent: '#ff1744' },
+  poison:    { hat: 'reaperhood', hatC: '#1b5e20', face: 'glow', faceC: '#76ff03', accent: '#76ff03' },
+  ninja:     { face: 'glow', faceC: '#ff1744', back: 'voidaura', accent: '#ff1744' },
+  rocketeer: { hat: 'visorhelm', hatC: '#4a148c', face: 'visor', faceC: '#e040fb', accent: '#e040fb' },
+  railgun:   { back: 'wings', accent: '#82b1ff' },
+  warden:    { hat: 'galaxycrown', hatC: '#64ffda', back: 'starcape', accent: '#64ffda' },
+  samurai:   { back: 'cape', backC: '#ffd54f', face: 'glow', faceC: '#ff1744', accent: '#ffd54f' },
+  wizard:    { hat: 'galaxycrown', hatC: '#b388ff', back: 'starcape', accent: '#b388ff' },
+  angel:     { hat: 'galaxycrown', hatC: '#ffd54f', accent: '#fff59d' },
+  reaper:    { face: 'glow', faceC: '#ff1744', accent: '#b388ff' },
+  cosmic:    { back: 'wings', accent: '#ea80fc' },
+  goldminer: { hat: 'galaxycrown', hatC: '#ffd54f', accent: '#ffd54f' },
+  pirate:    { hat: 'officer', hatC: '#212121', back: 'cape', backC: '#b71c1c', accent: '#ffd54f' },
+  knight:    { back: 'wings', accent: '#fff59d' },
+  druid:     { hat: 'galaxycrown', hatC: '#76ff03', back: 'voidaura', accent: '#b2ff59' },
+  firegod:   { back: 'starcape', accent: '#ffab00' },
+  thundergod:{ back: 'wings', accent: '#fff59d' },
+  skier:     { back: 'cape', backC: '#b71c1c', accent: '#ffd54f' },
+  icearcher: { back: 'wings', accent: '#80deea' },
+  iceknight: { hat: 'galaxycrown', hatC: '#b3e5fc', back: 'cape', backC: '#0d47a1', accent: '#80deea' },
+  frostmage: { back: 'starcape', accent: '#80deea' },
+  frostqueen:{ back: 'wings', accent: '#e1f5fe' },
+  farm: { accent: '#ffd54f' }, nuke: { accent: '#c6ff00' }, dragon: { accent: '#ff6d00' }, snowman: { accent: '#80deea' }, yeti: { accent: '#4fc3f7' },
+};
+const evoAccent = type => (EVO_LOOK[type] && EVO_LOOK[type].accent) || '#ffd54f';
+/** Efek unit evolusi: lingkar rune berputar di kaki + percikan cahaya naik */
+function drawEvoAura(type, x, y, under) {
+  const tt = time(), ac = evoAccent(type);
+  ctx.save();
+  if (under) {
+    ctx.strokeStyle = ac; ctx.globalAlpha *= 0.75; ctx.lineWidth = 1.6; ctx.setLineDash([5, 4]); ctx.lineDashOffset = -tt * 18;
+    ctx.beginPath(); ctx.ellipse(x, y + 12, 24, 8.5, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    for (let i = 0; i < 4; i++) { const a = tt * 1.2 + i * Math.PI / 2; ctx.fillStyle = ac; ctx.fillRect(x + Math.cos(a) * 24 - 1.5, y + 12 + Math.sin(a) * 8.5 - 1.5, 3, 3); }
+  } else {
+    for (let i = 0; i < 4; i++) {
+      const k = ((tt * 0.6 + i * 0.25) % 1), px = x - 14 + i * 9 + Math.sin(tt * 2 + i) * 2;
+      ctx.globalAlpha = (1 - k) * 0.9; ctx.fillStyle = i % 2 ? ac : '#ffffff';
+      ctx.fillRect(px, y + 6 - k * 40, 2, 2);
+    }
+  }
+  ctx.restore();
+}
 /* Tinggi penutup kepala (untuk mahkota evolusi) */
 const HAT_TOP = { minerhat: 34,  reaperhood: 34, galaxycrown: 40,  cowboy: 37, wizard: 50, kabuto: 40, officer: 34, mad: 33, plague: 36, robin: 36, halo: 40, chrono: 33, beanie: 35, ninja: 32 };
 
@@ -243,7 +299,12 @@ function drawWeapon(sp, t, shirt, skin, sk) {
 
 /** Gambar karakter lengkap untuk tower humanoid */
 function drawHero(t, x, y, sk, evo, base) {
-  const sp = CHARS[t.type] || CHARS.scout;
+  let sp = CHARS[t.type] || CHARS.scout;
+  if (evo && EVO_LOOK[t.type]) {   // perlengkapan evolusi + hiasan emas
+    const L = EVO_LOOK[t.type], out = [...(L.outfit || sp.outfit || [])];
+    if (!out.includes('goldtrim')) out.push('goldtrim');
+    sp = { ...sp, ...L, outfit: out };
+  }
   const face = Math.cos(t.angle || 0) >= 0 ? 1 : -1;
   const shirt = sk.rainbow ? `hsl(${(time() * 90 + x) % 360},80%,55%)` : (sk.body || (evo ? base : sp.shirt || base));
   const pants = sk.body ? shade(sk.body, -45) : sp.pants || '#37474f';
@@ -257,15 +318,19 @@ function drawHero(t, x, y, sk, evo, base) {
   drawHat(spx, x, y, sk);
   ctx.restore();
   if (sk.acc) drawAccessory(sk.acc, x, y, sk);
-  if (evo) { const top = HAT_TOP[spx.hat] || 30, b = Math.sin(time() * 3) * 1.5; ctx.fillStyle = '#ffd600'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x - 7, y - top - 2 + b); ctx.lineTo(x - 7, y - top - 8 + b); ctx.lineTo(x - 3.5, y - top - 5 + b); ctx.lineTo(x, y - top - 10 + b); ctx.lineTo(x + 3.5, y - top - 5 + b); ctx.lineTo(x + 7, y - top - 8 + b); ctx.lineTo(x + 7, y - top - 2 + b); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  if (evo) { const top = HAT_TOP[spx.hat] || 30, b = Math.sin(time() * 3) * 1.5, ac = evoAccent(t.type); ctx.fillStyle = '#ffd600'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - 8, y - top - 2 + b); ctx.lineTo(x - 8, y - top - 9 + b); ctx.lineTo(x - 4, y - top - 5.5 + b); ctx.lineTo(x, y - top - 11 + b); ctx.lineTo(x + 4, y - top - 5.5 + b); ctx.lineTo(x + 8, y - top - 9 + b); ctx.lineTo(x + 8, y - top - 2 + b); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = ac; ctx.beginPath(); ctx.arc(x, y - top - 4.5 + b, 1.8, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(x - 0.6, y - top - 5.6 + b, 1, 1);
+    // mata bercahaya
+    const fx = Math.cos(t.angle || 0) >= 0 ? 1 : -1; ctx.save(); ctx.globalAlpha *= 0.55 + Math.sin(time() * 5) * 0.25; ctx.fillStyle = ac;
+    ctx.fillRect(x + fx * 1 - 1, y - 21, 2.5, 1.5); ctx.fillRect(x + fx * 5 - 1, y - 21, 2.5, 1.5); ctx.restore(); }
   // senjata mengikuti arah bidik
   const aim = ['flag', 'hourstaff', 'teslastaff', 'scythe', 'starorb'].includes(sp.weapon) ? 0
     : t.type === 'mortar' ? -Math.PI / 2.6 * face + (face < 0 ? Math.PI : 0) : (t.angle || 0);
   ctx.save(); ctx.translate(x + 3 * face, y - 4); ctx.rotate(aim);
   const upright = ['flag', 'hourstaff', 'teslastaff', 'scythe', 'starorb'].includes(sp.weapon);
   if (face < 0) ctx.scale(upright ? -1 : 1, upright ? 1 : -1);
-  drawWeapon(sp, t, shirt, skin, sk);
+  drawWeapon(sp, t, shirt, skin, evo && !sk.gun ? { ...sk, gun: evoAccent(t.type) } : sk);
   ctx.restore();
 }
 

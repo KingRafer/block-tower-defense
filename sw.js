@@ -1,5 +1,5 @@
 /* Service worker: jaringan dulu, cadangan cache (bisa main solo saat offline) */
-const CACHE = 'btd-v5.4.0';
+const CACHE = 'btd-v5.5.0';
 const CORE = ['./', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon-192.png', 'assets/lobby-bg.png',
   ...['shared', 'config', 'storage', 'audio', 'game', 'render', 'chars', 'skills', 'scene', 'ui', 'menu', 'dev', 'pwa', 'online', 'main'].map(f => `js/${f}.js`)];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {})); self.skipWaiting(); });

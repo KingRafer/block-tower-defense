@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.5.0] — 2026-11-27
+### Diubah
+- **Peluang gacha dibuat sedikit lebih sulit**:
+  Summon — Biasa 62%, Langka 28%, Epik 8%, Legendaris 1,7%, Mitos 0,27%, Rahasia 0,025%, Ilahi 0,005% (pity Legendaris 80).
+  Lucky — Biasa 30%, Langka 38%, Epik 24%, Legendaris 6,5%, Mitos 1,3%, Rahasia 0,15%, Ilahi 0,05% (pity 40).
+  Banner Winter — Biasa 50%, Langka 31%, Epik 13,5%, Legendaris 4,2%, Mitos 1,1%, Rahasia 0,2% (pity 70).
+- **Evolusi lebih menarik & detail**: setiap unit berevolusi punya kostum baru (topi/helm/mahkota, jubah, sayap, aura),
+  hiasan emas, senjata berwarna aksen, mata bercahaya, mahkota bertatahkan permata, alas gelap berlis emas,
+  lingkar rune berputar di kaki dan percikan cahaya naik — warna aksen berbeda tiap unit.
+- **Animasi evolusi**: kilatan cahaya lalu bentuk baru muncul, lengkap dengan daftar perubahan (damage, jangkauan, kemampuan baru, tampilan).
+- Tab **Evolusi** di detail unit menampilkan perbandingan sebelum ➜ sesudah dan semua perubahan statistik.
+
 ## [5.4.0] — 2026-11-27
 ### Ditambahkan
 - **Tier baru tertinggi: Ilahi** (di atas Rahasia) — **Dewa Api** (tombak matahari menembus barisan & membakar) dan **Dewa Petir** (petir melompat ke 10–18 musuh).

@@ -1649,3 +1649,25 @@ img.pxe.huge { width: 72px; height: 72px; }
 .r-divine .ix-head b, .rate.r-divine { background: linear-gradient(90deg, #ffe066, #ff8a65, #fff59d, #ffe066); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 3s linear infinite; }
 .ucard.r-divine { border-color: #ffe066 !important; box-shadow: inset 0 0 0 2px #ffe066, 0 3px 0 rgba(0,0,0,.35) !important; }
 .pcardx.r-divine .front { box-shadow: 0 0 34px #ffe066, 0 0 60px #ff8a65; }
+
+/* ---------- v5.5 evolusi ---------- */
+.evo-pv { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 8px; }
+.evo-pv > div { display: flex; flex-direction: column; align-items: center; background: var(--k-well); border: 2px solid var(--k-ink); border-radius: 6px; padding: 4px 8px; }
+.evo-pv canvas { width: 84px; height: 84px; } .evo-pv small { font-weight: 700; font-size: 11px; }
+.evo-pv .ev-after { border-color: var(--ac); box-shadow: inset 0 0 0 2px var(--ac); }
+.evo-arrow { font-size: 22px; color: var(--k-gold); }
+.evm-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 6px 0; text-align: left; }
+.evm-list div { display: flex; justify-content: space-between; gap: 6px; background: var(--k-well); border: 1px solid var(--k-ink); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.evm-list b { color: var(--k-gold); text-align: right; } .evm-list.sm div { font-size: 11px; }
+.evomodal { position: fixed; inset: 0; z-index: 200; background: rgba(8,12,16,.82); display: flex; align-items: center; justify-content: center; padding: 14px; animation: fadein .2s; }
+.evm-box { width: min(460px, 100%); background: var(--k-panel); border: 3px solid var(--ac); border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 6px 0 rgba(0,0,0,.4); }
+.evm-box h2 { margin: 6px 0 2px; font-size: 22px; color: var(--ac); } .evm-box .btn { margin-top: 8px; width: 100%; }
+.evm-stage { position: relative; width: 160px; height: 160px; margin: 6px auto; }
+.evm-stage canvas { position: absolute; inset: 0; width: 160px; height: 160px; }
+.evm-old { animation: evoOld 1.4s forwards; } .evm-new { opacity: 0; animation: evoNew 1.4s forwards; }
+.evm-flash { position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, #fff 0 25%, var(--ac) 45%, transparent 70%); opacity: 0; animation: evoFlash 1.4s forwards; pointer-events: none; }
+@keyframes evoOld { 0% { opacity: 1; transform: scale(1); filter: brightness(1); } 45% { opacity: 1; transform: scale(1.06); filter: brightness(3); } 55% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes evoNew { 0%, 50% { opacity: 0; transform: scale(.8); } 70% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes evoFlash { 0%, 35% { opacity: 0; transform: scale(.3); } 55% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1.4); } }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 760px) { .evm-list { grid-template-columns: 1fr; } }

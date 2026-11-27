@@ -133,8 +133,8 @@
 
   /* ---------------- GACHA ---------------- */
   const GACHA = {
-    cost1: 50, cost10: 450, pity: 60,
-    rates: { common: 55, rare: 30, epic: 11, legendary: 3.5, mythic: 0.46, secret: 0.03, divine: 0.01 },
+    cost1: 50, cost10: 450, pity: 80,
+    rates: { common: 62, rare: 28, epic: 8, legendary: 1.7, mythic: 0.27, secret: 0.025, divine: 0.005 },
     banners: {
       std:   { name: 'Banner Standar', currency: 'diamonds', desc: 'Semua unit tersedia. Pakai 💎 Diamond yang didapat dari bermain.' },
       feat:  { name: 'Banner Unggulan', currency: 'diamonds', desc: 'Peluang 50% unit unggulan saat dapat Legendaris/Mitos. Berganti setiap hari.' },
@@ -143,10 +143,10 @@
     },
   };
   /* Banner Winter: unit eksklusif event (selain itu sama dengan banner standar) */
-  const WINTER_GACHA = { pity: 50, cost1: 60, cost10: 540,   // biaya dalam ❄️ Kepingan Salju; pity = Legendaris+ dijamin
-    rates: { common: 45, rare: 30, epic: 16, legendary: 6.5, mythic: 2, secret: 0.5 } };
+  const WINTER_GACHA = { pity: 70, cost1: 60, cost10: 540,   // biaya dalam ❄️ Kepingan Salju; pity = Legendaris+ dijamin
+    rates: { common: 50, rare: 31, epic: 13.5, legendary: 4.2, mythic: 1.1, secret: 0.2 } };
   /* Lucky Summon (Permata hasil top up) */
-  const LUCKY = { cost1: 10, cost10: 90, pity: 30, rates: { common: 25, rare: 37, epic: 27, legendary: 9, mythic: 1.8, secret: 0.15, divine: 0.05 } };
+  const LUCKY = { cost1: 10, cost10: 90, pity: 40, rates: { common: 30, rare: 38, epic: 24, legendary: 6.5, mythic: 1.3, secret: 0.15, divine: 0.05 } };
   const unitsOfRarity = r => UNIT_TYPES.filter(t => UNIT_RARITY[t] === r && !EVENT_UNITS[t]);   // pool banner biasa
   function dayStr(now) { const d = new Date(now + 7 * 3600e3); return d.toISOString().slice(0, 10); } // zona WIB
   function featuredUnit(now) {

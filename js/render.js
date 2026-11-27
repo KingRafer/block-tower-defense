@@ -135,15 +135,19 @@ function drawTower(t, ghost) {
   }
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 16, 20, 7, 0, 0, Math.PI * 2); ctx.fill();
   if (!ghost && isMP() && t.owner) { ctx.strokeStyle = playerColor(t.owner); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 14, 22, 9, 0, 0, Math.PI * 2); ctx.stroke(); }
+  if (evo) drawEvoAura(t.type, x, y, true);
   pixelSprite(x, y, () => {
-    block(x - 19, y + 4, 38, 12, 6, t.level >= 3 ? '#ffb300' : '#78909c');
-    if (t.type === 'farm') drawFarm(t, x, y, sk);
-    else if (t.type === 'nuke') drawNuke(t, x, y, sk, body);
-    else if (t.type === 'dragon') drawDragon(t, x, y, sk, body);
-    else if (t.type === 'snowman') drawSnowman(t, x, y, sk);
-    else if (t.type === 'yeti') drawYeti(t, x, y, sk);
+    block(x - 19, y + 4, 38, 12, 6, evo ? '#37474f' : t.level >= 3 ? '#ffb300' : '#78909c');
+    if (evo) { ctx.fillStyle = evoAccent(t.type); ctx.fillRect(x - 19, y - 2, 38, 2); ctx.fillStyle = '#ffd54f'; for (let i = 0; i < 3; i++) ctx.fillRect(x - 12 + i * 11, y + 3, 3, 3); }
+    const skE = evo && !sk.body ? { ...sk, body: base, gun: sk.gun || evoAccent(t.type) } : sk;
+    if (t.type === 'farm') drawFarm(t, x, y, skE);
+    else if (t.type === 'nuke') drawNuke(t, x, y, skE, body);
+    else if (t.type === 'dragon') drawDragon(t, x, y, skE, body);
+    else if (t.type === 'snowman') drawSnowman(t, x, y, skE);
+    else if (t.type === 'yeti') drawYeti(t, x, y, skE);
     else drawHero(t, x, y, sk, evo, base);
   });
+  if (evo) drawEvoAura(t.type, x, y, false);
   for (let i = 0; i < t.level; i++) {
     ctx.fillStyle = '#ffd54f'; ctx.fillRect(x - 14 + i * 8, y + 18, 6, 6);
     ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(x - 14 + i * 8, y + 18, 6, 6);
