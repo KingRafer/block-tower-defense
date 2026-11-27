@@ -1,5 +1,15 @@
 # Changelog
 
+## [5.0.0] — 2026-11-27
+### Ditambahkan
+- **Skill unit**: setiap unit kini punya **1 skill pasif** (selalu aktif) dan **1 skill aktif** (terbuka di level upgrade 2, cooldown 30–60 detik).
+  Pakai lewat tombol skill di panel tower atau tombol **F** saat tower dipilih. Berlaku juga saat mabar.
+  Contoh: Scout *Rentetan* (tembak 3× lebih cepat), Sniper *Headshot* & *Peluru Penembus*, Freezer *Zona Beku*, Commander *Serbu!* (tower sekitar 60% lebih cepat),
+  Samurai *Seribu Tebasan*, Penyihir *Meteor Arkana*, Malaikat *Berkah Surga* (pulihkan nyawa base), Malaikat Maut *Panen Jiwa*, Kaisar Kosmik *Lubang Hitam*, Penambang *Demam Emas*.
+- **Variasi serangan & efek**: tiap unit punya gaya serangan sendiri — peluru, panah melayang, shuriken berputar, orb & bintang sihir berekor, sambaran petir, sinar laser/railgun/suci, semburan api & racun, kristal es, tebasan katana, percikan emas — lengkap dengan efek benturan berbeda.
+- **Update Log** (Lainnya → 📜 Update Log) dan popup **"Yang baru"** otomatis sekali setiap ada versi baru.
+- Skill pasif & aktif tampil di detail unit dan Index Unit.
+
 ## [4.9.0] — 2026-11-27
 ### Ditambahkan
 - **Ganti foto profil** (Akun → 📷): unggah foto dari perangkat (otomatis dipotong persegi & dikompres) atau pakai karakter unit yang dimiliki; bisa kembali ke foto Google. Disimpan di database (`avatars`) & tampil di menu, teman, room & papan skor.

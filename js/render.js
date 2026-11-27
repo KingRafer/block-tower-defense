@@ -232,7 +232,9 @@ function draw(dt) {
   for (const f of S.effects) {
     const k = f.life / f.max;
     ctx.globalAlpha = Math.max(0, k);
-    if (f.kind === 'tracer') { ctx.strokeStyle = f.col; ctx.lineWidth = f.w; ctx.beginPath(); ctx.moveTo(f.x1, f.y1); ctx.lineTo(f.x2, f.y2); ctx.stroke(); }
+    if (f.kind === 'atk') drawAtkFx(f);
+    else if (f.kind === 'imp') drawImpactFx(f);
+    else if (f.kind === 'tracer') { ctx.strokeStyle = f.col; ctx.lineWidth = f.w; ctx.beginPath(); ctx.moveTo(f.x1, f.y1); ctx.lineTo(f.x2, f.y2); ctx.stroke(); }
     else if (f.kind === 'flash') { ctx.fillStyle = '#fff59d'; ctx.beginPath(); ctx.arc(f.x, f.y, 6, 0, 7); ctx.fill(); }
     else if (f.kind === 'boom') {
       ctx.fillStyle = '#ff9800'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.2 - k * 0.5), 0, 7); ctx.fill();

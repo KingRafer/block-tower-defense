@@ -151,6 +151,7 @@ const Menu = {
         <h3>${d.name} ${this.rarityTag(sel)}</h3><small class="dim">${d.role || ''} • Maks ${d.limit} di map</small>
         <p>${d.desc}</p>
         <div class="ix-st"><div><small>Lv 0</small><b>${st(L0)}</b></div><div><small>Lv ${d.levels.length - 1}</small><b>${st(Lm)}</b></div></div>
+        ${this.skillRow(sel)}
         ${ev ? `<p class="dim">✨ Evolusi: ${ev.desc}</p>` : ''}
         ${RARITY[r].exclusive ? '<div class="ix-rate"><span>Cara mendapatkan</span><b>Kode redeem EARLYACC (pemain Beta)</b></div>' : `<div class="ix-rate"><span>Peluang per tarikan</span><b>Summon ${pct(rateOf(GACHA, sel))}</b><b>Lucky ${pct(rateOf(LUCKY, sel))}</b></div>`}
         <small class="dim">${own[sel] ? `Kamu punya ${own[sel]} unit ini.` : 'Belum dimiliki — dapatkan lewat Summon' + (r === 'secret' ? ', Lucky Summon, atau Toko Pass.' : '.')}</small></div>`;
@@ -193,6 +194,52 @@ const Menu = {
   async uploadAvatar(dataUrl) {
     try { const r = await Online.api('me.avatar', { image: dataUrl }); Online.user = r.user; this.avPick = false; sfx('coin'); UI.toast('✅ Foto profil diperbarui'); Online.refreshUi(); this.show(this.screen, true); }
     catch (e) { UI.toast('❌ ' + e.message); }
+  },
+  /** Ringkasan skill pasif & aktif unit */
+  skillRow(type) {
+    const sk = UNIT_SKILLS[type]; if (!sk) return '';
+    return `<div class="skrow"><div class="sp"><b>🛡 Pasif: ${esc(sk.passive.name)}</b>${esc(sk.passive.desc)}</div>
+      <div class="sa"><b>${sk.active.icon} Aktif: ${esc(sk.active.name)}</b>${esc(sk.active.desc)}<br><small class="dim">Cooldown ${sk.active.cd} dtk • terbuka di level upgrade ${SKILL_UNLOCK_LV} • tombol F</small></div></div>`;
+  },
+  /** Ambil & urai CHANGELOG.md jadi daftar versi */
+  async loadUpdates(force) {
+    if (this.updLoading || (this.updLog && !force)) return this.updLog;
+    this.updLoading = true;
+    try {
+      const md = await (await fetch('CHANGELOG.md?v=' + VERSION, { cache: 'no-cache' })).text();
+      const out = []; let cur = null, sec = null;
+      const inline = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
+      for (const raw of md.split('\n')) {
+        const line = raw.replace(/\s+$/, '');
+        let m;
+        if ((m = /^## \[(.+?)\](?:\s*[—-]\s*(.+))?/.exec(line))) { cur = { v: m[1], date: m[2] || '', secs: [] }; out.push(cur); sec = null; }
+        else if (cur && (m = /^### (.+)/.exec(line))) { sec = { t: m[1], items: [] }; cur.secs.push(sec); }
+        else if (cur && /^\s*- /.test(line)) { if (!sec) { sec = { t: 'Perubahan', items: [] }; cur.secs.push(sec); } sec.items.push(inline(line.replace(/^\s*- /, ''))); }
+        else if (cur && sec && sec.items.length && /^\s{2,}\S/.test(line)) sec.items[sec.items.length - 1] += ' ' + inline(line.trim());
+      }
+      this.updLog = out;
+    } catch (e) { this.updLog = { error: true }; }
+    this.updLoading = false;
+    if (this.screen === 'updates') this.show('updates', true);
+    return this.updLog;
+  },
+  updCard(v, open) {
+    const ic = t => /tambah/i.test(t) ? '✨' : /perbaik/i.test(t) ? '🛠️' : /performa/i.test(t) ? '⚡' : '🔄';
+    return `<details class="upd box" ${open ? 'open' : ''}><summary><b>v${esc(v.v)}</b>${v.v === VERSION ? '<span class="tag gold">TERBARU</span>' : ''}<small>${esc(v.date)}</small></summary>
+      ${v.secs.map(s => `<h5>${ic(s.t)} ${esc(s.t)}</h5><ul>${s.items.map(i => `<li>${i}</li>`).join('')}</ul>`).join('')}</details>`;
+  },
+  /** Popup "Yang baru" sekali setiap versi baru */
+  async whatsNew() {
+    if (!SET.seenVersion && !PROFILE.stats.games) { SET.seenVersion = VERSION; saveSettings(true); return; }   // pemain baru: tidak perlu popup
+    if (SET.seenVersion === VERSION) return;
+    const L = await this.loadUpdates(); SET.seenVersion = VERSION; saveSettings(true);
+    if (!Array.isArray(L) || !L.length || this.screen !== 'main') return;
+    const box = document.createElement('div'); box.className = 'wn-modal';
+    box.innerHTML = `<div class="wn-card"><div class="wn-head"><span>🎉</span><div><b>Yang baru di v${esc(L[0].v)}</b><small>${esc(L[0].date)}</small></div></div>
+      <div class="wn-body">${this.updCard(L[0], true)}</div>
+      <div class="row2"><button class="btn" data-wn="ok">Mantap!</button><button class="btn gray" data-wn="all">📜 Lihat semua update</button></div></div>`;
+    box.onclick = ev => { const b = ev.target.closest('[data-wn]'); if (!b && ev.target !== box) return; box.remove(); if (b && b.dataset.wn === 'all') this.go('updates'); };
+    document.body.appendChild(box);
   },
   announce() {
     const g = Online.cfg.global || {}, a = g.announcement || {};
@@ -282,6 +329,14 @@ const Menu = {
         <small class="dim">Mitos & Rahasia tidak pernah dijual otomatis.</small></div>
         <div class="row2"><button class="btn gray" data-act="go:units">← Kembali ke Unit</button></div>`;
     },
+    updates() {
+      const L = this.updLog;
+      if (!L) { this.loadUpdates(); return `${this.header('📜 Update Log')}<div class="box">⏳ Memuat catatan pembaruan…</div>`; }
+      if (L.error) return `${this.header('📜 Update Log')}<div class="box">❌ Tidak bisa memuat update log (offline?).</div>`;
+      const list = this.updAll ? L : L.slice(0, 6);
+      return `${this.header('📜 Update Log')}<div class="upd-list">${list.map((v, i) => this.updCard(v, i === 0)).join('')}</div>
+        ${!this.updAll && L.length > 6 ? `<div class="row2"><button class="btn gray" data-act="updall">Tampilkan semua (${L.length} versi)</button></div>` : ''}`;
+    },
     more() {
       const u = Online.user, row = (act, ic, t, d) => `<button class="mrow" data-act="${act}"><span>${ic}</span><div><b>${t}</b><small>${d}</small></div><i>›</i></button>`;
       return `${this.header('Lainnya')}<div class="mlist">
@@ -291,6 +346,7 @@ const Menu = {
         ${row('mgo:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`)}
         ${row('mgo:stats', '📊', 'Statistik', PROFILE.stats.games + ' game')}
         ${row('mgo:download', '📲', 'Download Aplikasi', PWA.installed() ? 'Sudah terpasang' : 'Android • iPhone • PC')}
+        ${row('mgo:updates', '📜', 'Update Log', 'Versi ' + VERSION + ' • yang baru')}
         ${row('mgo:howto', '📖', 'Cara Main', 'Panduan')}
         ${row('mgo:account', '👤', 'Akun', u ? esc(u.name) : 'Masuk dengan Google')}
         ${u && u.isAdmin ? row('mgo:dev', '🛠️', 'Panel Developer', 'Atur semua') : ''}
@@ -853,6 +909,7 @@ const Menu = {
           .catch(e => { if (btn) btn.classList.remove('busy'); sfx('error'); UI.toast('❌ ' + e.message); });
         break;
       }
+      case 'updall': this.updAll = true; this.show('updates', true); break;
       case 'mgo': this.ret = 'more'; this.go(arg); break;
       case 'mclaim': { const [, kind, id] = a.split(':'); this.eco('missionClaim', { kind, id }, r => '🎯 ' + this.rw(r)).then(() => this.show(this.screen, true)); break; }
       case 'pclaim': { const [, track, t] = a.split(':'); this.eco('passClaim', { track, tier: +t }, r => '🎫 ' + this.rw(r.claimed[0].got)).then(() => this.show('pass', true)); break; }
@@ -1019,7 +1076,7 @@ const Menu = {
     const sv = this.rw(this.sellVal(u.type));
     const tabs = [['stat', '📊 Statistik'], ['trait', '🎲 Trait'], ['evo', '🧬 Evolusi'], ['skin', '🎨 Skin']];
     let body = '';
-    if (tab === 'stat') body = `<div class="ud-st"><div><small>Lv 0</small><b>${st(L0)}</b></div><div><small>Lv ${d.levels.length - 1}</small><b>${st(Lm)}</b></div></div>
+    if (tab === 'stat') body = `${this.skillRow(u.type)}<div class="ud-st"><div><small>Lv 0</small><b>${st(L0)}</b></div><div><small>Lv ${d.levels.length - 1}</small><b>${st(Lm)}</b></div></div>
         <details><summary>Semua level upgrade</summary><table>${rows}</table></details>`;
     else if (tab === 'trait') body = `<div class="trait-cur" id="traitCur">${tr ? `<span class="ticon">${tr.icon}</span><div><b style="color:${RARITY[tr.rarity].color}">${tr.name}</b> <small>${tr.desc}</small></div>` : '<span class="dim">Belum ada trait</span>'}</div>
         <button class="btn sm purple" data-act="roll:${u.id}" ${v.crystals < 1 ? 'disabled' : ''}>${this.rollArm === u.id ? '⚠️ Yakin? Trait ini akan hilang' : '🎲 Roll Trait — ✨ 1'}</button>

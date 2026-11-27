@@ -424,6 +424,7 @@ const MP = {
       case 'place': if (TOWERS[m.type]) placeTower(m.type, m.c | 0, m.r | 0, pid); break;
       case 'upgrade': upgradeTower(tw(m.id), pid); break;
       case 'sell': sellTower(tw(m.id), pid); break;
+      case 'skill': Skills.use(tw(m.id), pid); break;
       case 'target': { const t = tw(m.id); if (t && t.owner === pid && TARGET_MODES.includes(m.mode)) t.target = m.mode; break; }
       case 'start': startWave(); break;
       case 'skip': skipWave(); break;
@@ -459,7 +460,7 @@ const MP = {
     return {
       t: 'snap', q: ++this.lastQ, w: S.wave, mw: S.maxWave === Infinity ? -1 : S.maxWave, st: S.state, hp: Math.ceil(S.hp), mhp: S.maxHp,
       tm: r1(S.time), fz: r1(S.freezeT), oc: r1(S.overclockT), sh: r1(S.shieldT), rd: r1(S.radarT), sq: S.spawnQ.length, k: S.kills, bk: S.bossKills, sp: S.speed, pl,
-      tw: S.towers.map(t => [t.id, t.type, t.c, t.r, t.level, r1(t.angle), t.owner, t.evo ? 1 : 0, t.trait || 0, S.time < t.stunUntil ? 1 : 0, t.target, t.buff > 0 ? 1 : 0, Math.round(t.dmg), t.kills, t.spent, t.recoil > 0.5 ? 1 : 0, t.skin || 'default']),
+      tw: S.towers.map(t => [t.id, t.type, t.c, t.r, t.level, r1(t.angle), t.owner, t.evo ? 1 : 0, t.trait || 0, S.time < t.stunUntil ? 1 : 0, t.target, t.buff > 0 ? 1 : 0, Math.round(t.dmg), t.kills, t.spent, t.recoil > 0.5 ? 1 : 0, t.skin || 'default', Skills.left(t)]),
       en: S.enemies.map(e => [e.id, e.type, Math.round(e.x), Math.round(e.y), Math.ceil(e.hp), Math.ceil(e.maxHp),
         (S.time < e.slowUntil ? 1 : 0) | (e.dot && S.time < e.dot.until ? (e.dot.col === 'poison' ? 16 : 2) : 0) | (e.frozenUntil > S.time ? 4 : 0) | (e.hitT > 0 ? 8 : 0) | (e.hidden ? 32 : 0), e.maxShield ? Math.round(e.shieldHp / e.maxShield * 100) : 0]),
       pr: S.projectiles.map(p => [Math.round(p.x), Math.round(p.y), r1(p.a || 0), p.big ? 1 : 0]),
@@ -492,11 +493,11 @@ const MP = {
     // tower
     const old = Object.fromEntries(S.towers.map(t => [t.id, t]));
     S.towers = m.tw.map(a => {
-      const [id, type, c, r, level, angle, owner, evo, trait, stun, target, buff, dmg, kills, spent, shot, skin] = a;
+      const [id, type, c, r, level, angle, owner, evo, trait, stun, target, buff, dmg, kills, spent, shot, skin, skLeft] = a;
       let t = old[id];
       if (!t) t = { id, type, c, r, x: (c + 0.5) * T, y: (r + 0.5) * T, recoil: 0, cd: 0, shots: 0, ramp: 0 };
       if (t.level !== level || t.owner !== owner || !t.L) t.L = computeL(type, level, unitFor(type, owner));
-      Object.assign(t, { level, angle, owner, evo: !!evo, skin: skin || 'default', trait: trait || null, stunUntil: stun ? S.time + 0.3 : 0, target, buff: buff ? 0.1 : 0, dmg, kills, spent });
+      Object.assign(t, { skLeft: skLeft || 0, skCd: S.time + (skLeft || 0), level, angle, owner, evo: !!evo, skin: skin || 'default', trait: trait || null, stunUntil: stun ? S.time + 0.3 : 0, target, buff: buff ? 0.1 : 0, dmg, kills, spent });
       if (shot) t.recoil = 1;
       return t;
     });
@@ -519,7 +520,7 @@ const MP = {
   applyFx(list) {
     for (const f of list) {
       switch (f[0]) {
-        case 't': S.effects.push({ kind: 'tracer', x1: f[1], y1: f[2], x2: f[3], y2: f[4], col: f[5], w: f[6], life: f[7], max: 0.15 }); sfx(f[8] === 'sniper' ? 'snipe' : f[8] === 'freezer' ? 'freeze' : 'shoot'); break;
+        case 't': atkFx(f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8]); sfx(f[8] === 'sniper' ? 'snipe' : f[8] === 'freezer' ? 'freeze' : 'shoot'); break;
         case 'b': S.effects.push({ kind: 'boom', x: f[1], y: f[2], r: f[3], life: f[4], max: f[4] }); sfx('boom'); break;
         case 's': S.effects.push({ kind: 'shock', x: f[1], y: f[2], r: f[3], col: f[4], life: f[5], max: f[5] }); sfx('stun'); break;
         case 'p': puff(f[1], f[2], f[3], f[4]); if (f[5]) sfx(f[5]); break;

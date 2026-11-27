@@ -59,6 +59,7 @@ addEventListener('keydown', ev => {
   else if (k === 't' && S.selected && $('tgtBtn')) $('tgtBtn').click();
   else if (k === ' ') { ev.preventDefault(); if (canSkip()) skipWave(); else startWave(); }
   else if (SKILL_KEYS.includes(k) && equippedSkills()[SKILL_KEYS.indexOf(k)]) useAbility(equippedSkills()[SKILL_KEYS.indexOf(k)]);
+  else if (k === 'f' && S.selected && S.selected.owner === S.me && UNIT_SKILLS[S.selected.type]) { ev.preventDefault(); Skills.use(S.selected); }
   else if (k === 'f' && !isGuest()) $('speedBtn').click();
   else if (k === 'enter' && isMP()) { ev.preventDefault(); if (SET.chatMin) UI.toggleChat(false); $('chatIn').focus(); }
 });
@@ -124,5 +125,6 @@ setInterval(() => { if (Menu.screen === 'main') Menu.tickCd(); }, 1000);
 loadMap(MAP);
 newGame();
 Menu.show('main');
+setTimeout(() => Menu.whatsNew(), 1500);   // popup "Yang baru" setelah update
 Online.init();
 requestAnimationFrame(loop);

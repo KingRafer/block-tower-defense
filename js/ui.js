@@ -134,6 +134,17 @@ const UI = {
       if (mine) h += `<button class="btn blue" id="tgtBtn">🎯 Target: ${TARGET_LABEL[t.target]}</button>`;
       else h += `<div class="row dim"><span>Target</span><span>${TARGET_LABEL[t.target]}</span></div>`;
     }
+    // skill pasif & aktif unit
+    const sk = UNIT_SKILLS[t.type];
+    if (sk) {
+      h += `<div class="pskill"><div class="psk pas" title="${esc(sk.passive.desc)}"><b>🛡 ${esc(sk.passive.name)}</b><small>${esc(sk.passive.desc)}</small></div>`;
+      if (sk.active) {
+        const locked = t.level < SKILL_UNLOCK_LV;
+        h += mine ? `<button class="psk act ${locked ? 'locked' : ''}" id="skBtn" title="${esc(sk.active.desc)}"><span class="ski">${sk.active.icon}</span><span><b>${esc(sk.active.name)} <kbd>F</kbd></b><small>${locked ? `🔒 Terbuka di level ${SKILL_UNLOCK_LV}` : esc(sk.active.desc)}</small></span><i id="skCd"></i></button>`
+                  : `<div class="psk act"><span class="ski">${sk.active.icon}</span><span><b>${esc(sk.active.name)}</b><small>${esc(sk.active.desc)}</small></span></div>`;
+      }
+      h += `</div>`;
+    }
     if (mine) {
       h += next ? `<button class="btn" id="upBtn">⬆ ${esc(next.name)} — $${next.cost.toLocaleString('id-ID')} <kbd>Q</kbd></button>`
                 : `<button class="btn" disabled>★ LEVEL MAKS</button>`;
@@ -146,6 +157,7 @@ const UI = {
     p.classList.toggle('bottom', !left && exitRow() < ROWS / 2); // hindari menutupi base
     if ($('upBtn')) $('upBtn').onclick = () => upgradeTower(t);
     if ($('sellBtn')) $('sellBtn').onclick = () => sellTower(t);
+    if ($('skBtn')) $('skBtn').onclick = () => Skills.use(t);
     $('pClose').onclick = () => { S.selected = null; this.hidePanel(); };
     if ($('tgtBtn')) $('tgtBtn').onclick = () => { setTarget(t, TARGET_MODES[(TARGET_MODES.indexOf(t.target) + 1) % TARGET_MODES.length]); sfx('click'); this.showPanel(t); };
     this.updatePanel();
@@ -156,6 +168,10 @@ const UI = {
     if ($('upBtn') && !isMax(t)) $('upBtn').disabled = S.cash < costOf(t.type, t.level + 1, t.owner);
     if ($('pDmg')) $('pDmg').textContent = fmtNum(t.dmg);
     if ($('pKills')) $('pKills').textContent = t.kills;
+    const skb = $('skBtn');
+    if (skb) { const left = Math.max(0, Math.ceil((t.skCd || 0) - S.time)), locked = t.level < SKILL_UNLOCK_LV;
+      skb.classList.toggle('cooling', !locked && left > 0); skb.classList.toggle('ready', !locked && left <= 0);
+      const cdEl = $('skCd'), txt = locked ? '' : left > 0 ? left + 's' : 'SIAP'; if (cdEl && cdEl.textContent !== txt) cdEl.textContent = txt; }
   },
   hidePanel() { $('panel').style.display = 'none'; },
 

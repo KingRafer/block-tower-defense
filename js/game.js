@@ -210,6 +210,7 @@ function payWave(skipBonus = 0) {
   S.towers.filter(t => t.type === 'farm').forEach(t => {
     let inc = lvl(t).income;
     if (lvl(t).perk === 'interest') inc += Math.min(400, Math.floor(pcash(t.owner) * 0.02));
+    inc += Skills.waveBonus(t, lvl(t).income);
     addCash(t.owner, inc);
     if (t.owner === S.me) farm += inc;
     addText(t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2); fxEmit(['x', t.x, t.y - 26, '+$' + inc, '#ffd54f', 1.2]);
@@ -354,8 +355,11 @@ function updateStrikes(dt) {
   S.strikes = S.strikes.filter(st => !st.done);
   if (S.stormQ.length) {
     for (const q of S.stormQ) q.t -= dt;
-    while (S.stormQ.length && S.stormQ[0].t <= 0) {
-      const q = S.stormQ.shift(), pool = S.enemies.filter(e => !e.dead);
+    const due = S.stormQ.filter(q => q.t <= 0);
+    if (due.length) S.stormQ = S.stormQ.filter(q => q.t > 0);
+    for (const q of due) {
+      if (Skills.hitQueued(q)) continue;              // serangan skill unit (hujan/badai)
+      const pool = S.enemies.filter(e => !e.dead);
       if (!pool.length) continue;
       const e = pool[Math.floor(Math.random() * pool.length)];
       tracer(e.x + (Math.random() - 0.5) * 40, 0, e.x, e.y - 8, '#c5cae9', 4, 0.2, 'tesla');
@@ -395,18 +399,21 @@ function damage(e, amt, L, src, quiet) {
     if (e.shieldHp <= 0) { puff(e.x, e.y, '#64b5f6', 10); addText(e.x, e.y - 30, 'PERISAI PECAH', '#64b5f6', 0.8); }
     if (a <= 0) return;
   }
+  if (src && !quiet) a = Skills.hitMul(src, e, a);                  // skill pasif
+  if (S.time < (e.shredUntil || 0)) a *= 1 + (e.shred || 0);         // musuh terluka: damage ekstra
   if (e.armor && !L.pierceArmor) a *= (1 - e.armor);
   a = Math.min(a, e.hp);
   e.hp -= a; e.hitT = 0.1;
   if (src) { src.dmg += a; addUxp(src.owner, src.type, a / 60); }
   if (SET.dmgNum && a >= 0.5 && !quiet) addText(e.x + (Math.random() * 16 - 8), e.y - 22, fmtNum(a), '#fff', 0.5);
   if (e.hp <= 0.001) kill(e, src);
+  else if (src && !quiet) Skills.afterHit(src, e);
 }
 function kill(e, src) {
   e.dead = true;
   const rw = Math.round(e.reward * (src ? lvl(src).rewardMul : 1));
   addCashAll(rw); S.kills++;
-  if (src) { src.kills++; addUxp(src.owner, src.type, 1); }
+  if (src) { src.kills++; addUxp(src.owner, src.type, 1); Skills.onKill(src, e); }
   puff(e.x, e.y, e.color, e.boss ? 30 : 8);
   if (e.boss) { S.bossKills++; PROFILE.stats.bossKills++; S.shake = SET.shake ? 10 : 0; sfx('boom'); UI.toast('👑 Boss dikalahkan! +$' + e.reward); fxEmit(['k']); checkAchievements(summary()); }
   if (e.split) for (let i = 0; i < (e.splitN || 2); i++) spawn(e.split, e);
@@ -589,7 +596,8 @@ function fire(t, L, e) {
   if (L.perk === 'freeze' && !e.boss && Math.random() < 0.2) { e.frozenUntil = S.time + 1; addText(e.x, e.y - 34, '❄', '#81d4fa', 0.6); }
   damage(e, dmg, L, t);
   if (L.goldHit) {   // Penambang Emas: setiap pukulan menghasilkan uang (teks digabung agar tidak ramai)
-    addCash(t.owner || S.me, L.goldHit); t.goldAcc = (t.goldAcc || 0) + L.goldHit;
+    const gh = Math.round(L.goldHit * Skills.goldMul(t));
+    addCash(t.owner || S.me, gh); t.goldAcc = (t.goldAcc || 0) + gh;
     if (S.time - (t.goldTxt || 0) > 0.6) { addText(t.x, t.y - 34, '+$' + t.goldAcc, '#ffd54f', 0.8); fxEmit(['x', t.x, t.y - 34, '+$' + t.goldAcc, '#ffd54f', 0.8]); t.goldAcc = 0; t.goldTxt = S.time; }
   }
   if (L.dot && !e.dead) applyDot(e, L, t);
@@ -611,7 +619,7 @@ const TRACER = {
   samurai: { col: '#ffffff', w: 5, life: 0.12, sfx: 'snipe' }, cosmic: { col: '#ea80fc', w: 4, life: 0.2, sfx: 'stun' }, goldminer: { col: '#ffd54f', w: 3, life: 0.07, sfx: 'shoot' }, wizard: { col: '#b388ff', w: 3, life: 0.16, sfx: 'stun' }, angel: { col: '#fff59d', w: 8, life: 0.3, sfx: 'snipe' },
 };
 function tracer(x1, y1, x2, y2, col, w, life, type) {
-  S.effects.push({ kind: 'tracer', x1, y1, x2, y2, life, max: 0.15, col, w });
+  atkFx(x1, y1, x2, y2, col, w, life, type);        // gaya serangan per unit (skills.js)
   fxEmit(['t', x1 | 0, y1 | 0, x2 | 0, y2 | 0, col, w, life, type]);
 }
 function applySlow(e, slow) {
@@ -659,7 +667,7 @@ function pulseAura(t, L) {
   let any = false;
   for (const o of S.enemies) {
     if (o.dead || (o.hidden && !canSeeHidden(t))) continue;
-    if (Math.hypot(o.x - t.x, o.y - t.y) <= L.range * T) { damage(o, L.dmg, L, t, true); applySlow(o, L.slow); any = true; }
+    if (Math.hypot(o.x - t.x, o.y - t.y) <= L.range * T) { damage(o, L.dmg, L, t, true); applySlow(o, L.slow); if (!o.dead) Skills.afterHit(t, o); any = true; }
   }
   const ac = t.type === 'reaper' ? '#b388ff' : '#64ffda';
   if (any) { S.effects.push({ kind: 'shock', x: t.x, y: t.y, r: L.range * T, life: 0.4, max: 0.4, col: ac }); fxEmit(['s', t.x | 0, t.y | 0, (L.range * T) | 0, ac, 0.4]); }
@@ -778,12 +786,12 @@ function update(dt) {
     t.recoil = Math.max(0, t.recoil - dt * 6);
     if (S.time < t.stunUntil) continue;
     const L = lvl(t); t.cd -= dt;
-    if (L.aura) { if (t.cd <= 0) { t.cd = L.rate; pulseAura(t, L); } continue; }
+    if (L.aura) { if (t.cd <= 0) { t.cd = L.rate * Skills.rateMul(t); pulseAura(t, L); } continue; }
     const tg = pickTarget(t, L);
     if (!tg && t.ramp) t.ramp = Math.max(0, t.ramp - dt * 0.5);
     if (tg) {
       t.angle = Math.atan2(tg.y - t.y, tg.x - t.x);
-      if (t.cd <= 0) { t.cd = L.rate * (1 - t.buff) * (S.overclockT > 0 ? 0.5 : 1); t.recoil = 1; fire(t, L, tg); }
+      if (t.cd <= 0) { t.cd = L.rate * (1 - t.buff) * (S.overclockT > 0 ? 0.5 : 1) * Skills.rateMul(t); t.recoil = 1; fire(t, L, tg); }
     }
   }
 
@@ -807,6 +815,7 @@ function update(dt) {
 /* ---------------- EFEK & UTIL ---------------- */
 function updateEffects(dt) {
   for (const f of S.effects) {
+    if (f.delay > 0) { f.delay -= dt; continue; }   // efek benturan menunggu proyektil tiba
     f.life -= dt;
     if (f.kind === 'part') { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 400 * dt; }
   }
