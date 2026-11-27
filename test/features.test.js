@@ -131,8 +131,11 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   const wr = SHARED.actions.summon(wv, { banner: 'winter', count: 10 }, ctx);
   assert(wv.diamonds === d0 && wv.ev.lan === 1e6 - SHARED.WINTER_GACHA.cost10, 'Banner Winter memakai koin Winter');
   for (let i = 0; i < 6; i++) SHARED.actions.summon(wv, { banner: 'winter', count: 10 }, { ...ctx, rng: () => 0.99 });
-  assert(wv.units.some(u => SHARED.UNIT_RARITY[u.type] === 'winter'), 'pity unit Winter');
-  assert(!SHARED.RARITY_ORDER.includes('winter') && SHARED.EXCLUSIVE.includes('winter'), 'Winter tidak ada di summon biasa');
+  const wins = wv.units.filter(u => SHARED.EVENT_UNITS[u.type]);
+  assert(wv.units.length - 4 === 70 && wins.length === 70, 'Banner Winter hanya memberi unit Winter');
+  assert(wins.some(u => SHARED.RARITY[SHARED.UNIT_RARITY[u.type]].rank >= 3), 'pity Legendaris+ Winter');
+  assert(SHARED.RARITY_ORDER.every(r => SHARED.unitsOfRarity(r).every(t => !SHARED.EVENT_UNITS[t])), 'unit Winter tidak ada di summon biasa');
+  assert(SHARED.unitsOfRarity('divine').length === 2 && SHARED.GACHA.rates.divine > 0, 'tier Ilahi');
   assert.throws(() => SHARED.actions.summon(wv, { banner: 'winter', count: 1 }, { ...ctx, now: Date.parse(SHARED.LIMITED.end + 'T12:00:00+07:00') + 3 * 864e5 }), /berakhir/);
   SHARED.actions.claim(ev, { result: { cleared: 20, won: false, diff: 'normal', map: 'frost', mode: 'normal', bossKills: 2, kills: 300, duration: 2000 } }, { ...ctx, now: now0 + 60000 });
   assert(ev.ev.s.frost === 1, 'main di map event tercatat');

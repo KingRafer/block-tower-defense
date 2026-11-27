@@ -1,5 +1,18 @@
 # Changelog
 
+## [5.4.0] — 2026-11-27
+### Ditambahkan
+- **Tier baru tertinggi: Ilahi** (di atas Rahasia) — **Dewa Api** (tombak matahari menembus barisan & membakar) dan **Dewa Petir** (petir melompat ke 10–18 musuh).
+  Peluang Summon 0,01%, Lucky 0,05%.
+- **Unit baru**: **Bajak Laut** (Langka, meriam tangan area), **Ksatria** (Epik, tebasan tembus armor), **Druid** (Legendaris, racun berantai).
+- **5 unit Winter baru** (total 7): Pemain Ski (Biasa), Pemanah Es (Langka), Ksatria Es (Epik), Penyihir Salju (Legendaris), Ratu Es (Rahasia),
+  plus Manusia Salju (kini Legendaris) dan Yeti (kini Mitos). Semua punya skill pasif & aktif serta bentuk evolusi.
+### Diubah
+- **❄️ Banner Winter kini khusus unit Winter** — semua hasil tarikan adalah unit Winter dengan peluang per kelangkaan
+  (Biasa 45%, Langka 30%, Epik 16%, Legendaris 6,5%, Mitos 2%, Rahasia 0,5%). Legendaris+ dijamin di tarikan ke-50, 10× menjamin Epik.
+- **Index Banner** mengikuti banner: Index Banner Winter hanya berisi unit Winter beserta peluangnya; Index Standar berisi unit Summon & Lucky.
+  Klik unit di Banner Winter untuk langsung melihat detailnya.
+
 ## [5.3.1] — 2026-11-27
 ### Diubah
 - **❄️ Banner Winter kini memakai ❄️ Kepingan Salju (koin Winter)**, bukan Diamond: ×1 = 60, ×10 = 540. Unit Winter dijamin di tarikan ke-50.

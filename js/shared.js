@@ -18,24 +18,29 @@
     legendary: { name: 'Legendaris', color: '#ffb300', rank: 3 },
     mythic:    { name: 'Mitos',      color: '#ff1744', rank: 4 },
     secret:    { name: 'Rahasia',    color: '#00e5ff', rank: 5 },
+    divine:    { name: 'Ilahi',      color: '#ffe066', rank: 6 },
     beta:      { name: 'Beta',       color: '#26c6da', rank: 3, exclusive: true },
-    winter:    { name: 'Winter',     color: '#4fc3f7', rank: 4, exclusive: true },
   };
   /* Kelangkaan eksklusif: tidak bisa didapat dari Summon */
-  const EXCLUSIVE = ['beta', 'winter'];
-  const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic', 'secret'];
+  const EXCLUSIVE = ['beta'];
+  const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic', 'secret', 'divine'];
 
   /* ---------------- UNIT ---------------- */
   const UNIT_RARITY = {
     scout: 'common', sniper: 'common', farm: 'common', pistol: 'common', archer: 'common',
-    demoman: 'rare', freezer: 'rare', cannon: 'rare', flamer: 'rare', mortar: 'rare', shotgun: 'rare',
-    minigun: 'epic', commander: 'epic', tesla: 'epic', laser: 'epic', poison: 'epic', ninja: 'epic',
-    rocketeer: 'legendary', railgun: 'legendary', warden: 'legendary', samurai: 'legendary', wizard: 'legendary',
+    demoman: 'rare', freezer: 'rare', cannon: 'rare', flamer: 'rare', mortar: 'rare', shotgun: 'rare', pirate: 'rare',
+    minigun: 'epic', commander: 'epic', tesla: 'epic', laser: 'epic', poison: 'epic', ninja: 'epic', knight: 'epic',
+    rocketeer: 'legendary', railgun: 'legendary', warden: 'legendary', samurai: 'legendary', wizard: 'legendary', druid: 'legendary',
     nuke: 'mythic', dragon: 'mythic', angel: 'mythic',
     reaper: 'secret', cosmic: 'secret',
+    firegod: 'divine', thundergod: 'divine',
     goldminer: 'beta',
-    snowman: 'winter', yeti: 'winter',
+    // unit event Winter (hanya dari Banner Winter)
+    skier: 'common', icearcher: 'rare', iceknight: 'epic', snowman: 'legendary', frostmage: 'legendary', yeti: 'mythic', frostqueen: 'secret',
   };
+  /* Unit event: hanya bisa didapat dari banner event masing-masing */
+  const EVENT_UNITS = { skier: 'winter', icearcher: 'winter', iceknight: 'winter', snowman: 'winter', frostmage: 'winter', yeti: 'winter', frostqueen: 'winter' };
+  const eventUnits = ev => Object.keys(EVENT_UNITS).filter(t => EVENT_UNITS[t] === ev);
   const UNIT_TYPES = Object.keys(UNIT_RARITY);
   const STARTER_UNITS = ['scout', 'sniper', 'demoman', 'farm'];
 
@@ -129,19 +134,20 @@
   /* ---------------- GACHA ---------------- */
   const GACHA = {
     cost1: 50, cost10: 450, pity: 60,
-    rates: { common: 55, rare: 30, epic: 11, legendary: 3.5, mythic: 0.47, secret: 0.03 },
+    rates: { common: 55, rare: 30, epic: 11, legendary: 3.5, mythic: 0.46, secret: 0.03, divine: 0.01 },
     banners: {
       std:   { name: 'Banner Standar', currency: 'diamonds', desc: 'Semua unit tersedia. Pakai 💎 Diamond yang didapat dari bermain.' },
       feat:  { name: 'Banner Unggulan', currency: 'diamonds', desc: 'Peluang 50% unit unggulan saat dapat Legendaris/Mitos. Berganti setiap hari.' },
-      winter: { name: '❄️ Banner Winter', currency: 'lan', event: true, desc: 'Pakai ❄️ Kepingan Salju (koin Winter) dari bermain & misi event. Peluang mendapat unit eksklusif Winter: Manusia Salju & Yeti — tidak ada di banner lain.' },
+      winter: { name: '❄️ Banner Winter', currency: 'lan', event: true, desc: 'Khusus unit Winter! Semua hasil tarikan adalah unit eksklusif Winter (Biasa sampai Rahasia) yang tidak ada di banner lain. Pakai ❄️ Kepingan Salju dari bermain & misi event.' },
       lucky: { name: '🍀 Lucky Summon', currency: 'gems', desc: 'Pakai 💠 Permata (top up). Peluang Legendaris & Mitos jauh lebih tinggi, pity lebih cepat, 10× menjamin Legendaris.' },
     },
   };
   /* Banner Winter: unit eksklusif event (selain itu sama dengan banner standar) */
-  const WINTER_GACHA = { rate: 0.025, pity: 50, yeti: 0.3, cost1: 60, cost10: 540 };   // biaya dalam ❄️ Kepingan Salju
+  const WINTER_GACHA = { pity: 50, cost1: 60, cost10: 540,   // biaya dalam ❄️ Kepingan Salju; pity = Legendaris+ dijamin
+    rates: { common: 45, rare: 30, epic: 16, legendary: 6.5, mythic: 2, secret: 0.5 } };
   /* Lucky Summon (Permata hasil top up) */
-  const LUCKY = { cost1: 10, cost10: 90, pity: 30, rates: { common: 25, rare: 37, epic: 27, legendary: 9, mythic: 1.85, secret: 0.15 } };
-  const unitsOfRarity = r => UNIT_TYPES.filter(t => UNIT_RARITY[t] === r);
+  const LUCKY = { cost1: 10, cost10: 90, pity: 30, rates: { common: 25, rare: 37, epic: 27, legendary: 9, mythic: 1.8, secret: 0.15, divine: 0.05 } };
+  const unitsOfRarity = r => UNIT_TYPES.filter(t => UNIT_RARITY[t] === r && !EVENT_UNITS[t]);   // pool banner biasa
   function dayStr(now) { const d = new Date(now + 7 * 3600e3); return d.toISOString().slice(0, 10); } // zona WIB
   function featuredUnit(now) {
     if (EVENT.featured && UNIT_RARITY[EVENT.featured]) return EVENT.featured;
@@ -149,7 +155,7 @@
     const s = dayStr(now).split('-').reduce((a, x) => a * 31 + +x, 7);
     return pool[s % pool.length];
   }
-  const SCRAP = { common: { coins: 15 }, rare: { coins: 40 }, epic: { coins: 100, crystals: 1 }, legendary: { coins: 300, stones: 1 }, mythic: { coins: 1000, stones: 3 }, secret: { coins: 4000, stones: 8 }, beta: { coins: 200 }, winter: { coins: 1500, stones: 4 } };
+  const SCRAP = { common: { coins: 15 }, rare: { coins: 40 }, epic: { coins: 100, crystals: 1 }, legendary: { coins: 300, stones: 1 }, mythic: { coins: 1000, stones: 3 }, secret: { coins: 4000, stones: 8 }, divine: { coins: 10000, stones: 15 }, beta: { coins: 200 } };
   /* Jual otomatis saat summon: hanya kelangkaan ini yang boleh di-auto-sell */
   const AUTO_SELL_OK = ['common', 'rare', 'epic', 'legendary'];
 
@@ -378,22 +384,17 @@
       } else pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
       bumpMissions(v, ctx.now, { summons: n }); bumpEvent(v, ctx.now, { summons: n }, 0);
       const featured = featuredUnit(ctx.now), out = [], sold = {};
+      const win = banner === 'winter', rates = win ? WINTER_GACHA.rates : cfg.rates, pk = win ? 'wex' : banner, pmax = win ? WINTER_GACHA.pity : cfg.pity;
       for (let i = 0; i < n; i++) {
-        if (banner === 'winter') {   // unit eksklusif Winter (pity tersendiri)
-          v.pity.wex = (v.pity.wex || 0) + 1;
-          if (ctx.rng() < WINTER_GACHA.rate || v.pity.wex >= WINTER_GACHA.pity) {
-            v.pity.wex = 0;
-            const u = makeUnit(ctx.rng() < WINTER_GACHA.yeti ? 'yeti' : 'snowman', ctx.rng, ctx.now + i);
-            v.units.push(u); out.push(u); continue;
-          }
-        }
-        v.pity[banner] = (v.pity[banner] || 0) + 1;
-        let r = weighted(ctx.rng, cfg.rates);
-        if (v.pity[banner] >= cfg.pity && RARITY[r].rank < 3) r = 'legendary';
-        const minLast = lucky ? 3 : 2;   // 10×: Lucky menjamin Legendaris, biasa menjamin Epik
-        if (n === 10 && i === 9 && !out.some(u => RARITY[UNIT_RARITY[u.type]].rank >= minLast) && RARITY[r].rank < minLast) { r = lucky ? 'legendary' : 'epic'; if (lucky) v.pity[banner] = 0; }
-        if (RARITY[r].rank >= 3) v.pity[banner] = 0;
-        let pool = unitsOfRarity(r), type = pool[Math.floor(ctx.rng() * pool.length)];
+        v.pity[pk] = (v.pity[pk] || 0) + 1;
+        let r = weighted(ctx.rng, rates);
+        if (v.pity[pk] >= pmax && RARITY[r].rank < 3) r = 'legendary';
+        const minLast = lucky ? 3 : 2;   // 10×: Lucky menjamin Legendaris, lainnya menjamin Epik
+        if (n === 10 && i === 9 && !out.some(u => RARITY[UNIT_RARITY[u.type]].rank >= minLast) && RARITY[r].rank < minLast) { r = lucky ? 'legendary' : 'epic'; if (lucky) v.pity[pk] = 0; }
+        if (RARITY[r].rank >= 3) v.pity[pk] = 0;
+        let pool = win ? eventUnits('winter').filter(t => UNIT_RARITY[t] === r) : unitsOfRarity(r);
+        if (!pool.length) pool = win ? eventUnits('winter') : unitsOfRarity('common');
+        let type = pool[Math.floor(ctx.rng() * pool.length)];
         if (banner === 'feat' && RARITY[r].rank >= 3 && ctx.rng() < 0.5) type = featured;
         const u = makeUnit(type, ctx.rng, ctx.now + i);
         // Auto-sell: jual langsung bila kelangkaan dipilih & jenis unit ini sudah dimiliki (unit baru tetap disimpan)
@@ -403,7 +404,7 @@
         } else { v.units.push(u); out.push(u); }
       }
       v.pulls = (v.pulls || 0) + n;
-      return { units: out, pity: v.pity[banner], sold };
+      return { units: out, pity: v.pity[pk], sold };
     },
     setAutoSell(v, p) {
       v.autoSell = (Array.isArray(p.rarities) ? p.rarities : []).filter(r => AUTO_SELL_OK.includes(r));
@@ -658,6 +659,6 @@
     MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
     newVault, makeUnit, fixVault, actions, SKILL_PRICES, FREE_SKILLS, EVENT, DEFAULTS, applyGlobal,
     EXCLUSIVE, AUTO_SELL_OK, MISSIONS, missionProgress, rollMissions, PASS, PASS_SHOP, PASS_TOK, rollPass, passTier, passReward, seasonName, seasonStr, giveReward,
-    shopSkins, WINTER_GACHA, EVENT_MAPS, ACC_MAX, accXpFor, accLevel, levelReward, LEVEL_SPECIAL, seedAxp, LIMITED, EV_MISSIONS, EV_MILESTONES, EV_SHOP, limitedActive, limitedEndsAt, rollEvent,
+    shopSkins, WINTER_GACHA, EVENT_UNITS, eventUnits, EVENT_MAPS, ACC_MAX, accXpFor, accLevel, levelReward, LEVEL_SPECIAL, seedAxp, LIMITED, EV_MISSIONS, EV_MILESTONES, EV_SHOP, limitedActive, limitedEndsAt, rollEvent,
   };
 });

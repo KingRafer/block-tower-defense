@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '5.3.1';
+const VERSION = '5.4.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
@@ -280,10 +280,89 @@ Object.assign(TOWERS, {
       {name:'Raungan Beku',   cost:8000,  dmg:95,  range:2.9, rate:0.8,  aura:true, slow:0.45, pierceArmor:true, bossMul:1.5, hidden:true},
       {name:'Yeti Purba',     cost:17000, dmg:180, range:3.2, rate:0.7,  aura:true, slow:0.55, pierceArmor:true, bossMul:1.8, hidden:true}]},
 });
+/* ---------------- UNIT BARU v5.4 ---------------- */
+Object.assign(TOWERS, {
+  pirate: { name:'Bajak Laut', color:'#6d4c41', limit:6, role:'Area',
+    desc:'Meriam tangan bajak laut: peluru meledak mengenai beberapa musuh.',
+    levels:[
+      {name:'Bajak Laut',     cost:500,  dmg:7,  range:3.3, rate:1.6, splash:0.8},
+      {name:'Mesiu Basah',    cost:400,  dmg:11, range:3.5, rate:1.5, splash:0.9},
+      {name:'Kapten',         cost:1000, dmg:19, range:3.7, rate:1.4, splash:1.0, hidden:true},
+      {name:'Meriam Galleon', cost:2300, dmg:34, range:4.0, rate:1.2, splash:1.1, hidden:true, pierceArmor:true},
+      {name:'Raja Lautan',    cost:5000, dmg:60, range:4.3, rate:1.0, splash:1.3, hidden:true, pierceArmor:true}]},
+  knight: { name:'Ksatria', color:'#9e9e9e', limit:4, role:'Jarak dekat',
+    desc:'Ksatria berzirah dengan pedang besar: tebasan menembus armor & mengenai sekitar.',
+    levels:[
+      {name:'Ksatria',        cost:1200, dmg:18,  range:1.6, rate:1.0,  splashHit:0.6, pierceArmor:true},
+      {name:'Zirah Baja',     cost:900,  dmg:28,  range:1.7, rate:0.95, splashHit:0.7, pierceArmor:true},
+      {name:'Paladin',        cost:2200, dmg:46,  range:1.8, rate:0.85, splashHit:0.8, pierceArmor:true, hidden:true},
+      {name:'Ksatria Agung',  cost:4800, dmg:80,  range:2.0, rate:0.75, splashHit:0.9, pierceArmor:true, hidden:true},
+      {name:'Pahlawan Raja',  cost:9800, dmg:135, range:2.2, rate:0.65, splashHit:1.0, pierceArmor:true, hidden:true, bossMul:1.3}]},
+  druid: { name:'Druid', color:'#33691e', limit:3, role:'Racun berantai',
+    desc:'Penjaga hutan: sihir alam melompat ke beberapa musuh, meracuni & memperlambat.',
+    levels:[
+      {name:'Druid',          cost:2300, dmg:10, range:3.8, rate:1.3, chain:3, chainRange:1.7, slow:0.2,  dot:{pct:1.2, dur:4, col:'poison'}},
+      {name:'Akar Berduri',   cost:1800, dmg:16, range:4.0, rate:1.2, chain:4, chainRange:1.8, slow:0.25, dot:{pct:1.3, dur:4, col:'poison'}},
+      {name:'Roh Hutan',      cost:4000, dmg:28, range:4.3, rate:1.1, chain:5, chainRange:2.0, slow:0.3,  dot:{pct:1.4, dur:5, col:'poison'}, hidden:true},
+      {name:'Penjaga Alam',   cost:9000, dmg:52, range:4.7, rate:1.0, chain:6, chainRange:2.2, slow:0.35, dot:{pct:1.6, dur:5, col:'poison'}, hidden:true, pierceArmor:true}]},
+  firegod: { name:'Dewa Api', color:'#ff6d00', limit:1, role:'Ilahi',
+    desc:'Tier tertinggi. Tombak matahari menembus seluruh barisan dan membakar habis musuh.',
+    levels:[
+      {name:'Dewa Api',       cost:9000,  dmg:150, range:7.0, rate:1.8, line:true, pierceArmor:true, hidden:true, dot:{pct:0.8, dur:3, col:'burn'}},
+      {name:'Api Abadi',      cost:9000,  dmg:260, range:7.5, rate:1.6, line:true, pierceArmor:true, hidden:true, dot:{pct:0.9, dur:3, col:'burn'}},
+      {name:'Matahari Murka', cost:18000, dmg:460, range:8.0, rate:1.4, line:true, pierceArmor:true, hidden:true, dot:{pct:1.0, dur:4, col:'burn'}, bossMul:1.5},
+      {name:'Inti Bintang',   cost:36000, dmg:850, range:8.8, rate:1.2, line:true, pierceArmor:true, hidden:true, dot:{pct:1.2, dur:4, col:'burn'}, bossMul:2.0}]},
+  thundergod: { name:'Dewa Petir', color:'#3949ab', limit:1, role:'Ilahi',
+    desc:'Tier tertinggi. Petir ilahi melompat ke belasan musuh sekaligus.',
+    levels:[
+      {name:'Dewa Petir',     cost:9500,  dmg:110, range:5.5, rate:1.2, chain:10, chainRange:2.8, hidden:true, pierceArmor:true},
+      {name:'Palu Guntur',    cost:9500,  dmg:190, range:5.9, rate:1.1, chain:12, chainRange:3.0, hidden:true, pierceArmor:true},
+      {name:'Badai Surgawi',  cost:19000, dmg:340, range:6.3, rate:1.0, chain:14, chainRange:3.2, hidden:true, pierceArmor:true, bossMul:1.5},
+      {name:'Raja Langit',    cost:38000, dmg:620, range:7.0, rate:0.9, chain:18, chainRange:3.5, hidden:true, pierceArmor:true, bossMul:2.0}]},
+  /* --- unit event Winter --- */
+  skier: { name:'Pemain Ski', color:'#e53935', limit:8, role:'Winter • Serba guna',
+    desc:'Unit Winter. Tembakan cepat berlapis es yang sedikit memperlambat musuh.',
+    levels:[
+      {name:'Pemain Ski',     cost:220,  dmg:2.5, range:3.2, rate:0.8,  slow:0.15},
+      {name:'Papan Cepat',    cost:180,  dmg:3.5, range:3.4, rate:0.75, slow:0.18},
+      {name:'Kacamata Salju', cost:450,  dmg:5,   range:3.6, rate:0.65, slow:0.2,  hidden:true},
+      {name:'Lereng Hitam',   cost:1000, dmg:8,   range:3.9, rate:0.55, slow:0.22, hidden:true},
+      {name:'Juara Ski',      cost:2200, dmg:13,  range:4.2, rate:0.45, slow:0.25, hidden:true}]},
+  icearcher: { name:'Pemanah Es', color:'#4fc3f7', limit:6, role:'Winter • Jarak jauh',
+    desc:'Unit Winter. Panah es jarak jauh yang memperlambat target.',
+    levels:[
+      {name:'Pemanah Es',     cost:400,  dmg:5,  range:4.2, rate:1.1, slow:0.25},
+      {name:'Busur Beku',     cost:350,  dmg:8,  range:4.5, rate:1.0, slow:0.3},
+      {name:'Panah Kristal',  cost:850,  dmg:13, range:4.8, rate:0.9, slow:0.32, hidden:true},
+      {name:'Pemburu Kutub',  cost:1900, dmg:22, range:5.2, rate:0.8, slow:0.35, hidden:true, pierceArmor:true},
+      {name:'Bidikan Aurora', cost:4200, dmg:38, range:5.6, rate:0.7, slow:0.4,  hidden:true, pierceArmor:true}]},
+  iceknight: { name:'Ksatria Es', color:'#90caf9', limit:4, role:'Winter • Jarak dekat',
+    desc:'Unit Winter. Pedang es menebas musuh di sekitar, menembus armor & memperlambat.',
+    levels:[
+      {name:'Ksatria Es',     cost:1300,  dmg:14,  range:1.8, rate:0.9,  splashHit:0.7, slow:0.2,  pierceArmor:true},
+      {name:'Zirah Beku',     cost:1000,  dmg:22,  range:1.9, rate:0.85, splashHit:0.8, slow:0.25, pierceArmor:true},
+      {name:'Pedang Gletser', cost:2400,  dmg:36,  range:2.0, rate:0.8,  splashHit:0.9, slow:0.3,  pierceArmor:true, hidden:true},
+      {name:'Penjaga Kutub',  cost:5200,  dmg:62,  range:2.2, rate:0.7,  splashHit:1.0, slow:0.35, pierceArmor:true, hidden:true},
+      {name:'Raja Es',        cost:10500, dmg:105, range:2.4, rate:0.6,  splashHit:1.1, slow:0.4,  pierceArmor:true, hidden:true}]},
+  frostmage: { name:'Penyihir Salju', color:'#4fc3f7', limit:3, role:'Winter • Sihir',
+    desc:'Unit Winter. Sihir es yang melompat ke banyak musuh dan sangat memperlambat.',
+    levels:[
+      {name:'Penyihir Salju', cost:2600, dmg:16, range:4.0, rate:1.3, chain:4, chainRange:1.8, slow:0.3},
+      {name:'Tongkat Beku',   cost:2000, dmg:25, range:4.2, rate:1.2, chain:5, chainRange:1.9, slow:0.35},
+      {name:'Badai Kristal',  cost:4500, dmg:42, range:4.5, rate:1.1, chain:6, chainRange:2.1, slow:0.4,  hidden:true},
+      {name:'Archmage Es',    cost:9800, dmg:78, range:4.9, rate:1.0, chain:8, chainRange:2.3, slow:0.45, hidden:true, pierceArmor:true}]},
+  frostqueen: { name:'Ratu Es', color:'#b3e5fc', limit:1, role:'Winter • Rahasia',
+    desc:'Unit Winter tertinggi. Bintang es abadi melompat ke banyak musuh dan hampir membekukan mereka.',
+    levels:[
+      {name:'Ratu Es',        cost:7500,  dmg:90,  range:5.2, rate:1.4,  chain:7,  chainRange:2.4, slow:0.45, hidden:true, pierceArmor:true},
+      {name:'Mahkota Beku',   cost:7500,  dmg:150, range:5.6, rate:1.3,  chain:8,  chainRange:2.6, slow:0.5,  hidden:true, pierceArmor:true},
+      {name:'Musim Abadi',    cost:15000, dmg:270, range:6.0, rate:1.2,  chain:10, chainRange:2.8, slow:0.55, hidden:true, pierceArmor:true, bossMul:1.4},
+      {name:'Permaisuri Kutub',cost:30000,dmg:500, range:6.5, rate:1.05, chain:13, chainRange:3.0, slow:0.6,  hidden:true, pierceArmor:true, bossMul:1.8}]},
+});
 const TOWER_ORDER = [...UNIT_TYPES].sort((a, b) => RARITY[UNIT_RARITY[a]].rank - RARITY[UNIT_RARITY[b]].rank);
 const DEFAULT_LOADOUT = [...STARTER_UNITS];
 /* Jenis proyektil (tower lain memakai tembakan langsung) */
-const PROJ = { demoman: 'rocket', rocketeer: 'rocket', cannon: 'shell', mortar: 'shell', nuke: 'nuke', dragon: 'fire' };
+const PROJ = { pirate: 'shell', demoman: 'rocket', rocketeer: 'rocket', cannon: 'shell', mortar: 'shell', nuke: 'nuke', dragon: 'fire' };
 
 /* ---------------- MUSUH ---------------- */
 const ENEMIES = {
@@ -426,6 +505,16 @@ const EVOS = {
   cosmic:    { name:'Pencipta Semesta', color:'#000051', perk:'crit', mul:{ dmg:1.45, chainAdd:3 }, desc:'Bintang melompat +3 dan 25% critical.' },
   snowman:   { name:'Raja Es',       color:'#81d4fa', perk:'freeze',   mul:{ dmg:1.4, splash:1.2 }, desc:'20% peluang membekukan musuh 1 detik, ledakan salju lebih luas.' },
   yeti:      { name:'Yeti Purbakala',color:'#4fc3f7', perk:null,       mul:{ dmg:1.5, slowAdd:0.1, range:1.15 }, desc:'Hentakan +50% damage, +10% perlambatan, +15% jangkauan.' },
+  pirate:    { name:'Laksamana',     color:'#3e2723', perk:'burn',     mul:{ dmg:1.4, splash:1.25 }, desc:'Ledakan membakar musuh.' },
+  knight:    { name:'Ksatria Suci',  color:'#616161', perk:'crit',     mul:{ dmg:1.45, range:1.1 }, desc:'25% peluang tebasan critical 3× damage.' },
+  druid:     { name:'Druid Agung',   color:'#1b5e20', perk:null,       mul:{ dmg:1.35, dotMul:2, chainAdd:2 }, desc:'Racun 2× lebih kuat, +2 lompatan.' },
+  firegod:   { name:'Dewa Matahari', color:'#e65100', perk:'crit',     mul:{ dmg:1.5, range:1.1 },  desc:'25% peluang critical 3× damage.' },
+  thundergod:{ name:'Zeus',          color:'#1a237e', perk:'crit',     mul:{ dmg:1.45, chainAdd:4 }, desc:'Petir melompat +4 dan 25% critical.' },
+  skier:     { name:'Atlet Olimpiade',color:'#b71c1c', perk:'triple',  mul:{ dmg:1.5, range:1.1 },  desc:'Setiap tembakan ke-4 memberi damage 3×.' },
+  icearcher: { name:'Pemanah Aurora',color:'#0288d1', perk:'freeze',   mul:{ dmg:1.4, range:1.15 }, desc:'20% peluang membekukan musuh 1 detik.' },
+  iceknight: { name:'Jenderal Es',   color:'#1565c0', perk:'freeze',   mul:{ dmg:1.45, range:1.1 }, desc:'20% peluang membekukan musuh 1 detik.' },
+  frostmage: { name:'Penyihir Kutub',color:'#0277bd', perk:'freeze',   mul:{ dmg:1.35, chainAdd:2 }, desc:'Sihir 20% membekukan musuh 1 detik, +2 lompatan.' },
+  frostqueen:{ name:'Dewi Musim Dingin', color:'#81d4fa', perk:'freeze', mul:{ dmg:1.45, chainAdd:3 }, desc:'Membekukan musuh (20%), +3 lompatan.' },
   goldminer: { name:'Juragan Emas',  color:'#ff6f00', perk:null,       mul:{ dmg:1.3, goldHit:1.5 }, desc:'Emas per pukulan +50%.' },
   angel:     { name:'Serafim Emas',  color:'#ffd54f', perk:'crit',     mul:{ dmg:1.4, range:1.1 },  desc:'25% peluang sinar critical 3× damage.' },
 };
