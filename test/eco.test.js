@@ -46,10 +46,10 @@ const act = (token, action, payload) => call('eco.act', { token, body: { action,
   assert.strictEqual((await act(B.token, 'summon', { banner: 'lucky', count: 1 })).status, 400, 'lucky butuh permata');
   r = await act(B.token, 'summon', { banner: 'feat', count: 10 });
   assert.strictEqual(r.status, 400, 'diamond kurang untuk 10x');
-  // pity: 60 tarikan menjamin legendaris+
+  // pity: GACHA.pity tarikan menjamin legendaris+
   const v = SHARED.newVault(Date.now(), Math.random); v.diamonds = 1e6;
   let gotLeg = 0; const ctx = { rng: () => 0.001, now: Date.now() };   // rng rendah = selalu common
-  for (let i = 0; i < 60; i++) { const out = SHARED.actions.summon(v, { banner: 'std', count: 1 }, ctx); if (SHARED.RARITY[SHARED.UNIT_RARITY[out.units[0].type]].rank >= 3) gotLeg++; }
+  for (let i = 0; i < SHARED.GACHA.pity; i++) { const out = SHARED.actions.summon(v, { banner: "std", count: 1 }, ctx); if (SHARED.RARITY[SHARED.UNIT_RARITY[out.units[0].type]].rank >= 3) gotLeg++; }
   assert.strictEqual(gotLeg, 1, 'pity bekerja');
   // distribusi kasar
   const cnt = {}; const v2 = SHARED.newVault(0, Math.random); v2.diamonds = 1e9;
