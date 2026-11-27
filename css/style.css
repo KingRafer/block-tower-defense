@@ -2088,3 +2088,9 @@ canvas#game { border: 5px solid #5d4037 !important; outline: 3px solid #1a110a; 
 }
 @media (orientation: portrait), (max-width: 599px) { .lh-quick .qb small { font-size: 9px !important; font-weight: 700; } }
 .lh-quick .qb small { font-size: inherit; }
+/* v6.4.1 — ukuran unit lobby menyesuaikan jumlah unit & lebar panggung */
+.lh .showcase { container-type: inline-size; }
+.lh .showcase .sc-unit { flex: 0 1 auto; min-width: 0; }
+.lh .showcase .sc-unit canvas { width: min(var(--uh, 24dvh), calc(96cqw / var(--n, 4))) !important; height: min(var(--uh, 24dvh), calc(96cqw / var(--n, 4))) !important; }
+@media (orientation: landscape) and (min-width: 600px) { .lh .showcase { --uh: clamp(64px, 24dvh, 180px); } }
+@media (orientation: portrait), (max-width: 599px) { .lh .showcase { --uh: 96px; } }

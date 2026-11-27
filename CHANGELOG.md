@@ -1,5 +1,9 @@
 # Changelog
 
+## [6.4.1] — 2026-11-27
+### Diperbaiki
+- **Ukuran unit di panggung lobby menyesuaikan jumlah unit & lebar layar** — 6 unit tidak lagi keluar panggung atau menutupi menu kiri.
+
 ## [6.4.0] — 2026-11-27
 ### Baru & diubah — lobby
 - **Satu tata letak lanskap untuk semua layar** (desktop, tablet, HP miring): rel ikon kiri, panggung tim besar di tengah, kartu kanan, slot peti + Misi Harian di kanan bawah, MAIN & MABAR berdampingan — ukuran menyesuaikan tinggi layar.

@@ -368,7 +368,7 @@ const Menu = {
             ${tile('go:friends', 'friend', 'Teman', 'c-blue', `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`)}${tile('go:more', 'menu', 'Lainnya', 'c-gray')}
           </nav>
           <section class="lh-center">
-            <div class="showcase">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
+            <div class="showcase" style="--n:${Math.max(4, lo4.length)}">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
           </section>
           <nav class="lh-quick">
             <button class="qb" data-act="go:scores" title="Papan Skor">${pxi('trophy')}<small>Peringkat</small></button>
