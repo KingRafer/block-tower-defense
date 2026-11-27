@@ -1778,3 +1778,8 @@ img.pxe.huge { width: 72px; height: 72px; }
 .end-badges:empty { display: none; }
 .end-badges .badge img.pxe { width: 18px; height: 18px; }
 @media (max-width: 760px), (max-height: 560px) { .end-badges .badge { font-size: 12px; padding: 3px 8px; } .end-badges { gap: 4px; } }
+/* v5.6.2 latar sesuai tier di panggung lobby: cahaya warna kelangkaan di belakang unit */
+.sc-unit { position: relative; }
+.sc-unit::before { content: ''; position: absolute; left: 50%; bottom: 14%; width: 86%; aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rc) 70%, transparent) 0%, color-mix(in srgb, var(--rc) 28%, transparent) 45%, transparent 70%); }
+.sc-unit canvas { position: relative; z-index: 1; }

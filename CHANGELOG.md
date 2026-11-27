@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.6.2] — 2026-11-27
+### Diubah
+- **Latar di belakang unit kini sesuai tier**: gradien warna kelangkaan (Biasa abu-abu, Langka biru, Epik ungu, Legendaris emas, Mitos merah,
+  Rahasia biru muda, Ilahi kuning-emas). Legendaris ke atas memakai sinar cahaya, Rahasia & Ilahi ditambah kilau bintang.
+  Berlaku di daftar unit, loadout, detail unit, Index, Banner, hasil Summon, peti, Markas, event, dan bar tower saat bermain.
+- Unit di panggung lobby diberi cahaya warna tier di belakangnya.
+
 ## [5.6.1] — 2026-11-27
 ### Diubah — tampilan HP
 - **Markas**: slot peti, tambang, liga, koleksi & kalender login lebih ringkas di HP (potret 2 kolom peti, lanskap tombol sebaris).

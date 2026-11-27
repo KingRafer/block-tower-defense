@@ -341,7 +341,7 @@ const Menu = {
           <div class="sc-tip"><b>${esc(this.unitName(x))}</b> <small>Lv ${unitLevel(x.xp)}</small><br>${this.rarityTag(x.type)} <small>${d.role || ''}</small>
             <div class="sc-st"><span>⚔️ ${fmtNum(L.dmg)}</span><span>🎯 ${(+L.range).toFixed(1)}</span><span>⏱ ${(+L.rate).toFixed(2)}s</span><span>💥 ${fmtNum(L.dmg / L.rate)}/s</span></div>
             ${tr ? `<small class="sc-tr">${tr.icon || '✦'} ${tr.name}</small>` : ''}</div>
-          <canvas width="96" height="96" data-icon="${x.type}" data-skin="${x.skin || 'default'}" data-evo="${x.evo ? 1 : 0}"></canvas>
+          <canvas width="96" height="96" data-bg="0" data-icon="${x.type}" data-skin="${x.skin || 'default'}" data-evo="${x.evo ? 1 : 0}"></canvas>
           <i class="sc-shadow"></i></button>`;
       }).join('');
       // misi aktif (2 teratas yang belum diambil)
@@ -751,11 +751,11 @@ const Menu = {
       let body = '';
       if (false) body = '';
       else if (tab === 'skin') body = `${SHARED.limitedActive(Date.now()) ? (() => { const it = SHARED.EV_SHOP.find(x => x.give.skin), sk = it && SKINS[it.give.skin]; if (!sk) return ''; const e = SHARED.rollEvent(v, Date.now()), own = v.skins.includes(it.give.skin), can = !own && e && e.lan >= it.cost;
-            return `<h4>❄️ Skin Event</h4><div class="shopgrid skins"><div class="sitem skin evskin"><canvas width="64" height="64" data-icon="scout" data-skin="${it.give.skin}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Eksklusif event • dibeli dengan ${SHARED.LIMITED.token}</small></div>
+            return `<h4>❄️ Skin Event</h4><div class="shopgrid skins"><div class="sitem skin evskin"><canvas width="64" height="64" data-bg="0" data-icon="scout" data-skin="${it.give.skin}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Eksklusif event • dibeli dengan ${SHARED.LIMITED.token}</small></div>
               ${own ? '<span class="owned">✔ Dimiliki</span>' : `<button class="btn sm ${can ? '' : 'gray'}" ${can ? '' : 'disabled'} data-act="evbuy:${it.id}">${SHARED.LIMITED.icon} ${it.cost.toLocaleString('id-ID')}</button>`}</div></div>`; })() : ''}
           <h4>Skin Permata</h4><div class="shopgrid skins">${Object.entries(SKINS).filter(([k, x]) => k !== 'default' && !x.event).map(([k, sk]) => {
         const own = v.skins.includes(k);
-        return `<div class="sitem skin"><canvas width="64" height="64" data-icon="scout" data-skin="${k}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Kosmetik untuk semua unit</small></div>
+        return `<div class="sitem skin"><canvas width="64" height="64" data-bg="0" data-icon="scout" data-skin="${k}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Kosmetik untuk semua unit</small></div>
           ${own ? '<span class="owned">✔ Dimiliki</span>' : `<button class="btn sm purple" data-act="buyskin:${k}">💠 ${sk.price}</button>`}</div>`; }).join('')}</div>
           <p class="dim">Pasang skin di menu <b>Unit</b> → pilih unit → Skin.</p>`;
       else if (tab === 'material') body = `<div class="cards">${Object.entries(MATERIALS).map(([k, m]) => `<div class="card shopc">
@@ -1322,7 +1322,7 @@ const Menu = {
     this.drawIcons(el);
     units.forEach((u, i) => setTimeout(() => sfx(RARITY[UNIT_RARITY[u.type]].rank >= 3 ? 'win' : RARITY[UNIT_RARITY[u.type]].rank >= 2 ? 'achieve' : 'coin'), 300 + i * 180));
   },
-  drawIcons(root) { (root || document).querySelectorAll('canvas[data-icon]').forEach(c => drawUnitIcon(c, c.dataset.icon, c.dataset.skin, c.dataset.evo === '1')); (root || document).querySelectorAll('canvas[data-pxi]').forEach(drawPxi); },
+  drawIcons(root) { (root || document).querySelectorAll('canvas[data-icon]').forEach(c => drawUnitIcon(c, c.dataset.icon, c.dataset.skin, c.dataset.evo === '1', c.dataset.bg !== '0')); (root || document).querySelectorAll('canvas[data-pxi]').forEach(drawPxi); },
   async loadTrades() {
     try { this.tradeData = await Online.api('trade.list', null, 'GET'); if (this.screen === 'trade') this.show('trade', true); }
     catch (e) { UI.toast('❌ ' + e.message); }

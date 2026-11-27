@@ -159,7 +159,31 @@ function drawTower(t, ghost) {
 }
 
 /** Gambar tower di kanvas kecil (untuk kartu unit di menu) */
-function drawUnitIcon(canvas, type, skin, evo) {
+/* Latar ikon unit sesuai tier (kelangkaan): gradien warna tier, cahaya di belakang karakter,
+ * sinar untuk Legendaris ke atas dan kilau bintang untuk Rahasia/Ilahi. */
+const hexRgb = h => { const n = parseInt((h || '#999999').slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+function drawTierBg(g, type) {
+  const rk = RARITY[UNIT_RARITY[type]] || RARITY.common, [r, gg, b] = hexRgb(rk.color), rgba = a => `rgba(${r},${gg},${b},${a})`, rank = rk.rank;
+  const rr = (x, y, w, h, rad) => { g.beginPath(); g.moveTo(x + rad, y); g.arcTo(x + w, y, x + w, y + h, rad); g.arcTo(x + w, y + h, x, y + h, rad); g.arcTo(x, y + h, x, y, rad); g.arcTo(x, y, x + w, y, rad); g.closePath(); };
+  g.save(); rr(1, 1, 62, 62, 7); g.clip();
+  g.fillStyle = '#161d23'; g.fillRect(0, 0, 64, 64);
+  let lg = g.createLinearGradient(0, 0, 0, 64); lg.addColorStop(0, rgba(0.6)); lg.addColorStop(0.6, rgba(0.22)); lg.addColorStop(1, rgba(0.08));
+  g.fillStyle = lg; g.fillRect(0, 0, 64, 64);
+  if (rank >= 3) {   // sinar dari belakang karakter
+    g.save(); g.translate(32, 30); g.fillStyle = rank >= 5 ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.09)';
+    const n = rank >= 5 ? 12 : 8;
+    for (let i = 0; i < n; i++) { g.rotate(Math.PI * 2 / n); g.beginPath(); g.moveTo(0, 0); g.lineTo(-4, -50); g.lineTo(4, -50); g.closePath(); g.fill(); }
+    g.restore();
+  }
+  const rg = g.createRadialGradient(32, 32, 2, 32, 32, 30); rg.addColorStop(0, rank >= 3 ? 'rgba(255,255,255,.35)' : rgba(0.35)); rg.addColorStop(0.45, rgba(0.3)); rg.addColorStop(1, rgba(0));
+  g.fillStyle = rg; g.fillRect(0, 0, 64, 64);
+  if (rank >= 5) { g.fillStyle = 'rgba(255,255,255,.85)'; for (const [x, y, s] of [[9, 10, 1.6], [54, 14, 1.3], [12, 48, 1.1], [52, 44, 1.5], [44, 7, 1]]) { g.fillRect(x - s, y - s / 3, s * 2, s * 0.7); g.fillRect(x - s / 3, y - s, s * 0.7, s * 2); } }
+  // lantai gelap di bawah karakter
+  const fl = g.createLinearGradient(0, 44, 0, 64); fl.addColorStop(0, 'rgba(0,0,0,0)'); fl.addColorStop(1, 'rgba(0,0,0,.45)'); g.fillStyle = fl; g.fillRect(0, 44, 64, 20);
+  g.restore();
+  rr(1, 1, 62, 62, 7); g.strokeStyle = rgba(rank >= 3 ? 0.95 : 0.7); g.lineWidth = rank >= 3 ? 2 : 1.4; g.stroke();
+}
+function drawUnitIcon(canvas, type, skin, evo, bg = true) {
   const g = canvas.getContext('2d'), prev = ctx;
   g.clearRect(0, 0, canvas.width, canvas.height);
   // resolusi kanvas mengikuti ukuran tampil × devicePixelRatio agar tidak buram
@@ -170,6 +194,7 @@ function drawUnitIcon(canvas, type, skin, evo) {
   }
   g.clearRect(0, 0, canvas.width, canvas.height);
   g.save(); g.scale(canvas.width / 64, canvas.height / 64); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  if (bg && UNIT_RARITY[type]) drawTierBg(g, type);
   ctx = g;
   try { drawTower({ type, x: 32, y: 40, level: 0, angle: -0.6, recoil: 0, evo, skin: skin || 'default', owner: null }, false); }
   finally { ctx = prev; g.restore(); }
