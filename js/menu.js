@@ -59,26 +59,8 @@ const Menu = {
   /** Latar pemandangan menu (dibuat sekali, berganti sesuai jam WIB) */
   scene(on) {
     const el = $('menuScene'); if (!el) return;
-    if (!on) { el.style.display = 'none'; return; }
-    const hour = new Date(Date.now() + 7 * 3600e3).getUTCHours();
-    const sky = hour >= 5 && hour < 8 ? 'dawn' : hour < 16 ? 'day' : hour < 19 ? 'dusk' : 'night';
-    if (el.dataset.sky !== sky) {
-      el.dataset.sky = sky;
-      let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
-      const stars = Array.from({ length: 34 }, (_, i) => `<i style="left:${(rnd() * 100).toFixed(1)}%;top:${(rnd() * 48).toFixed(1)}%;--s:${(1 + rnd() * 2).toFixed(1)}px;--d:${(rnd() * 4).toFixed(1)}s" class="${i % 4 ? '' : 'tw'}"></i>`).join('');
-      const motes = Array.from({ length: 14 }, () => `<i style="left:${(rnd() * 100).toFixed(1)}%;top:${(55 + rnd() * 40).toFixed(1)}%;--d:${(rnd() * -12).toFixed(1)}s;--t:${(8 + rnd() * 8).toFixed(1)}s"></i>`).join('');
-      el.innerHTML = `<div class="hscene sky-${sky}"><div class="sky"></div><div class="stars">${stars}</div><div class="rays"></div><div class="sun"></div>
-        <div class="clouds"><i></i><i></i><i></i><i></i></div>
-        <svg class="mtn far" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 220 L90 140 L150 175 L250 70 L330 150 L420 95 L520 170 L610 60 L700 150 L790 110 L880 165 L990 75 L1080 150 L1200 100 L1200 300 L0 300Z"/>
-          <path class="snow" d="M250 70 L228 92 L242 88 L254 98 L266 86 L276 95Z M610 60 L586 84 L600 80 L612 92 L624 80 L636 88Z M990 75 L968 97 L982 92 L994 102 L1006 90 L1016 98Z"/></svg>
-        <svg class="mtn mid" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 230 L140 175 L300 210 L420 160 L560 205 L700 170 L860 215 L1000 175 L1200 205 L1200 300 L0 300Z"/>
-          <g class="castle"><path d="M780 182 V120 h10 v-8 h6 v8 h8 v-8 h6 v8 h10 v-8 h6 v8 h10 V182Z M800 120 V92 h6 v-6 h5 v6 h5 v-6 h5 v6 h6 V120Z M770 140 V110 h-2 l10 -16 l10 16 h-2 V140Z M852 140 V110 h-2 l10 -16 l10 16 h-2 V140Z"/>
-          <rect class="win" x="808" y="100" width="6" height="8"/><rect class="win" x="795" y="135" width="5" height="7"/><rect class="win" x="818" y="135" width="5" height="7"/><rect class="win" x="841" y="135" width="5" height="7"/><rect class="win" x="775" y="118" width="4" height="6"/><rect class="win" x="857" y="118" width="4" height="6"/>
-          <path class="flag" d="M820 86 V70 l12 4 l-12 4"/></g></svg>
-        <svg class="mtn near" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 300 V250 ${Array.from({ length: 30 }, (_, i) => { const x = i * 41; return `L${x} 250 L${x + 8} ${215 - (i % 3) * 12} L${x + 16} 250 L${x + 22} 238 L${x + 30} ${205 - (i % 4) * 8} L${x + 38} 240`; }).join(' ')} L1200 245 V300Z"/></svg>
-        <div class="ground"><div class="gpath"></div></div><div class="motes">${motes}</div><div class="vignette"></div></div>`;
-    }
-    el.style.display = 'block';
+    if (!on) { el.style.display = 'none'; if (window.LobbyScene) LobbyScene.stop(); return; }
+    el.style.display = 'block'; LobbyScene.mount(el);
   },
 
   /* ---------- helper tampilan ---------- */
@@ -258,7 +240,7 @@ const Menu = {
       const nextDay = Date.parse(SHARED.dayStr(now + 864e5) + 'T00:00:00+07:00');
       const hour = new Date(now + 7 * 3600e3).getUTCHours();
       const sky = hour >= 5 && hour < 8 ? 'dawn' : hour < 16 ? 'day' : hour < 19 ? 'dusk' : 'night';
-      const tile = (act, ic, label, cls, badge = '') => `<button class="ltile ${cls}" data-act="${act}"><span class="lt-ic">${ic}</span><b>${label}</b>${badge}</button>`;
+      const tile = (act, ic, label, cls, badge = '') => `<button class="ltile ${cls}" data-act="${act}"><span class="lt-ic">${pxi(ic)}</span><b>${label}</b>${badge}</button>`;
       // unggulan
       const feat = SHARED.featuredUnit(now), fr = RARITY[UNIT_RARITY[feat]], pityLeft = Math.max(1, GACHA.pity - ((v.pity || {}).feat || 0));
       // showcase loadout
@@ -287,14 +269,14 @@ const Menu = {
             <button class="lh-prof" data-act="go:account">${this.avatar(u, 46)}
               <div><b>${esc(u ? u.name : 'Tamu')}</b><div class="lvrow"><span class="lvl">Lv ${lv}</span><div class="xpbar"><div style="width:${pct}%"></div></div></div></div></button>
             <div class="lh-cur">${this.currency()}</div>
-            <div class="lh-sys">${PWA.installed() ? '' : `<button class="sysb dl" data-act="go:download" title="Download aplikasi">⬇️</button>`}
-              <button class="sysb" data-act="go:howto" title="Cara main">❔</button><button class="sysb" data-act="settings:main" title="Pengaturan">⚙️</button></div>
+            <div class="lh-sys">${PWA.installed() ? '' : `<button class="sysb dl" data-act="go:download" title="Download aplikasi">${pxi('down')}</button>`}
+              <button class="sysb" data-act="go:howto" title="Cara main">${pxi('help')}</button><button class="sysb" data-act="settings:main" title="Pengaturan">${pxi('gear')}</button></div>
           </header>
           <nav class="lh-left">
-            ${tile('go:gacha', '🎰', 'Summon', 'c-gold')}${tile('go:units', '🗼', 'Unit', 'c-purple')}
-            ${tile('go:skills', '⚡', 'Skill', 'c-orange')}${tile('go:shop', '🛒', 'Toko', 'c-teal')}
-            ${tile('go:missions', '🎯', 'Misi', 'c-green', this.badge(missionsReady()))}${tile('go:pass', '🎫', 'Pass', 'c-pink', this.badge(passReady()))}
-            ${tile('go:friends', '👥', 'Teman', 'c-blue', `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`)}${tile('go:more', '☰', 'Lainnya', 'c-gray')}
+            ${tile('go:gacha', 'chest', 'Summon', 'c-gold')}${tile('go:units', 'tower', 'Unit', 'c-purple')}
+            ${tile('go:skills', 'bolt', 'Skill', 'c-orange')}${tile('go:shop', 'bag', 'Toko', 'c-teal')}
+            ${tile('go:missions', 'target', 'Misi', 'c-green', this.badge(missionsReady()))}${tile('go:pass', 'ticket', 'Pass', 'c-pink', this.badge(passReady()))}
+            ${tile('go:friends', 'friend', 'Teman', 'c-blue', `<span class="badge-dot" data-badge="friends">${Online.requests || ''}</span>`)}${tile('go:more', 'menu', 'Lainnya', 'c-gray')}
           </nav>
           <section class="lh-center">
             <div class="feat-ban" style="--rc:${fr.color}">
@@ -307,18 +289,18 @@ const Menu = {
             <div class="showcase">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
           </section>
           <aside class="lh-right">
-            ${evOn ? `<button class="rcard r-event" data-act="go:play"><span class="rc-ic">🎉</span><div><b>EVENT AKTIF</b><small>${ev.rewardMul > 1 ? `🪙 ×${ev.rewardMul} ` : ''}${ev.diamondMul > 1 ? `💎 ×${ev.diamondMul}` : ''} hadiah bermain</small></div></button>` : ''}
-            <button class="rcard r-pass" data-act="go:pass"><span class="rc-ic">🎫</span><div><b>SEASON PASS</b><small>Tier ${pt}/${SHARED.PASS.tiers}${ps.premium ? ' • ⭐' : ''}</small><div class="rc-bar"><div style="width:${ppct}%"></div></div></div>${this.badge(passReady())}</button>
-            <button class="rcard r-daily" data-act="go:daily"><span class="rc-ic">📅</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai • reset <span data-cd="' + nextDay + '"></span>' : 'Hadiah 🪙 ' + DAILY_REWARD + ' + 💎'}</small></div></button>
-            <div class="rcard r-login"><span class="rc-ic">🎁</span><div><b>LOGIN HARIAN</b><small>Hari ke-${streak || 1} • besok 💎 ${nextLogin}</small><small class="dim">Berikutnya <span data-cd="${nextDay}"></span></small></div></div>
+            ${evOn ? `<button class="rcard r-event" data-act="go:play"><span class="rc-ic">${pxi('star')}</span><div><b>EVENT AKTIF</b><small>${ev.rewardMul > 1 ? `🪙 ×${ev.rewardMul} ` : ''}${ev.diamondMul > 1 ? `💎 ×${ev.diamondMul}` : ''} hadiah bermain</small></div></button>` : ''}
+            <button class="rcard r-pass" data-act="go:pass"><span class="rc-ic">${pxi('ticket')}</span><div><b>SEASON PASS</b><small>Tier ${pt}/${SHARED.PASS.tiers}${ps.premium ? ' • ⭐' : ''}</small><div class="rc-bar"><div style="width:${ppct}%"></div></div></div>${this.badge(passReady())}</button>
+            <button class="rcard r-daily" data-act="go:daily"><span class="rc-ic">${pxi('cal')}</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai • reset <span data-cd="' + nextDay + '"></span>' : 'Hadiah 🪙 ' + DAILY_REWARD + ' + 💎'}</small></div></button>
+            <div class="rcard r-login"><span class="rc-ic">${pxi('gift')}</span><div><b>LOGIN HARIAN</b><small>Hari ke-${streak || 1} • besok 💎 ${nextLogin}</small><small class="dim">Berikutnya <span data-cd="${nextDay}"></span></small></div></div>
           </aside>
-          <button class="lh-mis" data-act="go:missions"><b>🎯 MISI HARIAN</b>${misW}</button>
+          <button class="lh-mis" data-act="go:missions"><b>${pxi('target', 'sm')} MISI HARIAN</b>${misW}</button>
           <div class="lh-play">
             ${save ? `<button class="bigplay cont" data-act="continue"><span class="bp-ic">⏯</span><div><b>LANJUTKAN</b><small>${sm.name} • Wave ${save.wave + 1}</small></div></button>
               <div class="bp-side"><button class="hchip" data-act="go:play">＋ Baru</button><button class="hchip" data-act="discard">✕ Hapus</button></div>`
-            : `<button class="bigplay" data-act="go:play"><span class="bp-ic">▶</span><div><b>MAIN</b><small>${MAP.name} • ${DIFFS[DIFF].name}</small></div></button>`}
+            : `<button class="bigplay" data-act="go:play"><span class="bp-ic">${pxi('play')}</span><div><b>MAIN</b><small>${MAP.name} • ${DIFFS[DIFF].name}</small></div></button>`}
           </div>
-          <button class="lh-coop" data-act="go:mabar"><span>🤝</span><div><b>MABAR</b><small>Co-op 2–4 pemain</small></div></button>
+          <button class="lh-coop" data-act="go:mabar"><span>${pxi('swords')}</span><div><b>MABAR</b><small>Co-op 2–4 pemain</small></div></button>
           <div class="lh-foot">v${VERSION} • ${Online.available ? '🟢 Online' : '⚪ Offline'}</div>
         </div>`;
     },
@@ -517,7 +499,7 @@ const Menu = {
         </div>
         <div class="room-bar">
           <div class="rb-info"><span><b>${m.name}</b> • ${DIFFS[r.diff] ? DIFFS[r.diff].name : r.diff} • ${MODES[r.mode] ? MODES[r.mode].name : r.mode}</span><small>${r.players.length}/4 pemain • bagikan kode room agar teman bisa bergabung</small></div>
-          ${host ? `<button class="bigplay rb-go" data-act="room-start"><span class="bp-ic">▶</span><div><b>MULAI</b><small>${r.players.length} pemain</small></div></button>` : '<div class="waiting">⏳ Menunggu host memulai…</div>'}
+          ${host ? `<button class="bigplay rb-go" data-act="room-start"><span class="bp-ic">${pxi('play')}</span><div><b>MULAI</b><small>${r.players.length} pemain</small></div></button>` : '<div class="waiting">⏳ Menunggu host memulai…</div>'}
         </div>`;
     },
 
@@ -1118,7 +1100,7 @@ const Menu = {
     this.drawIcons(el);
     units.forEach((u, i) => setTimeout(() => sfx(RARITY[UNIT_RARITY[u.type]].rank >= 3 ? 'win' : RARITY[UNIT_RARITY[u.type]].rank >= 2 ? 'achieve' : 'coin'), 300 + i * 180));
   },
-  drawIcons(root) { (root || document).querySelectorAll('canvas[data-icon]').forEach(c => drawUnitIcon(c, c.dataset.icon, c.dataset.skin, c.dataset.evo === '1')); },
+  drawIcons(root) { (root || document).querySelectorAll('canvas[data-icon]').forEach(c => drawUnitIcon(c, c.dataset.icon, c.dataset.skin, c.dataset.evo === '1')); (root || document).querySelectorAll('canvas[data-pxi]').forEach(drawPxi); },
   async loadTrades() {
     try { this.tradeData = await Online.api('trade.list', null, 'GET'); if (this.screen === 'trade') this.show('trade', true); }
     catch (e) { UI.toast('❌ ' + e.message); }

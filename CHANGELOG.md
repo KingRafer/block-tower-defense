@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.0] — 2026-11-27
+### Diubah
+- **Latar lobby baru bergaya pixel-art**: padang rumput dan awan, dengan **kerajaan** di kejauhan (kastil, menara, desa) dan **perkemahan** (tenda bergaris, paviliun, api unggun, spanduk, peti & rak senjata).
+  Ada animasi kecil: bendera berkibar, api dan asap, burung terbang. Warna mengikuti jam WIB (pagi, siang, senja, malam dengan jendela kastil menyala).
+- **Tampilan UI/UX baru bertema "Kerajaan"**: panel batu-arang dengan garis tegas, tombol warna solid tanpa glow/gradien, sudut lebih kotak, font judul pixel.
+- Ikon menu lobby diganti **ikon pixel** buatan sendiri (bukan emoji).
+
 ## [5.0.0] — 2026-11-27
 ### Ditambahkan
 - **Skill unit**: setiap unit kini punya **1 skill pasif** (selalu aktif) dan **1 skill aktif** (terbuka di level upgrade 2, cooldown 30–60 detik).

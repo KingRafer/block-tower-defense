@@ -1,7 +1,7 @@
 /* Service worker: jaringan dulu, cadangan cache (bisa main solo saat offline) */
-const CACHE = 'btd-v5.0.0';
-const CORE = ['./', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon-192.png',
-  ...['shared', 'config', 'storage', 'audio', 'game', 'render', 'chars', 'skills', 'skills', 'ui', 'menu', 'dev', 'pwa', 'online', 'main'].map(f => `js/${f}.js`)];
+const CACHE = 'btd-v5.1.0';
+const CORE = ['./', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon-192.png', 'assets/lobby-bg.png',
+  ...['shared', 'config', 'storage', 'audio', 'game', 'render', 'chars', 'skills', 'scene', 'ui', 'menu', 'dev', 'pwa', 'online', 'main'].map(f => `js/${f}.js`)];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {})); self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
