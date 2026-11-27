@@ -870,6 +870,7 @@ function abandonGame() {
 }
 async function finishGame(won) {
   if (S.recorded) return; S.recorded = true;
+  Track.ev(won ? 'game_win' : 'game_lose', { w: S.wave });
   SaveGame.clear();
   const D = DIFFS[S.diff];
   const cleared = won ? S.wave : Math.max(0, S.wave - 1);

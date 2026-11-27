@@ -263,4 +263,43 @@ async function redeem(d, user, raw) {
   return { got: res, vault };
 }
 
-module.exports = { routes, isAdmin, getGlobal, cleanGlobal, redeem };
+/* ---------- undangan teman (referral) ---------- */
+const REF_REWARD = { diamonds: 150, coins: 1000 }, REF_INVITER = { diamonds: 150 }, REF_MAX = 30, REF_DAYS = 14;
+function refInfo(u) {
+  const age = Date.now() - (u.createdAt || 0);
+  return { code: u.friendCode, count: u.refCount || 0, max: REF_MAX, used: !!u.referredBy, canUse: !u.referredBy && age <= REF_DAYS * 864e5,
+    reward: REF_REWARD, inviter: REF_INVITER, days: REF_DAYS };
+}
+async function refClaim(d, u, raw) {
+  const code = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const info = refInfo(u);
+  if (info.used) throw err(409, 'Kamu sudah memakai kode undangan');
+  if (!info.canUse) throw err(410, `Kode undangan hanya untuk akun baru (maks ${REF_DAYS} hari)`);
+  const inv = code && await d.collection('users').findOne({ friendCode: code });
+  if (!inv || inv._id === u._id) throw err(404, 'Kode undangan tidak valid');
+  if ((inv.refCount || 0) >= REF_MAX) throw err(410, 'Kuota undangan pemilik kode sudah penuh');
+  const r = await d.collection('users').updateOne({ _id: u._id, referredBy: { $exists: false } }, { $set: { referredBy: inv._id, referredAt: Date.now() } });
+  if (!r.modifiedCount) throw err(409, 'Kamu sudah memakai kode undangan');
+  await d.collection('users').updateOne({ _id: inv._id }, { $inc: { refCount: 1 } });
+  const { res, vault } = await mutateVault(d, u._id, v => SHARED.giveReward(v, REF_REWARD, rng, Date.now()));
+  try { await mutateVault(d, inv._id, v => SHARED.giveReward(v, REF_INVITER, rng, Date.now())); } catch (e) {}
+  return { got: res, vault, inviter: inv.name };
+}
+
+/* ---------- analitik ---------- */
+const wibDay = t => new Date(t + 7 * 3600e3).toISOString().slice(0, 10);
+routes['admin.analytics'] = async (req, d) => {
+  const now = Date.now(), days = Array.from({ length: 14 }, (_, i) => wibDay(now - (13 - i) * 864e5));
+  const docs = await d.collection('stats').find({ _id: { $in: days } }).toArray(), by = Object.fromEntries(docs.map(x => [x._id, x]));
+  const rows = [];
+  for (const day of days) {
+    const s = by[day] || {}, t = Date.parse(day + 'T12:00:00Z'), cohort = s.newp || 0;
+    const d1day = wibDay(t + 864e5), d7day = wibDay(t + 7 * 864e5);
+    const d1 = cohort && d1day <= wibDay(now) ? await d.collection('active').countDocuments({ day: d1day, first: day }) : null;
+    const d7 = cohort && d7day <= wibDay(now) ? await d.collection('active').countDocuments({ day: d7day, first: day }) : null;
+    rows.push({ day, dau: s.dau || 0, newp: cohort, ev: s.ev || {}, d1, d7 });
+  }
+  return { rows, total: await d.collection('seen').countDocuments({}) };
+};
+
+module.exports = { routes, isAdmin, getGlobal, cleanGlobal, redeem, refInfo, refClaim, wibDay };

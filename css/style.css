@@ -2094,3 +2094,14 @@ canvas#game { border: 5px solid #5d4037 !important; outline: 3px solid #1a110a; 
 .lh .showcase .sc-unit canvas { width: min(var(--uh, 24dvh), calc(96cqw / var(--n, 4))) !important; height: min(var(--uh, 24dvh), calc(96cqw / var(--n, 4))) !important; }
 @media (orientation: landscape) and (min-width: 600px) { .lh .showcase { --uh: clamp(64px, 24dvh, 180px); } }
 @media (orientation: portrait), (max-width: 599px) { .lh .showcase { --uh: 96px; } }
+/* v6.5 — undang teman */
+.refbox h3 { margin: 4px 0; color: var(--k-gold); }
+.refcode { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.refcode span { color: var(--k-dim); font-size: 12px; }
+.refcode b { font: 700 26px var(--font-h); letter-spacing: 4px; color: #ffe9a8; background: var(--k-well); border: 2px dashed var(--k-gold); border-radius: 6px; padding: 2px 14px; }
+.refbox .big-ic .pxi { width: 48px; height: 48px; }
+#refinfo { margin: 4px 0 8px; font-size: 13px; }
+.anabars { display: flex; align-items: flex-end; gap: 4px; height: 120px; padding-top: 6px; }
+.anabars > div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
+.anabars i { display: block; width: 100%; min-height: 2px; background: linear-gradient(#ffe9a8, #f2c14e 60%, #b8862b); border: 1px solid #000; border-radius: 2px 2px 0 0; }
+.anabars small { font-size: 9px; color: var(--k-dim); }

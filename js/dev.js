@@ -11,7 +11,7 @@ const DevPanel = {
   async load(kind, force) {
     if (this.busy || (!force && this.data[kind])) return;
     this.busy = true;
-    const req = { stats: ['admin.stats'], players: ['admin.search', { q: this.q }], global: ['admin.getGlobal'],
+    const req = { ana: ['admin.analytics'], stats: ['admin.stats'], players: ['admin.search', { q: this.q }], global: ['admin.getGlobal'],
       pay: ['admin.payments'], codes: ['admin.codes'], trades: ['admin.trades'], lb: ['admin.lb', { mode: this.lbMode || 'classic' }], log: ['admin.log'] }[kind];
     try { this.data[kind] = await Online.api(req[0], null, 'GET', req[1] || {}); }
     catch (e) { UI.toast('❌ ' + e.message); this.data[kind] = { error: e.message }; }
@@ -37,8 +37,8 @@ const DevPanel = {
 
   render() {
     if (!this.isAdmin()) return `${Menu.header('🛠️ Developer')}<div class="box center-box"><div class="big-ic">🔒</div><h3>Khusus developer</h3></div>`;
-    const tabs = [['stats', '📈 Ringkasan'], ['tools', '🔄 Refresh & Alat'], ['players', '👤 Pemain'], ['global', '🌐 Game Global'], ['codes', '🎁 Kode'], ['pay', '💳 Transaksi'], ['trades', '🔁 Trading'], ['lb', '🏆 Skor'], ['log', '📜 Log']];
-    const body = { stats: this.tStats, players: this.tPlayers, global: this.tGlobal, codes: this.tCodes, pay: this.tPay, trades: this.tTrades, lb: this.tLb, log: this.tLog, tools: this.tTools }[this.tab].call(this);
+    const tabs = [['stats', '📈 Ringkasan'], ['ana', '📊 Analitik'], ['tools', '🔄 Refresh & Alat'], ['players', '👤 Pemain'], ['global', '🌐 Game Global'], ['codes', '🎁 Kode'], ['pay', '💳 Transaksi'], ['trades', '🔁 Trading'], ['lb', '🏆 Skor'], ['log', '📜 Log']];
+    const body = { ana: this.tAna, stats: this.tStats, players: this.tPlayers, global: this.tGlobal, codes: this.tCodes, pay: this.tPay, trades: this.tTrades, lb: this.tLb, log: this.tLog, tools: this.tTools }[this.tab].call(this);
     return `${Menu.header('🛠️ Panel Developer')}<div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${this.tab === k ? 'on' : ''}" data-act="dev:tab:${k}">${l}</button>`).join('')}</div><div class="devwrap">${body}</div>`;
   },
   wait(kind) { this.load(kind); const d = this.data[kind]; return !d ? '<div class="box">⏳ Memuat…</div>' : d.error ? `<div class="box warn">❌ ${esc(d.error)}</div>` : null; },
@@ -52,6 +52,25 @@ const DevPanel = {
       ${card('🗼', 'Total unit', s.units)}${card('🔁', 'Trade selesai', s.trades)}${card('🏠', 'Room aktif', s.rooms)}${card('⛔', 'Diblokir', s.banned)}
       ${card('💳', 'Transaksi lunas', s.paidCount)}${card('💰', 'Pendapatan', this.rp(s.revenue))}${card('📅', 'Pendapatan 24 jam', this.rp(s.paidToday))}</div>
       <button class="btn sm gray" data-act="dev:reload:stats">🔄 Muat ulang</button>`;
+  },
+
+  tAna() {
+    const w = this.wait('ana'); if (w) return w;
+    const { rows, total } = this.data.ana, today = rows[rows.length - 1] || {}, ev = r => r.ev || {};
+    const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
+    const avg = k => { const xs = rows.filter(r => r[k] != null && r.newp); const n = xs.reduce((a, r) => a + r.newp, 0); return n ? Math.round(xs.reduce((a, r) => a + r[k], 0) / n * 100) + '%' : '–'; };
+    const games = r => (ev(r).game_win || 0) + (ev(r).game_lose || 0), max = Math.max(1, ...rows.map(r => r.dau));
+    const card = (ic, l, v) => `<div class="devstat"><span>${ic}</span><b>${v}</b><small>${l}</small></div>`;
+    const sum = k => rows.reduce((a, r) => a + (ev(r)[k] || 0), 0);
+    return `<div class="devstats">${card('👥', 'Pemain aktif hari ini', today.dau || 0)}${card('🆕', 'Pemain baru hari ini', today.newp || 0)}${card('🌍', 'Total perangkat tercatat', total)}
+      ${card('🔁', 'Retensi D1 (14 hari)', avg('d1'))}${card('📅', 'Retensi D7 (14 hari)', avg('d7'))}${card('🎮', 'Game 14 hari', sum('game_win') + sum('game_lose'))}
+      ${card('🏆', 'Rasio menang', pct(sum('game_win'), sum('game_win') + sum('game_lose')))}${card('🎰', 'Summon 14 hari', sum('summon'))}${card('📲', 'Sesi dari aplikasi', pct(sum('pwa'), sum('session')))}</div>
+      <div class="box"><h4>Pemain aktif harian</h4><div class="anabars">${rows.map(r => `<div title="${r.day}: ${r.dau}"><i style="height:${r.dau / max * 100}%"></i><small>${r.day.slice(8)}</small></div>`).join('')}</div></div>
+      <div class="box devunits"><table><tr><th>Tanggal</th><th>Aktif</th><th>Baru</th><th>Sesi</th><th>Game</th><th>Menang</th><th>Rata wave</th><th>Summon</th><th>Toko</th><th>D1</th><th>D7</th></tr>
+      ${rows.slice().reverse().map(r => `<tr><td>${r.day}</td><td>${r.dau}</td><td>${r.newp}</td><td>${ev(r).session || 0}</td><td>${games(r)}</td><td>${pct(ev(r).game_win || 0, games(r))}</td>
+        <td>${games(r) ? Math.round((ev(r).waves || 0) / games(r)) : '–'}</td><td>${ev(r).summon || 0}</td><td>${ev(r).shop || 0}</td><td>${r.d1 == null ? '–' : pct(r.d1, r.newp)}</td><td>${r.d7 == null ? '–' : pct(r.d7, r.newp)}</td></tr>`).join('')}</table></div>
+      <p class="dim">Retensi D1/D7 = persentase pemain baru pada hari itu yang kembali 1/7 hari kemudian. Data anonim per perangkat.</p>
+      <button class="btn sm gray" data-act="dev:reload:ana">🔄 Muat ulang</button>`;
   },
 
   tPlayers() {
@@ -198,7 +217,7 @@ const DevPanel = {
     const p = a.split(':'), cmd = p[1];
     const cheat = () => { if (S) S.devUsed = true; };
     switch (cmd) {
-      case 'tab': this.tab = p[2]; if (p[2] !== 'players') this.sel = null; if (['stats', 'pay', 'trades', 'log', 'lb', 'codes'].includes(p[2])) delete this.data[p[2]]; Menu.show('dev', true); break;
+      case 'tab': this.tab = p[2]; if (p[2] !== 'players') this.sel = null; if (['ana', 'stats', 'pay', 'trades', 'log', 'lb', 'codes'].includes(p[2])) delete this.data[p[2]]; Menu.show('dev', true); break;
       case 'reload': delete this.data[p[2]]; Menu.show('dev', true); break;
       case 'search': this.q = this.v('devQ'); delete this.data.players; Menu.show('dev', true); break;
       case 'user': this.tab = 'players'; this.openUser(p[2]); break;

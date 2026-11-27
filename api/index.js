@@ -320,6 +320,27 @@ const routes = {
     return { vault, created: !had };
   },
   'redeem': async (req, d, u) => admin.redeem(d, u, req.body && req.body.code),
+  'ref.info': async (req, d, u) => admin.refInfo(u),
+  'ref.claim': async (req, d, u) => admin.refClaim(d, u, req.body && req.body.code),
+  /* analitik ringan: hitungan event harian + pemain aktif/baru (untuk retensi) */
+  'track': async (req, d) => {
+    const b = req.body || {}, aid = String(b.aid || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40);
+    if (aid.length < 8) throw err(400, 'aid tidak valid');
+    const day = admin.wibDay(Date.now()), inc = {};
+    for (const e of (Array.isArray(b.ev) ? b.ev.slice(0, 40) : [])) {
+      const n = String((e && e.n) || '');
+      if (!TRACK_EVENTS.has(n)) continue;
+      inc['ev.' + n] = (inc['ev.' + n] || 0) + 1;
+      if ((n === 'game_win' || n === 'game_lose') && e.w) inc['ev.waves'] = (inc['ev.waves'] || 0) + Math.min(500, Math.max(0, e.w | 0));
+      if (n === 'session' && e.pwa) inc['ev.pwa'] = (inc['ev.pwa'] || 0) + 1;
+    }
+    await d.collection('seen').updateOne({ _id: aid }, { $setOnInsert: { first: day, at: Date.now() } }, { upsert: true });
+    const seen = await d.collection('seen').findOne({ _id: aid });
+    const act = await d.collection('active').updateOne({ _id: day + '|' + aid }, { $setOnInsert: { day, aid, first: seen.first } }, { upsert: true });
+    if (act.upsertedCount) { inc.dau = 1; if (seen.first === day) inc.newp = 1; }
+    if (Object.keys(inc).length) await d.collection('stats').updateOne({ _id: day }, { $inc: inc }, { upsert: true });
+    return { ok: true };
+  },
   'eco.act': async (req, d, u) => eco.runAction(d, u, String(req.body && req.body.action || ''), req.body && req.body.payload),
 
   /* ---------- Trading ---------- */
@@ -370,7 +391,8 @@ const routes = {
   },
 };
 
-const PUBLIC = new Set(['config', 'auth.google', 'auth.dev', 'lb.get', 'pay.notify', 'avatar']);
+const TRACK_EVENTS = new Set(['session', 'game_start', 'game_win', 'game_lose', 'summon', 'shop', 'topup_open', 'mabar', 'pass', 'event', 'base', 'login', 'ref', 'tutorial']);
+const PUBLIC = new Set(['track', 'config', 'auth.google', 'auth.dev', 'lb.get', 'pay.notify', 'avatar']);
 function devAuthEnabled() { return process.env.DEV_AUTH === '1' && process.env.NODE_ENV !== 'production' && process.env.VERCEL_ENV !== 'production'; }
 
 module.exports = async function handler(req, res) {
@@ -386,7 +408,7 @@ module.exports = async function handler(req, res) {
     const user = PUBLIC.has(route) ? null : await requireUser(req, d);
     const isAdm = admin.isAdmin(user);
     if (route.startsWith('admin.') && !isAdm) throw err(403, 'Khusus developer');
-    if (g.maintenance && !isAdm && !['config', 'auth.google', 'auth.dev', 'me', 'pay.notify'].includes(route))
+    if (g.maintenance && !isAdm && !['config', 'auth.google', 'auth.dev', 'me', 'pay.notify', 'track'].includes(route))
       throw err(503, g.maintenanceMsg || 'Server sedang maintenance, coba lagi nanti');
     const out = await fn(req, d, user);
     if (out && out.__raw) { res.setHeader('Content-Type', out.type); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); return res.status(200).end(out.__raw); }

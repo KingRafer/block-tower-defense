@@ -1,5 +1,10 @@
 # Changelog
 
+## [7.0.0] — 2026-11-27
+### Baru
+- **Undang Teman**: setiap akun punya kode undangan (di menu Redeem). Teman baru (akun ≤ 14 hari) yang memakainya dapat 💎150 + 🪙1.000, pengundang dapat 💎150 (maks 30 teman). Tombol Salin & Bagikan.
+- **Analitik untuk developer** (Panel Developer → 📊 Analitik): pemain aktif harian, pemain baru, retensi D1/D7, jumlah game & rasio menang, rata-rata wave, summon, kunjungan toko, sesi dari aplikasi — grafik 14 hari. Data anonim per perangkat.
+
 ## [6.4.1] — 2026-11-27
 ### Diperbaiki
 - **Ukuran unit di panggung lobby menyesuaikan jumlah unit & lebar layar** — 6 unit tidak lagi keluar panggung atau menutupi menu kiri.

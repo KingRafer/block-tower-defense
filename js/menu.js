@@ -43,6 +43,7 @@ const Menu = {
   open: false, screen: null, back: 'main', endData: null, resetArm: false, shopSel: 'scout',
 
   show(scr, quiet) {
+    if (!quiet && scr !== this.screen && ['shop', 'pass', 'event', 'base', 'mabar'].includes(scr)) Track.ev(scr);
     this.open = true; this.screen = scr;
     const o = $('overlay');
     o.style.display = 'flex';
@@ -570,7 +571,12 @@ const Menu = {
       return `${this.header('🎁 Kode Redeem')}<div class="box center-box"><div class="big-ic">🎁</div>
         <p class="dim">Masukkan kode hadiah dari event, media sosial, atau developer. Setiap kode hanya bisa dipakai sekali per akun.</p>
         <div class="devrow center"><input id="rcode" class="bigin" placeholder="KODE" maxlength="20" autocomplete="off"><button class="btn green" data-act="redeem">Tukar</button></div>
-        <div id="rres"></div></div>`;
+        <div id="rres"></div></div>
+        <div class="box center-box refbox"><div class="big-ic">🤝</div><h3>Undang Teman</h3>
+          <p class="dim">Bagikan kode undanganmu. Teman baru yang memasukkannya dapat <b>💎 150 + 🪙 1.000</b>, dan kamu dapat <b>💎 150</b> (maks 30 teman).</p>
+          <div class="refcode"><span>Kode kamu</span><b id="myref">${esc(Online.user.friendCode || '-')}</b><button class="btn sm blue" data-act="refcopy">Salin</button><button class="btn sm gold" data-act="refshare">Bagikan</button></div>
+          <div id="refinfo" class="dim"></div>
+          <div class="devrow center" id="refin"><input id="refcode" class="bigin" placeholder="KODE TEMAN" maxlength="8" autocomplete="off"><button class="btn green" data-act="refclaim">Pakai</button></div></div>`;
     },
     download() {
       const P = PWA, ios = P.isIOS();
@@ -984,6 +990,14 @@ const Menu = {
   },
 
   after: {
+    redeem() {
+      if (!Online.user) return;
+      Online.api('ref.info', null, 'GET').then(r => {
+        const el = $('refinfo'), inp = $('refin'); if (!el) return;
+        el.innerHTML = `👥 Teman yang kamu undang: <b>${r.count}/${r.max}</b>` + (r.used ? ' • ✅ Kamu sudah memakai kode undangan' : !r.canUse ? ` • Kode undangan hanya bisa dipakai akun baru (≤ ${r.days} hari)` : '');
+        if (inp && !r.canUse) inp.style.display = 'none';
+      }).catch(() => {});
+    },
     play() { document.querySelectorAll('canvas[data-map]').forEach(c => drawPreview(c, MAPS[+c.dataset.map])); },
     daily() { this.after.play(); },
     units() { this.drawIcons(); },
@@ -1091,7 +1105,7 @@ const Menu = {
       case 'hpull': {
         const btn = document.querySelector(`[data-act="hpull:${arg}"]`); if (btn) btn.classList.add('busy');
         this.banner = 'feat';
-        Eco.act('summon', { banner: 'feat', count: +arg }).then(r => { this.show('gacha'); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })
+        Eco.act('summon', { banner: 'feat', count: +arg }).then(r => { Track.ev('summon'); this.show('gacha'); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })
           .catch(e => { if (btn) btn.classList.remove('busy'); sfx('error'); UI.toast('❌ ' + e.message); });
         break;
       }
@@ -1116,6 +1130,19 @@ const Menu = {
       case 'pclaimall': this.eco('passClaim', { tier: 'all' }, r => `🎁 ${r.claimed.length} hadiah diambil!`).then(() => this.show('pass', true)); break;
       case 'pbuy': if (confirm(`Aktifkan Season Pass Premium seharga 💠 ${SHARED.PASS.premiumCost} Permata?`)) this.eco('passBuy', {}, () => '⭐ Pass Premium aktif!').then(() => this.show('pass', true)); break;
       case 'install': PWA.install().then(() => this.show('download', true)); break;
+      case 'refcopy': { const c = Online.user && Online.user.friendCode; if (c) { try { navigator.clipboard.writeText(c); UI.toast('📋 Kode disalin: ' + c); } catch (e) { UI.toast(c); } } break; }
+      case 'refshare': {
+        const c = Online.user && Online.user.friendCode, txt = `Main Block Tower Defense bareng aku! Pakai kode undangan ${c} di menu Redeem untuk dapat 💎150 + 🪙1000 gratis. ${location.origin}`;
+        if (navigator.share) navigator.share({ title: 'Block Tower Defense', text: txt }).catch(() => {}); else { try { navigator.clipboard.writeText(txt); UI.toast('📋 Ajakan disalin'); } catch (e) { UI.toast(txt); } }
+        Track.ev('ref'); break;
+      }
+      case 'refclaim': {
+        const code = ($('refcode') || {}).value || '';
+        if (!code.trim()) { UI.toast('Masukkan kode undangan'); break; }
+        Online.api('ref.claim', { code }).then(r => { Eco.apply(r.vault); sfx('coin'); UI.toast('🎉 Diundang ' + r.inviter + ': ' + this.rw(r.got)); this.show('redeem', true); })
+          .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
+        break;
+      }
       case 'redeem': {
         const code = ($('rcode') || {}).value || '';
         if (!code.trim()) { UI.toast('Masukkan kode'); break; }
@@ -1170,7 +1197,7 @@ const Menu = {
       case 'ixof': this.idxFor = arg; this.idxSel = null; this.banner = 'index'; this.show('gacha', true); break;
       case 'idxw': this.idxFor = 'winter'; this.idxSel = arg; this.banner = 'index'; this.show('gacha', true); break;
       case 'pull':
-        Eco.act('summon', { banner: this.banner || 'std', count: +arg }).then(r => { this.show('gacha', true); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })
+        Eco.act('summon', { banner: this.banner || 'std', count: +arg }).then(r => { Track.ev('summon'); this.show('gacha', true); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })
           .catch(e => { sfx('error'); UI.toast('❌ ' + e.message); });
         break;
       case 'avpick': this.avPick = !this.avPick; this.show('account', true); break;
@@ -1395,7 +1422,7 @@ function autoFullscreen() {
   if (desktop && SET.autoFs && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
 }
 function startGame(opts = {}) {
-  sfx('click');
+  sfx('click'); Track.ev('game_start');
   if (!opts.daily && !mapOpen(MAP)) { MAP = MAPS[0]; loadMap(MAP); UI.toast('Map event sudah berakhir'); }
   SaveGame.clear();
   newGame(opts);

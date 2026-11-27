@@ -74,6 +74,7 @@ const Online = {
     catch (e) { UI.toast('❌ ' + e.message); }
   },
   async afterLogin(r) {
+    Track.ev('login');
     this.setToken(r.token); this.user = r.user;
     await this.syncOnLogin();
     this.startPresence();
@@ -578,3 +579,28 @@ const MP = {
   addChat(n, m) { this.chatLog.push({ n, m, at: Date.now() }); this.chatLog = this.chatLog.slice(-40); UI.renderChat(); },
   sysChat(m) { this.addChat('', m); },
 };
+
+/* ---------- Analitik ringan (anonim): dikirim berkala ke server untuk statistik admin ---------- */
+const Track = {
+  q: [], aid: null,
+  id() {
+    if (this.aid) return this.aid;
+    try { this.aid = localStorage.getItem('btd_aid'); if (!this.aid) { this.aid = 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem('btd_aid', this.aid); } }
+    catch (e) { this.aid = 'a' + Math.random().toString(36).slice(2, 14); }
+    return this.aid;
+  },
+  ev(n, x) { try { this.q.push({ n, ...(x || {}) }); if (this.q.length >= 20) this.flush(); } catch (e) {} },
+  flush(beacon) {
+    if (!this.q.length || !Online.available) return;
+    const body = JSON.stringify({ aid: this.id(), ev: this.q.splice(0, 40) }), url = API_BASE + '?r=track';
+    try { if (beacon && navigator.sendBeacon) navigator.sendBeacon(url, body); else fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {}); } catch (e) {}
+  },
+  start() {
+    let pwa = false; try { pwa = matchMedia('(display-mode: standalone)').matches; } catch (e) {}
+    this.ev('session', pwa ? { pwa: 1 } : null);
+    setTimeout(() => this.flush(), 4000); setInterval(() => this.flush(), 30000);
+    addEventListener('pagehide', () => this.flush(true));
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.flush(true); });
+  },
+};
+Track.start();
