@@ -966,8 +966,8 @@ const Menu = {
       const d = this.endData;
       return `<h1 class="${d.won ? 'win' : 'lose'}">${d.won ? '🏆 MENANG!' : '💀 GAME OVER'}</h1>
         <div class="score">${d.score.toLocaleString('id-ID')} <small>poin • peringkat #${d.rank}</small></div>
-        ${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.chest ? `<span class="badge">${pxImg(CHEST_IC[d.chest])} ${d.firstWin ? 'Menang pertama hari ini: ' : 'Dapat '}${SHARED.CHESTS[d.chest].name}!</span>` : d.chestFull ? '<span class="badge gray">Slot peti penuh — buka peti di Markas</span>' : ''}${d.lgPts ? `<span class="badge">🏆 +${d.lgPts} poin liga</span>` : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
-        ${d.unlockedSkill ? `<span class="badge purple">⚡ Skill baru: ${d.unlockedSkill.icon} ${d.unlockedSkill.name}</span>` : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}
+        <div class="end-badges">        ${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.chest ? `<span class="badge">${pxImg(CHEST_IC[d.chest])} ${d.firstWin ? 'Menang pertama hari ini: ' : 'Dapat '}${SHARED.CHESTS[d.chest].name}!</span>` : d.chestFull ? '<span class="badge gray">Slot peti penuh — buka peti di Markas</span>' : ''}${d.lgPts ? `<span class="badge">🏆 +${d.lgPts} poin liga</span>` : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
+        ${d.unlockedSkill ? `<span class="badge purple">⚡ Skill baru: ${d.unlockedSkill.icon} ${d.unlockedSkill.name}</span>` : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}</div>
         <div class="box endbox"><table>
           <tr><td>Map</td><td><b>${MAP.name}</b> (${DIFFS[S.diff].name})</td></tr>
           <tr><td>Mode</td><td><b>${isMP() ? '🤝 Mabar • ' + MODES[S.mode].name : S.daily ? '📅 Tantangan Harian' : MODES[S.mode].name}</b></td></tr>

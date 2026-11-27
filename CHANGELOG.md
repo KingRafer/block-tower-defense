@@ -1,5 +1,15 @@
 # Changelog
 
+## [5.6.1] — 2026-11-27
+### Diubah — tampilan HP
+- **Markas**: slot peti, tambang, liga, koleksi & kalender login lebih ringkas di HP (potret 2 kolom peti, lanskap tombol sebaris).
+- **Event**: header event ringkas (deskripsi panjang disembunyikan di HP), tombol pintas sejajar, tab Unit Eksklusif 1 kolom.
+- **Banner Winter**: di HP potret tombol Summon & saldo tampil paling atas; kartu unit lebih kecil.
+- **Season Pass & Hadiah Level**: header, badge tier, dan sel hadiah menyesuaikan layar HP.
+- **Animasi evolusi & buka peti**: muat di layar HP; di lanskap tampil 2 kolom (gambar di kiri, isi di kanan).
+- **Layar hasil**: lencana (rekor, peti, poin liga, naik level) disusun berjejer, tidak lagi memanjang ke bawah.
+- Lobby HP potret: kartu Markas menggantikan Season Pass (Pass tetap ada di menu ikon).
+
 ## [5.6.0] — 2026-11-27
 ### Ditambahkan — Markas (alasan untuk kembali setiap hari)
 - **Peti Hadiah**: menang atau mencapai wave 10 memberi peti (Kayu 15 menit, Perak 1 jam, Emas 3 jam, Ajaib 8 jam). 4 slot, dibuka satu per satu dengan timer
