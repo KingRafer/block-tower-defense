@@ -148,9 +148,9 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   const co = SHARED.actions.chestOpen(mv, { i: 0 }, { ...mc, now: now0 + 181 * 60000 }); assert(co.got.coins > 0 && mv.chests.length === 0, 'peti dibuka');
   for (let i = 0; i < 6; i++) SHARED.actions.claim(mv, { result: { cleared: 15, won: false, diff: 'normal', map: 'grass', mode: 'classic', bossKills: 1, kills: 100, duration: 3000 } }, mc);
   assert(mv.chests.length === SHARED.CHEST_SLOTS, 'slot peti maksimal 4');
-  mv.mine.at = now0 - 100 * 3600e3; const c0 = mv.coins; const mr = SHARED.actions.mineClaim(mv, {}, mc);
-  assert(mr.coins === Math.floor(SHARED.MINE.capH(1) * SHARED.MINE.coinsPerH(1)) && mv.coins === c0 + mr.coins, 'tambang dibatasi kapasitas');
-  const nextWeek = { ...mc, now: now0 + 8 * 864e5 }; SHARED.rollLeague(mv, nextWeek);
+  mv.mine.at = now0 - 100 * 3600e3; const mc0 = mv.coins; const mr = SHARED.actions.mineClaim(mv, {}, mc);
+  assert(mr.coins === Math.floor(SHARED.MINE.capH(1) * SHARED.MINE.coinsPerH(1)) && mv.coins === mc0 + mr.coins, 'tambang dibatasi kapasitas');
+  const nextWeek = { ...mc, now: now0 + 8 * 864e5 }; SHARED.rollLeague(mv, nextWeek.now);
   const lr = SHARED.actions.leagueClaim(mv, {}, nextWeek); assert(lr.got.diamonds > 0, 'hadiah liga minggu lalu');
   assert.throws(() => SHARED.actions.leagueClaim(mv, {}, nextWeek));
   assert.throws(() => SHARED.actions.collectionClaim(mv, { i: 1 }, mc), /belum cukup/);
