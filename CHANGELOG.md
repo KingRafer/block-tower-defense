@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.1.0] — 2026-11-27
+### Diubah — visual menu
+- **Panggung banner Summon**: unit andalan banner (Ilahi & Rahasia di Banner Standar; Naga, Malaikat Maut, Malaikat Agung di Lucky) berdiri di panggung bercahaya dengan sinar berputar — klik untuk lihat di Index.
+- **Tombol Summon berkilau**; Summon ×10 berwarna ungu.
+- **Pratinjau map** di Pilih Map, Mabar & Tantangan Harian kini memakai medan pixel-art asli (pohon, kaktus, batu, portal & kastil) dan lebih tajam.
+
 ## [7.0.0] — 2026-11-27
 ### Baru
 - **Undang Teman**: setiap akun punya kode undangan (di menu Redeem). Teman baru (akun ≤ 14 hari) yang memakainya dapat 💎150 + 🪙1.000, pengundang dapat 💎150 (maks 30 teman). Tombol Salin & Bagikan.

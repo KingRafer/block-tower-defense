@@ -706,7 +706,7 @@ const Menu = {
           if (!mapOpen(m)) return '';
           const b = PROFILE.best[bestKey(m.id, DIFF, MODE)] || 0, won = MODE === 'classic' && b >= DIFFS[DIFF].waves;
           return `<div class="card ${MAP === m ? 'sel' : ''} ${m.event ? 'evmap' : ''}" data-act="map:${i}">${m.event ? '<span class="evtag">❄️ EVENT</span>' : ''}
-            <canvas width="200" height="120" data-map="${i}"></canvas>
+            <canvas width="400" height="240" style="width:200px;height:120px;max-width:100%" data-map="${i}"></canvas>
             <div class="nm">${m.name} ${won ? '🏆' : ''}</div>
             <div class="stars">${'★'.repeat(m.stars)}${'☆'.repeat(4 - m.stars)}</div>
             <small>${m.desc}</small><div class="best">Rekor: wave ${b}</div></div>`;
@@ -786,7 +786,7 @@ const Menu = {
             ${ban === 'winter' ? `<div class="wban">${SHARED.eventUnits('winter').slice().sort((a, b) => RARITY[UNIT_RARITY[b]].rank - RARITY[UNIT_RARITY[a]].rank).map(t => `<div class="wbu" style="--rc:${RARITY[UNIT_RARITY[t]].color}" data-act="idxw:${t}"><canvas width="72" height="72" data-icon="${t}" data-skin="default" data-evo="0"></canvas><b>${TOWERS[t].name}</b><small>${RARITY[UNIT_RARITY[t]].name}</small></div>`).join('')}</div>
               <p class="dim">❄️ Semua hasil adalah unit Winter. Legendaris+ dijamin dalam <b>${cfg.pity - ((v.pity || {}).wex || 0)}</b> tarikan • berakhir <span data-cd="${SHARED.limitedEndsAt()}"></span></p>`
             : ban === 'feat' ? `<div class="featured"><canvas width="96" height="96" data-icon="${feat}" data-skin="default" data-evo="0"></canvas><div><small>UNIT UNGGULAN HARI INI</small><b>${TOWERS[feat].name}</b>${this.rarityTag(feat)}<small>${TOWERS[feat].desc}</small></div></div>`
-              : `<div class="gacha-art">${lucky ? '🍀' : '🎰'}</div>`}
+              : `<div class="gshow ${lucky ? 'lucky' : ''}"><i class="gs-rays"></i>${(lucky ? ['dragon', 'reaper', 'angel'] : ['thundergod', 'firegod', 'cosmic']).map((t, k) => `<div class="gs-u ${k === 1 ? 'mid' : ''}" style="--rc:${RARITY[UNIT_RARITY[t]].color}" data-act="idxs:${t}"><canvas width="${k === 1 ? 120 : 84}" height="${k === 1 ? 120 : 84}" data-bg="0" data-icon="${t}" data-skin="default" data-evo="0"></canvas><small>${RARITY[UNIT_RARITY[t]].name}</small></div>`).join('')}<i class="gs-plat"></i><b class="gs-tag">${lucky ? '🍀 Peluang Legendaris 4× lebih besar' : '✨ Dapatkan unit Ilahi & Rahasia!'}</b></div>`}
             <div class="rates">${rates}</div>
             ${win ? '<p class="dim">10× menjamin minimal 1 unit Winter Epik.</p>' : `<p class="dim">Pity: <b>${v.pity[ban] || 0}/${lucky ? LUCKY.pity : GACHA.pity}</b> — Legendaris dijamin di tarikan ke-${lucky ? LUCKY.pity : GACHA.pity}. 10× menjamin minimal 1 ${lucky ? 'Legendaris' : 'Epik'}.</p>`}
             <button class="btn sm gray" data-act="ixof:${win ? 'winter' : 'std'}">📖 Index banner ini: unit & peluangnya</button>
@@ -794,7 +794,7 @@ const Menu = {
           <div class="gright">
             <div class="gem-bal ${lucky ? '' : win ? 'wcoin' : 'dia'}">${icon} ${bal.toLocaleString('id-ID')}</div>
             <button class="btn big gold" data-act="pull:1" ${bal < cfg.cost1 ? 'disabled' : ''}>Summon ×1 <small>${icon} ${cfg.cost1}</small></button>
-            <button class="btn big" data-act="pull:10" ${bal < cfg.cost10 ? 'disabled' : ''}>Summon ×10 <small>${icon} ${cfg.cost10} (hemat 10%)</small></button>
+            <button class="btn big purple" data-act="pull:10" ${bal < cfg.cost10 ? 'disabled' : ''}>Summon ×10 <small>${icon} ${cfg.cost10} (hemat 10%)</small></button>
             ${win ? `<small class="dim center">${SHARED.LIMITED.icon} ${SHARED.LIMITED.token} didapat dari setiap permainan (map Lembah Beku ×1,5) dan misi event.</small><button class="btn gray sm" data-act="go:event">❄️ Buka Event</button>`
               : lucky ? `<button class="btn gray" data-act="shoptab:topup">💠 Top Up Permata</button>` : `<small class="dim center">💎 Diamond didapat dari menyelesaikan wave, mengalahkan boss, menang, login harian & pencapaian.</small>`}
           </div>
@@ -1195,6 +1195,7 @@ const Menu = {
       case 'banner': if (arg === 'index') this.idxFor = this.banner === 'winter' ? 'winter' : (this.idxFor || 'std'); this.banner = arg; this.show('gacha', true); break;
       case 'idxfor': this.idxFor = arg; this.idxSel = null; this.show('gacha', true); break;
       case 'ixof': this.idxFor = arg; this.idxSel = null; this.banner = 'index'; this.show('gacha', true); break;
+      case 'idxs': this.idxFor = 'std'; this.idxSel = arg; this.banner = 'index'; this.show('gacha', true); break;
       case 'idxw': this.idxFor = 'winter'; this.idxSel = arg; this.banner = 'index'; this.show('gacha', true); break;
       case 'pull':
         Eco.act('summon', { banner: this.banner || 'std', count: +arg }).then(r => { Track.ev('summon'); this.show('gacha', true); this.showPull(r.units); this.soldToast(r); checkAchievements(null); })

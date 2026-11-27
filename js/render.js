@@ -602,14 +602,30 @@ function draw(dt) {
 }
 
 /** Mini preview peta untuk menu pilih map */
+/** Mini preview peta: render medan pixel-art asli lalu diperkecil (di-cache per map) */
+const previewCache = {};
 function drawPreview(c, m) {
-  const g = c.getContext('2d'), ts = c.width / COLS, tiles = computeTiles(m.path);
-  for (let r = 0; r < ROWS; r++) for (let x = 0; x < COLS; x++) {
-    const p = tiles.has(x + ',' + r);
-    g.fillStyle = p ? m.th.p1 : ((x + r) % 2 ? m.th.g1 : m.th.g2);
-    g.fillRect(x * ts, r * ts, ts + 0.5, ts + 0.5);
+  const g = c.getContext('2d');
+  if (!previewCache[m.id]) {
+    const sv = { MAP, pathPx, pathTiles, deco, grid: SET.grid };
+    try {
+      MAP = m; pathPx = m.path.map(([cc, r]) => ({ x: (cc + 0.5) * T, y: (r + 0.5) * T })); pathTiles = computeTiles(m.path);
+      deco = computeDeco(pathTiles, 7 + MAPS.indexOf(m) * 13); SET.grid = false;
+      const off = document.createElement('canvas'); off.width = W / 2; off.height = H / 2;
+      const og = off.getContext('2d'); og.scale(0.5, 0.5); drawMapStatic(og);
+      // portal & kastil mini
+      const st = m.path[0][1], ex = m.path[m.path.length - 1][1];
+      og.fillStyle = '#7b1fa2'; og.beginPath(); og.arc(10, (st + 0.5) * T, 22, 0, 7); og.fill(); og.fillStyle = '#e1bee7'; og.beginPath(); og.arc(10, (st + 0.5) * T, 9, 0, 7); og.fill();
+      const bx = W - 46, by = (ex + 0.5) * T;
+      og.fillStyle = '#4e4a44'; og.fillRect(bx - 22, by - 34, 60, 58); og.fillStyle = '#8d8780'; og.fillRect(bx - 18, by - 30, 52, 50);
+      og.fillStyle = '#5d4037'; og.fillRect(bx - 2, by - 2, 14, 22); og.fillStyle = '#c62828'; og.beginPath(); og.moveTo(bx + 4, by - 58); og.lineTo(bx + 24, by - 50); og.lineTo(bx + 4, by - 42); og.fill();
+      og.fillStyle = '#3e2723'; og.fillRect(bx + 2, by - 58, 3, 26);
+      previewCache[m.id] = off;
+    } catch (e) { previewCache[m.id] = null; }
+    finally { MAP = sv.MAP; pathPx = sv.pathPx; pathTiles = sv.pathTiles; deco = sv.deco; SET.grid = sv.grid; }
   }
-  const e = m.path[m.path.length - 1];
-  g.fillStyle = '#e53935'; g.fillRect(19 * ts, (e[1] - 1) * ts, ts, ts * 2);
-  g.fillStyle = '#ab47bc'; g.fillRect(0, m.path[0][1] * ts, ts / 2, ts);
+  const off = previewCache[m.id];
+  if (off) { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(off, 0, 0, c.width, c.height); return; }
+  const ts = c.width / COLS, tiles = computeTiles(m.path);
+  for (let r = 0; r < ROWS; r++) for (let x = 0; x < COLS; x++) { g.fillStyle = tiles.has(x + ',' + r) ? m.th.p1 : ((x + r) % 2 ? m.th.g1 : m.th.g2); g.fillRect(x * ts, r * ts, ts + 0.5, ts + 0.5); }
 }
