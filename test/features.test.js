@@ -101,5 +101,28 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   const c0 = r.body.vault.coins, sellId = r.body.vault.units.find(u => !u.lock && u.type !== 'goldminer').id;
   r = await act('scrap', { unitIds: [sellId] }); assert(r.body.vault.coins > c0, 'jual memberi koin');
   await act('setAutoSell', { rarities: [] });
+
+  // Hadiah level akun: XP dicatat server, level belum tercapai ditolak, klaim tidak bisa ganda
+  r = await act('levelClaim', { lv: 50 }); assert.strictEqual(r.status, 400, 'level belum tercapai ditolak');
+  for (let i = 0; i < 3; i++) { await new Promise(res => setTimeout(res, 5)); await act('claim', { result: { cleared: 30, won: true, diff: 'normal', map: 'grass', mode: 'normal', bossKills: 3, kills: 900, duration: 99999 } }); }
+  r = await act('levelClaim', { lv: 'all' });
+  if (r.status === 200) {
+    assert(r.body.result.claimed.length >= 1 && r.body.vault.lvc.length >= 1, 'hadiah level diambil');
+    const again = await act('levelClaim', { lv: r.body.result.claimed[0].lv }); assert(again.status === 400 || again.body.result.claimed.length === 0, 'tidak bisa klaim ganda');
+  }
+  assert(SHARED.accLevel(SHARED.accXpFor(9)) === 10 && SHARED.levelReward(25).unit === 'samurai', 'tabel level');
+
+  // Event terbatas
+  const now0 = Date.parse(SHARED.LIMITED.start + "T12:00:00+07:00"), ev = SHARED.newVault(now0, Math.random), ctx = { rng: Math.random, now: now0, server: false };
+  SHARED.actions.claim(ev, { result: { cleared: 30, won: true, diff: 'hard', map: 'grass', mode: 'normal', bossKills: 4, kills: 500, duration: 2000 } }, ctx);
+  assert(ev.ev && ev.ev.lan > 0 && ev.ev.s.games === 1, 'Lentera didapat dari bermain');
+  assert.throws(() => SHARED.actions.evShopBuy(ev, { id: 'mythic' }, ctx), /tidak cukup/);
+  ev.ev.lan = 5000; ev.ev.earned = 5000;
+  SHARED.actions.evShopBuy(ev, { id: 'skin' }, ctx); assert(ev.skins.includes('lantern'), 'skin event dibeli');
+  assert.throws(() => SHARED.actions.evShopBuy(ev, { id: 'skin' }, ctx));
+  assert.throws(() => SHARED.actions.buySkin(ev, { skin: 'lantern' }, ctx), /tidak dikenal/);
+  const ms = SHARED.actions.evMilestone(ev, { i: 'all' }, ctx); assert(ms.claimed.length === 5, 'hadiah pencapaian event');
+  assert(!SHARED.limitedActive(Date.parse(SHARED.LIMITED.end + 'T12:00:00+07:00') + 2 * 864e5), 'event berakhir');
+  assert.throws(() => SHARED.actions.evMission(ev, { id: 'e_play' }, { ...ctx, now: Date.parse(SHARED.LIMITED.end + 'T12:00:00+07:00') + 2 * 864e5 }), /berakhir/);
   console.log('✅ Semua uji misi, season pass & kode redeem lulus');
 })().catch(e => { console.error('❌', e); process.exit(1); });

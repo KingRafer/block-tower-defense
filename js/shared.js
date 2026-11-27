@@ -78,7 +78,10 @@
     ninja:   { name: 'Ninja',     price: 300, icon: '🥷', body: '#212121', head: '#212121', gun: '#c62828', acc: 'band',  eyes: '#fff' },
     robot:   { name: 'Robot',     price: 400, icon: '🤖', body: '#90a4ae', head: '#cfd8dc', gun: '#37474f', acc: 'antenna', eyes: '#00e676' },
     rainbow: { name: 'Pelangi',   price: 600, icon: '🌈', rainbow: true, acc: 'halo', glow: '#ffffff' },
+    lantern: { name: 'Lentera',   price: 0,   icon: '🏮', event: true, body: '#b71c1c', head: '#ffe0b2', gun: '#ffb300', acc: 'crown', glow: '#ffb74d' },
   };
+  /* Skin yang bisa dibeli / dipakai hadiah pass (skin event tidak termasuk) */
+  const shopSkins = () => Object.keys(SKINS).filter(k => k !== 'default' && !SKINS[k].event);
   /* Mata uang:
    *  diamonds 💎 — gratis dari bermain (Summon biasa, skill premium, trading)
    *  gems 💠     — hanya dari top up (Lucky Summon, skin) */
@@ -255,7 +258,7 @@
   }
   function passReward(track, tier, season) {
     const idx = season.split('-').reduce((a, x) => a * 13 + +x, 3);
-    const skins = Object.keys(SKINS).filter(k => k !== 'default'), mythics = unitsOfRarity('mythic'), epics = unitsOfRarity('epic');
+    const skins = shopSkins(), mythics = unitsOfRarity('mythic'), epics = unitsOfRarity('epic');
     if (track === 'f') {
       if (tier === 30) return { unit: epics[idx % epics.length], diamonds: 150 };
       if (tier % 10 === 0) return { stones: 2, diamonds: 100 };
@@ -294,6 +297,64 @@
     return got;
   }
 
+  /* ---------------- HADIAH LEVEL AKUN ---------------- */
+  const ACC_MAX = 100;
+  const accXpFor = lv => 100 * lv * lv;                  // total XP untuk naik dari level lv (sama dengan klien)
+  const accLevel = xp => { let lv = 1; while (lv < ACC_MAX && (xp || 0) >= accXpFor(lv)) lv++; return lv; };
+  const LEVEL_SPECIAL = { 5: { unit: 'archer' }, 10: { skin: 'ice' }, 15: { unit: 'ninja' }, 20: { skin: 'neon' }, 25: { unit: 'samurai' }, 30: { skin: 'gold' },
+    40: { unit: 'wizard' }, 50: { unit: 'angel' }, 60: { skin: 'robot' }, 75: { skin: 'rainbow' }, 100: { unit: 'cosmic' } };
+  function levelReward(lv) {
+    const r = { coins: 150 + lv * 25, diamonds: 20 + lv * 3 };
+    if (lv % 5 === 0) { r.crystals = 3; r.diamonds += 50; }
+    if (lv % 10 === 0) { r.stones = 2; r.diamonds += 100; }
+    return { ...r, ...(LEVEL_SPECIAL[lv] || {}) };
+  }
+  /* XP akun yang dicatat server (mengikuti rumus XP klien) */
+  function seedAxp(v, ctx) {
+    if (!v.axpSeed) { v.axpSeed = 1; v.axp = Math.max(v.axp || 0, Math.min(Math.max(0, +ctx.profileXp || 0), accXpFor(24))); }
+    return v.axp || 0;
+  }
+
+  /* ---------------- EVENT TERBATAS ---------------- */
+  // Bisa diubah dari panel developer (global.limited). Token event: 🏮 Lentera.
+  const LIMITED = { id: 'lentera-2026', name: 'Festival Lentera', start: '2026-11-27', end: '2026-12-11', on: true,
+    desc: 'Kumpulkan 🏮 Lentera dari setiap permainan, selesaikan misi event, dan tukarkan dengan hadiah eksklusif sebelum festival berakhir!' };
+  const EV_MISSIONS = [
+    { id: 'e_play',   name: 'Mainkan 12 permainan',     stat: 'games',    target: 12,  reward: { lan: 150, diamonds: 100 } },
+    { id: 'e_wave',   name: 'Selesaikan 250 wave',      stat: 'waves',    target: 250, reward: { lan: 200, coins: 3000 } },
+    { id: 'e_boss',   name: 'Kalahkan 30 boss',         stat: 'bosses',   target: 30,  reward: { lan: 200, stones: 2 } },
+    { id: 'e_win',    name: 'Menang 8 kali',            stat: 'wins',     target: 8,   reward: { lan: 250, crystals: 8 } },
+    { id: 'e_hard',   name: 'Menang 2 kali di Sulit',   stat: 'hardWins', target: 2,   reward: { lan: 300, diamonds: 300 } },
+    { id: 'e_summon', name: 'Summon 30 kali',           stat: 'summons',  target: 30,  reward: { lan: 150, diamonds: 150 } },
+  ];
+  /* Hadiah pencapaian: berdasarkan total Lentera yang pernah dikumpulkan selama event */
+  const EV_MILESTONES = [
+    { at: 300, reward: { diamonds: 150 } }, { at: 800, reward: { crystals: 6, coins: 3000 } }, { at: 1500, reward: { stones: 3 } },
+    { at: 2500, reward: { diamonds: 400 } }, { at: 4000, reward: { skin: 'lantern' } }, { at: 6000, reward: { unit: 'dragon' } },
+  ];
+  const EV_SHOP = [
+    { id: 'skin',   name: 'Skin Lentera (eksklusif)', icon: '🏮', cost: 1200, limit: 1,  give: { skin: 'lantern' } },
+    { id: 'legend', name: 'Unit Legendaris Acak',     icon: '🌟', cost: 600,  limit: 2,  give: { rarityUnit: 'legendary' } },
+    { id: 'mythic', name: 'Unit Mitos Acak',          icon: '🔥', cost: 1800, limit: 1,  give: { rarityUnit: 'mythic' } },
+    { id: 'dia',    name: '400 Diamond',              icon: '💎', cost: 160,  limit: 5,  give: { diamonds: 400 } },
+    { id: 'stone',  name: '3 Batu Evolusi',           icon: '🔮', cost: 150,  limit: 5,  give: { stones: 3 } },
+    { id: 'cry',    name: '10 Kristal Trait',         icon: '✨', cost: 120,  limit: 5,  give: { crystals: 10 } },
+    { id: 'coin',   name: '8.000 Koin',               icon: '🪙', cost: 80,   limit: 10, give: { coins: 8000 } },
+  ];
+  const limitedActive = now => { const d = dayStr(now); return LIMITED.on !== false && d >= LIMITED.start && d <= LIMITED.end; };
+  const limitedEndsAt = () => Date.parse(LIMITED.end + 'T23:59:59+07:00');
+  function rollEvent(v, now) {
+    if (!limitedActive(now)) return null;
+    if (!v.ev || v.ev.id !== LIMITED.id) v.ev = { id: LIMITED.id, lan: 0, earned: 0, s: {}, mc: [], ms: [], buy: {} };
+    return v.ev;
+  }
+  function bumpEvent(v, now, inc, lan) {
+    const e = rollEvent(v, now); if (!e) return 0;
+    for (const [k, n] of Object.entries(inc)) if (n > 0) e.s[k] = (e.s[k] || 0) + n;
+    if (lan > 0) { e.lan += lan; e.earned += lan; }
+    return lan;
+  }
+
   /* ---------------- AKSI ---------------- */
   /* Setiap aksi: (vault, payload, ctx{rng, now, server}) → hasil. Vault diubah langsung. */
   const actions = {
@@ -301,7 +362,7 @@
       const banner = GACHA.banners[p.banner] ? p.banner : 'std', n = p.count === 10 ? 10 : 1;
       const lucky = banner === 'lucky', cfg = lucky ? LUCKY : GACHA;
       pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
-      bumpMissions(v, ctx.now, { summons: n });
+      bumpMissions(v, ctx.now, { summons: n }); bumpEvent(v, ctx.now, { summons: n }, 0);
       const featured = featuredUnit(ctx.now), out = [], sold = {};
       for (let i = 0; i < n; i++) {
         v.pity[banner] = (v.pity[banner] || 0) + 1;
@@ -366,7 +427,7 @@
     },
     buySkin(v, p) {
       const s = SKINS[p.skin];
-      if (!s || p.skin === 'default') throw err('Skin tidak dikenal');
+      if (!s || p.skin === 'default' || s.event) throw err('Skin tidak dikenal');
       if (v.skins.includes(p.skin)) throw err('Skin sudah dimiliki');
       pay(v, 'gems', s.price); v.skins.push(p.skin);
       return { skin: p.skin };
@@ -416,6 +477,14 @@
       bumpMissions(v, ctx.now, { games: 1, waves: cleared, bosses: bossKills, wins: won ? 1 : 0, hardWins: won && diff === 'hard' ? 1 : 0 });
       const pxp = Math.min(1500, cleared * 8 + bossKills * 20 + (won ? 150 : 0));
       rollPass(v, ctx.now).xp += pxp;
+      // XP akun (untuk hadiah level) — rumus sama dengan klien, jumlah kill dibatasi
+      seedAxp(v, ctx);
+      const kills = Math.max(0, Math.min(r.kills | 0, cleared * 80 + 50));
+      const axp = Math.round(cleared * 20 * DIFF_INFO[diff].coinMul + kills * 0.5 + (won ? 300 : 0));
+      v.axp = (v.axp || 0) + axp;
+      // event terbatas
+      const lan = Math.min(500, Math.round((cleared * 3 + bossKills * 15 + (won ? 80 : 0)) * (diff === 'hard' ? 1.5 : 1)));
+      const evLan = bumpEvent(v, ctx.now, { games: 1, waves: cleared, bosses: bossKills, wins: won ? 1 : 0, hardWins: won && diff === 'hard' ? 1 : 0 }, lan);
       const mastery = [];
       for (const [id, g] of Object.entries(r.uxp || {})) {
         const u = v.units.find(x => x.id === id); if (!u) continue;
@@ -423,7 +492,7 @@
         const before = unitLevel(u.xp); u.xp += gain;
         mastery.push({ unitId: id, type: u.type, gain, lv: unitLevel(u.xp), up: unitLevel(u.xp) > before });
       }
-      return { ...rw, pxp, dailyFirstWin, dailyReward: dailyFirstWin ? DAILY_REWARD : 0, mastery, used, cleared };
+      return { ...rw, pxp, axp, lan: evLan, dailyFirstWin, dailyReward: dailyFirstWin ? DAILY_REWARD : 0, mastery, used, cleared };
     },
     dailyLogin(v, p, ctx) {
       const today = dayStr(ctx.now);
@@ -471,8 +540,48 @@
       if ((ps.tok || 0) < it.cost) throw err('Token Pass tidak cukup');
       const g = { ...it.give };
       if (g.rarityUnit) { const pool = unitsOfRarity(g.rarityUnit); g.unit = pool[Math.floor(ctx.rng() * pool.length)]; g.premiumUnit = true; delete g.rarityUnit; }
-      if (g.seasonSkin) { const sk = Object.keys(SKINS).filter(k => k !== 'default'), idx = ps.season.split('-').reduce((a, x) => a * 7 + +x, 5); g.skin = sk[idx % sk.length]; delete g.seasonSkin; }
+      if (g.seasonSkin) { const sk = shopSkins(), idx = ps.season.split('-').reduce((a, x) => a * 7 + +x, 5); g.skin = sk[idx % sk.length]; delete g.seasonSkin; }
       ps.tok -= it.cost; ps.buy[it.id] = n + 1;
+      return { item: it.id, got: giveReward(v, g, ctx.rng, ctx.now) };
+    },
+    levelClaim(v, p, ctx) {
+      const lv = accLevel(seedAxp(v, ctx)); if (!Array.isArray(v.lvc)) v.lvc = [];
+      const want = p.lv === 'all' ? Array.from({ length: lv - 1 }, (_, i) => i + 2) : [p.lv | 0];
+      const out = [];
+      for (const L of want) {
+        if (L < 2 || L > ACC_MAX || v.lvc.includes(L)) continue;
+        if (L > lv) throw err('Level belum tercapai');
+        v.lvc.push(L); out.push({ lv: L, got: giveReward(v, levelReward(L), ctx.rng, ctx.now) });
+      }
+      if (!out.length) throw err('Tidak ada hadiah level yang bisa diambil');
+      return { claimed: out, level: lv };
+    },
+    evMission(v, p, ctx) {
+      const e = rollEvent(v, ctx.now); if (!e) throw err('Event sudah berakhir');
+      const def = EV_MISSIONS.find(x => x.id === p.id); if (!def) throw err('Misi tidak dikenal');
+      if (e.mc.includes(def.id)) throw err('Hadiah misi sudah diambil');
+      if ((e.s[def.stat] || 0) < def.target) throw err('Misi belum selesai');
+      e.mc.push(def.id);
+      const { lan, ...rw } = def.reward; e.lan += lan; e.earned += lan;
+      return { ...giveReward(v, rw, ctx.rng, ctx.now), lan };
+    },
+    evMilestone(v, p, ctx) {
+      const e = rollEvent(v, ctx.now); if (!e) throw err('Event sudah berakhir');
+      const out = [];
+      EV_MILESTONES.forEach((m, i) => { if (e.earned >= m.at && !e.ms.includes(i) && (p.i === 'all' || p.i === i)) { e.ms.push(i); out.push(giveReward(v, m.reward, ctx.rng, ctx.now)); } });
+      if (!out.length) throw err('Belum ada hadiah yang bisa diambil');
+      return { claimed: out };
+    },
+    evShopBuy(v, p, ctx) {
+      const e = rollEvent(v, ctx.now); if (!e) throw err('Event sudah berakhir');
+      const it = EV_SHOP.find(x => x.id === p.id); if (!it) throw err('Item tidak ada');
+      const n = e.buy[it.id] || 0;
+      if (n >= it.limit) throw err('Stok item ini habis');
+      if (e.lan < it.cost) throw err('Lentera tidak cukup');
+      const g = { ...it.give };
+      if (g.rarityUnit) { const pool = unitsOfRarity(g.rarityUnit); g.unit = pool[Math.floor(ctx.rng() * pool.length)]; delete g.rarityUnit; }
+      if (g.skin && v.skins.includes(g.skin)) throw err('Skin ini sudah kamu miliki');
+      e.lan -= it.cost; e.buy[it.id] = n + 1;
       return { item: it.id, got: giveReward(v, g, ctx.rng, ctx.now) };
     },
     achClaim(v, p) {
@@ -488,7 +597,7 @@
   /* ---------------- PENGATURAN GLOBAL (panel developer) ---------------- */
   const clone = o => JSON.parse(JSON.stringify(o));
   Object.assign(DEFAULTS, { gacha: clone({ cost1: GACHA.cost1, cost10: GACHA.cost10, pity: GACHA.pity, rates: GACHA.rates }), lucky: clone(LUCKY),
-    dailyLogin: [...DAILY_LOGIN], skillPrices: clone(SKILL_PRICES), event: clone(EVENT), pass: { premiumCost: PASS.premiumCost } });
+    dailyLogin: [...DAILY_LOGIN], skillPrices: clone(SKILL_PRICES), event: clone(EVENT), pass: { premiumCost: PASS.premiumCost }, limited: clone(LIMITED) });
   const num = (x, min, max, d) => { const n = +x; return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : d; };
   /** Terapkan pengaturan global (dipakai server & client agar selalu sama). Nilai tidak valid diabaikan. */
   function applyGlobal(g) {
@@ -512,6 +621,11 @@
     const E = g.event || {};
     EVENT.rewardMul = num(E.rewardMul, 0, 20, 1); EVENT.diamondMul = num(E.diamondMul, 0, 20, 1);
     EVENT.featured = UNIT_RARITY[E.featured] ? E.featured : null;
+    const Lm = g.limited || {}, D2 = DEFAULTS.limited, isDay = x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
+    LIMITED.id = typeof Lm.id === 'string' && /^[a-z0-9-]{3,40}$/.test(Lm.id) ? Lm.id : D2.id;
+    LIMITED.name = typeof Lm.name === 'string' && Lm.name.trim() ? Lm.name.trim().slice(0, 40) : D2.name;
+    LIMITED.start = isDay(Lm.start) ? Lm.start : D2.start; LIMITED.end = isDay(Lm.end) ? Lm.end : D2.end;
+    LIMITED.on = Lm.on === undefined ? D2.on : !!Lm.on;
   }
 
   return {
@@ -520,5 +634,6 @@
     MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
     newVault, makeUnit, fixVault, actions, SKILL_PRICES, FREE_SKILLS, EVENT, DEFAULTS, applyGlobal,
     EXCLUSIVE, AUTO_SELL_OK, MISSIONS, missionProgress, rollMissions, PASS, PASS_SHOP, PASS_TOK, rollPass, passTier, passReward, seasonName, seasonStr, giveReward,
+    shopSkins, ACC_MAX, accXpFor, accLevel, levelReward, LEVEL_SPECIAL, seedAxp, LIMITED, EV_MISSIONS, EV_MILESTONES, EV_SHOP, limitedActive, limitedEndsAt, rollEvent,
   };
 });

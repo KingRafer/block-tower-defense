@@ -35,7 +35,7 @@ function cleanGlobal(g) {
     announcement: { text: String((g.announcement || {}).text || '').slice(0, 300), color: /^#[0-9a-f]{6}$/i.test((g.announcement || {}).color) ? g.announcement.color : '#ffcc33', active: !!(g.announcement || {}).active },
     maintenance: !!g.maintenance, maintenanceMsg: String(g.maintenanceMsg || '').slice(0, 200),
     topupEnabled: g.topupEnabled !== false,
-    gacha: g.gacha || {}, lucky: g.lucky || {}, dailyLogin: g.dailyLogin, skillPrices: g.skillPrices || {}, event: g.event || {}, pass: g.pass || {},
+    gacha: g.gacha || {}, lucky: g.lucky || {}, dailyLogin: g.dailyLogin, skillPrices: g.skillPrices || {}, event: g.event || {}, pass: g.pass || {}, limited: g.limited || {},
     // perintah refresh untuk semua pemain (lihat admin.forceRefresh)
     refresh: { v: Math.max(0, Math.floor(+((g.refresh || {}).v) || 0)), mode: (g.refresh || {}).mode === 'clear' ? 'clear' : 'refresh', msg: String((g.refresh || {}).msg || '').slice(0, 140), at: +((g.refresh || {}).at) || 0 },
   };
@@ -46,6 +46,7 @@ function cleanGlobal(g) {
   out.skillPrices = JSON.parse(JSON.stringify(SHARED.SKILL_PRICES));
   out.event = { ...SHARED.EVENT };
   out.pass = { premiumCost: SHARED.PASS.premiumCost };
+  out.limited = { id: SHARED.LIMITED.id, name: SHARED.LIMITED.name, start: SHARED.LIMITED.start, end: SHARED.LIMITED.end, on: SHARED.LIMITED.on };
   return out;
 }
 

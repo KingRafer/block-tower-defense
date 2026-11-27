@@ -186,7 +186,7 @@ const LobbyScene = {
 /* ---------- ikon pixel 12×12 (pengganti emoji di lobby) ----------
  * Baris 6 karakter = dicerminkan horizontal; daftar 6 baris = dicerminkan vertikal. */
 const PXI_PAL = { k: '#1c1712', w: '#fff4d6', y: '#f2c14e', Y: '#b8862b', r: '#d0503e', R: '#8f2f25', b: '#5a9ad8', B: '#2f5f99',
-  s: '#c6ccd1', S: '#8b969e', o: '#a8703e', O: '#6e4524', g: '#6cc04a', G: '#3d7f2c', p: '#a77ad8' };
+  s: '#c6ccd1', S: '#8b969e', o: '#a8703e', O: '#6e4524', g: '#6cc04a', G: '#3d7f2c', p: '#a77ad8', P: '#6a3fa0', c: '#8ee6ff', C: '#2fa3d6' };
 const PXI = {
   chest: ['......', '.kkkkk', 'kooooo', 'kOOOOO', 'kkkkky', 'kyoooy', 'kooook', 'kOOOOO', 'kooooo', 'kOOOOO', 'kkkkkk', '......'],
   tower: ['.....k', '....kr', '...krr', '..krrr', '.kRRRR', '..ksss', '..kssk', '..ksss', '..ksSs', '.kssss', 'kSSSSS', 'kkkkkk'],
@@ -203,6 +203,16 @@ const PXI = {
   gift: ['..kk..', '.kyyk.', '..kkyk', 'kkkkky', 'krrrry', 'kkkkky', '.krrry', '.krrry', '.kRrry', '.kRRRy', '.kkkkk', '......'],
   swords: ['k..........k', '.kw......wk.', '..kw....wk..', '...kw..wk...', '....kwwk....', '.....kk.....', '....kwwk....', '...kw..wk...', '.okk....kko.', 'oo........oo', 'o..........o', '............'],
   star: ['.....k', '....ky', '....ky', 'kkkkyy', '.kyyyy', '..kyyy', '...kyy', '..kyyy', '..kyyk', '.kyk.k', '.kk...', '......'],
+  coin: ['....kkkk....', '..kkyyyykk..', '.kwwyyyyyYk.', '.kwyyYYyyYk.', 'kwyyyYYyyyYk', 'kyyyyYYyyyYk', 'kyyyyYYyyyYk', 'kyyyyYYyyyYk', '.kyyyYYyyYk.', '.kYyyyyyyYk.', '..kkYYYYkk..', '....kkkk....'],
+  orb: ['....kkkk....', '..kkppppkk..', '.kwwppppppk.', '.kwppppppPk.', 'kwpppppppPPk', 'kpppppppppPk', 'kpppppppppPk', 'kppppppppPPk', '.kpppppppPk.', '.kPpppppPPk.', '..kkPPPPkk..', '....kkkk....'],
+  dia: ['............', '...kkkkkk...', '..kwwccCCk..', '.kwccccCCCk.', 'kkkkkkkkkkkk', '.kccccCCCCk.', '..kcccCCCk..', '...kccCCk...', '....kcCk....', '.....kk.....', '............', '............'],
+  gem: ['.....kk.....', '....kwbk....', '...kwbbBk...', '..kwbbbbBk..', '.kwbbwwbbBk.', 'kbbbwwwwbBBk', 'kbbbbwwbbBBk', '.kbbbbbbBBk.', '..kbbbbBBk..', '...kbbBBk...', '....kbBk....', '.....kk.....'],
+  cry: ['....k.......', '...kyk......', '...kyk......', '.kkyyykk....', 'kyyywyyyk...', '.kkyyykk....', '...kyk...k..', '...kyk..kyk.', '....k..kyyyk', '........kyk.', '.........k..', '............'],
+  tok: ['......', '......', 'kkkkkk', 'krrrrr', '.krrrR', '..krrk'],
+  paint: ['...kkkkk....', '..koooookk..', '.koroooobok.', 'koooooooooOk', 'kogookkooyok', 'koooOkkOoooO', 'kooooOOoooOk', '.koooooooOk.', '..kkooooOk..', '....kkkk....', '............', '............'],
+  lock: ['......', '...kkk', '..kS..', '..kS..', '.kkkkk', '.kyyyy', '.kyyyk', '.kyyyk', '.kyyyy', '.kYYYY', '.kkkkk', '......'],
+  check: ['............', '.kkkkkkkkkk.', '.kggggggggk.', '.kgggggggwk.', '.kggggggwgk.', '.kgwgggwggk.', '.kgwwgwgggk.', '.kggwwggggk.', '.kgggwggggk.', '.kGGGGGGGGk.', '.kkkkkkkkkk.', '............'],
+  lantern: ['.....k', '....kk', '..kYYY', '.krrrr', 'krwrrr', 'krwrrr', 'krrrrr', 'kRrrrr', '.kRRRR', '..kYYY', '...kky', '....ky'],
   play: ['..kk........', '..kwk.......', '..kwwk......', '..kwwwk.....', '..kwwwwk....', '..kwwwwwk...', '..kwwwwwk...', '..kwwwwk....', '..kwwwk.....', '..kwwk......', '..kwk.......', '..kk........'],
 };
 function pxiRows(name) {
@@ -214,4 +224,41 @@ function pxi(name, cls = '') { return `<canvas class="pxi ${cls}" data-pxi="${na
 function drawPxi(c) {
   const g = c.getContext('2d'), rows = pxiRows(c.dataset.pxi); g.clearRect(0, 0, 12, 12);
   rows.forEach((row, y) => [...row].forEach((ch, x) => { const col = PXI_PAL[ch]; if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); } }));
+}
+
+/* Emoji → ikon pixel (otomatis di semua menu, popup & notifikasi) */
+const PXE = { '🪙': 'coin', '💎': 'dia', '💠': 'gem', '✨': 'cry', '🔮': 'orb', '🎟': 'tok', '🎫': 'ticket', '🗼': 'tower', '🎨': 'paint', '🎁': 'gift',
+  '🎯': 'target', '⚡': 'bolt', '📅': 'cal', '⚙': 'gear', '⭐': 'star', '🔒': 'lock', '✅': 'check', '🏮': 'lantern' };
+const PXE_RE = new RegExp('(' + Object.keys(PXE).join('|') + ')\uFE0F?', 'g');
+const pxUrls = {};
+function pxUrl(name) {
+  if (!pxUrls[name]) { const c = document.createElement('canvas'); c.width = c.height = 12; c.dataset.pxi = name; drawPxi(c); pxUrls[name] = c.toDataURL(); }
+  return pxUrls[name];
+}
+function pxImg(name, cls = '') { return `<img class="pxe ${cls}" src="${pxUrl(name)}" alt="">`; }
+function pxText(root) {
+  if (!root) return;
+  if (root.nodeType === 3) root = root.parentNode;
+  if (!root || !root.ownerDocument && root !== document) return;
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => {
+    const p = n.parentNode; if (!p || /^(SCRIPT|STYLE|TEXTAREA|OPTION|TITLE)$/.test(p.nodeName) || p.closest && p.closest('[data-nopx]')) return 2;
+    PXE_RE.lastIndex = 0; return PXE_RE.test(n.nodeValue) ? 1 : 2; } });
+  const list = []; while (tw.nextNode()) list.push(tw.currentNode);
+  for (const n of list) {
+    const f = document.createDocumentFragment(); let last = 0; const t = n.nodeValue; PXE_RE.lastIndex = 0; let m;
+    while ((m = PXE_RE.exec(t))) {
+      if (m.index > last) f.appendChild(document.createTextNode(t.slice(last, m.index)));
+      const im = document.createElement('img'); im.className = 'pxe'; im.alt = m[1]; im.src = pxUrl(PXE[m[1]]); f.appendChild(im); last = m.index + m[0].length;
+    }
+    if (last < t.length) f.appendChild(document.createTextNode(t.slice(last)));
+    n.parentNode.replaceChild(f, n);
+  }
+}
+if (typeof document !== 'undefined') {
+  const startPx = () => {
+    pxText(document.body);
+    new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') pxText(m.target); else m.addedNodes.forEach(n => pxText(n)); } })
+      .observe(document.body, { childList: true, subtree: true, characterData: true });
+  };
+  if (document.body) startPx(); else addEventListener('DOMContentLoaded', startPx);
 }

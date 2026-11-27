@@ -1,5 +1,19 @@
 # Changelog
 
+## [5.2.0] — 2026-11-27
+### Ditambahkan
+- **Event terbatas: Festival Lentera** (27 Nov – 11 Des 2026). Kumpulkan 🏮 Lentera dari setiap permainan (wave, boss, menang; Sulit ×1,5), selesaikan 6 misi event,
+  ambil hadiah pencapaian (hadiah utama: skin eksklusif **Lentera** dan unit Mitos **Naga Api**), dan belanja di Toko Event. Ada hitung mundur di lobby.
+  Admin bisa mengatur nama, tanggal, dan memulai event baru dari panel developer.
+- **Hadiah level akun**: setiap naik level dapat 🪙 Koin & 💎 Diamond, tiap 5 level ✨ Kristal, tiap 10 level 🔮 Batu Evolusi,
+  plus hadiah spesial (Lv 5 Pemanah, Lv 10 skin Kristal Es, Lv 15 Ninja, Lv 25 Samurai, Lv 50 Malaikat Agung, Lv 100 Kaisar Kosmik, dll).
+  Buka dari profil (Akun) atau Lainnya → Hadiah Level. XP dicatat server agar aman.
+### Diubah
+- **Unit bergaya pixel**: semua unit (di lobby, kartu, index, dan saat bermain) digambar ulang dengan piksel tegas dan garis tepi gelap, serasi dengan latar.
+- **Season Pass dirapikan**: header baru (badge tier, progres XP), jalur hadiah dengan label Gratis/Premium tetap, garis progres tier, tanda AMBIL,
+  dan otomatis bergulir ke tier saat ini.
+- **Ikon pixel untuk koin & mata uang** (🪙 💎 💠 ✨ 🔮 🎟️ 🎫 dan lainnya) di semua menu, popup, dan notifikasi.
+
 ## [5.1.0] — 2026-11-27
 ### Diubah
 - **Latar lobby baru bergaya pixel-art**: padang rumput dan awan, dengan **kerajaan** di kejauhan (kastil, menara, desa) dan **perkemahan** (tenda bergaris, paviliun, api unggun, spanduk, peti & rak senjata).

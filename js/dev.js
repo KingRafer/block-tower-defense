@@ -109,6 +109,12 @@ const DevPanel = {
         <label>Pengali koin <input id="dgRew" type="number" step="0.1" value="${e.rewardMul}" style="width:70px"></label>
         <label>Pengali diamond <input id="dgDia" type="number" step="0.1" value="${e.diamondMul}" style="width:70px"></label>
         <label>Unit unggulan <select id="dgFeat">${units.map(([k, l]) => `<option value="${k}" ${k === (e.featured || '') ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div></div>
+      <div class="box"><h4>🏮 Event terbatas</h4><div class="devrow">
+        <label><input type="checkbox" id="dgLmOn" ${(g.limited || {}).on !== false ? 'checked' : ''}> Aktif</label>
+        <label>ID <input id="dgLmId" value="${esc((g.limited || {}).id || '')}" style="width:130px" title="Ganti ID untuk memulai event baru (progres event direset)"></label>
+        <label>Nama <input id="dgLmName" value="${esc((g.limited || {}).name || '')}" style="width:150px"></label>
+        <label>Mulai <input id="dgLmS" type="date" value="${(g.limited || {}).start || ''}"></label><label>Selesai <input id="dgLmE" type="date" value="${(g.limited || {}).end || ''}"></label></div>
+        <small class="dim">Tanggal WIB. Ganti ID (huruf kecil, angka, tanda -) untuk event baru — token & progres event pemain direset.</small></div>
       <div class="box"><h4>🎰 Summon (💎 Diamond)</h4><div class="devrow">
         <label>1x <input id="dgG1" type="number" value="${g.gacha.cost1}" style="width:80px"></label><label>10x <input id="dgG10" type="number" value="${g.gacha.cost10}" style="width:80px"></label>
         <label>Pity <input id="dgGP" type="number" value="${g.gacha.pity}" style="width:70px"></label></div>
@@ -243,6 +249,7 @@ const DevPanel = {
         gacha: { cost1: +this.v('dgG1'), cost10: +this.v('dgG10'), pity: +this.v('dgGP'), rates: this.json('dgGR', 'Rate summon') },
         lucky: { cost1: +this.v('dgL1'), cost10: +this.v('dgL10'), pity: +this.v('dgLP'), rates: this.json('dgLR', 'Rate lucky') },
         pass: { premiumCost: +this.v('dgPass') },
+        limited: { on: this.v('dgLmOn'), id: this.v('dgLmId').trim(), name: this.v('dgLmName'), start: this.v('dgLmS'), end: this.v('dgLmE') },
         dailyLogin: this.v('dgDaily').split(',').map(x => +x.trim()), skillPrices: this.json('dgSkill', 'Harga skill') };
       if (g.dailyLogin.length !== 7 || g.dailyLogin.some(isNaN)) throw new Error('Hadiah login harus 7 angka');
     } catch (e) { return UI.toast('❌ ' + e.message); }

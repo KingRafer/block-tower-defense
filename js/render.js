@@ -108,6 +108,34 @@ function drawAccessory(acc, x, y, sk) {
   else if (acc === 'antenna') { ctx.fillStyle = '#90a4ae'; ctx.fillRect(x - 1, y - 36, 2, 9); ctx.fillStyle = '#00e676'; ctx.fillRect(x - 2, y - 38, 4, 4); }
   else if (acc === 'halo') { ctx.strokeStyle = '#fff59d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - 33, 9, 3, 0, 0, 7); ctx.stroke(); }
 }
+/* ---------- gaya pixel untuk unit ----------
+ * Unit digambar ke kanvas kecil (½ resolusi) lalu diperbesar tanpa smoothing,
+ * diberi garis tepi gelap 1px agar serasi dengan latar pixel-art. */
+const PIX = { sc: 0.5, bx: 64, top: 84, bot: 30, a: null, b: null, hard: false };
+function pixelSprite(x, y, draw) {
+  const w = Math.ceil(PIX.bx * 2 * PIX.sc), h = Math.ceil((PIX.top + PIX.bot) * PIX.sc);
+  if (!PIX.a) { PIX.a = document.createElement('canvas'); PIX.b = document.createElement('canvas'); }
+  const A = PIX.a, B = PIX.b;
+  if (A.width !== w + 2 || A.height !== h + 2) { A.width = B.width = w + 2; A.height = B.height = h + 2; }
+  const ga = A.getContext('2d'), gb = B.getContext('2d'), main = ctx;
+  ga.setTransform(1, 0, 0, 1, 0, 0); ga.clearRect(0, 0, A.width, A.height); ga.globalAlpha = 1;
+  ga.setTransform(PIX.sc, 0, 0, PIX.sc, 1 + (PIX.bx - x) * PIX.sc, 1 + (PIX.top - y) * PIX.sc);
+  ctx = ga;
+  try { draw(); } finally { ctx = main; }
+  if (PIX.hard) {   // ikon menu: alpha dibuat tegas (tanpa anti-alias)
+    const im = ga.getImageData(0, 0, A.width, A.height), d = im.data;
+    for (let i = 3; i < d.length; i += 4) d[i] = d[i] > 100 ? 255 : 0;
+    ga.putImageData(im, 0, 0);
+  }
+  gb.setTransform(1, 0, 0, 1, 0, 0); gb.clearRect(0, 0, B.width, B.height); gb.globalAlpha = 1;
+  gb.globalCompositeOperation = 'source-over';
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) gb.drawImage(A, dx, dy);
+  gb.globalCompositeOperation = 'source-in'; gb.fillStyle = '#141a1f'; gb.fillRect(0, 0, B.width, B.height);
+  gb.globalCompositeOperation = 'source-over'; gb.drawImage(A, 0, 0);
+  const sm = main.imageSmoothingEnabled; main.imageSmoothingEnabled = false;
+  main.drawImage(B, x - PIX.bx - 1 / PIX.sc, y - PIX.top - 1 / PIX.sc, B.width / PIX.sc, B.height / PIX.sc);
+  main.imageSmoothingEnabled = sm;
+}
 function drawTower(t, ghost) {
   const unit = ghost ? unitOf(t.type) : t;
   const evo = !!unit.evo, sk = SKINS[(ghost ? unit.skin : t.skin) || 'default'] || SKINS.default;
@@ -123,11 +151,13 @@ function drawTower(t, ghost) {
   }
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 16, 20, 7, 0, 0, Math.PI * 2); ctx.fill();
   if (!ghost && isMP() && t.owner) { ctx.strokeStyle = playerColor(t.owner); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 14, 22, 9, 0, 0, Math.PI * 2); ctx.stroke(); }
-  block(x - 19, y + 4, 38, 12, 6, t.level >= 3 ? '#ffb300' : '#78909c');
-  if (t.type === 'farm') drawFarm(t, x, y, sk);
-  else if (t.type === 'nuke') drawNuke(t, x, y, sk, body);
-  else if (t.type === 'dragon') drawDragon(t, x, y, sk, body);
-  else drawHero(t, x, y, sk, evo, base);
+  pixelSprite(x, y, () => {
+    block(x - 19, y + 4, 38, 12, 6, t.level >= 3 ? '#ffb300' : '#78909c');
+    if (t.type === 'farm') drawFarm(t, x, y, sk);
+    else if (t.type === 'nuke') drawNuke(t, x, y, sk, body);
+    else if (t.type === 'dragon') drawDragon(t, x, y, sk, body);
+    else drawHero(t, x, y, sk, evo, base);
+  });
   for (let i = 0; i < t.level; i++) {
     ctx.fillStyle = '#ffd54f'; ctx.fillRect(x - 14 + i * 8, y + 18, 6, 6);
     ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(x - 14 + i * 8, y + 18, 6, 6);
@@ -142,11 +172,10 @@ function drawTower(t, ghost) {
 function drawUnitIcon(canvas, type, skin, evo) {
   const g = canvas.getContext('2d'), prev = ctx;
   g.clearRect(0, 0, canvas.width, canvas.height);
-  g.save(); g.scale(canvas.width / 64, canvas.height / 64);
-  ctx = g;
-  const fakeS = S; const oldTime = S ? S.time : 0;
+  g.save(); g.scale(canvas.width / 64, canvas.height / 64); g.imageSmoothingEnabled = false;
+  ctx = g; PIX.hard = true;
   try { drawTower({ type, x: 32, y: 40, level: 0, angle: -0.6, recoil: 0, evo, skin: skin || 'default', owner: null }, false); }
-  finally { ctx = prev; g.restore(); }
+  finally { ctx = prev; PIX.hard = false; g.restore(); }
 }
 
 /* ---------------- MUSUH ---------------- */

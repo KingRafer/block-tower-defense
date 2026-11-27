@@ -21,6 +21,15 @@ function passReady() {
   return n + seasonReady();
 }
 
+/** XP akun untuk hadiah level (dicatat server; sebelum pertama kali dicatat pakai XP profil, maks level 30) */
+function accXpNow() { const v = PROFILE.vault; return v.axpSeed ? (v.axp || 0) : Math.max(v.axp || 0, Math.min(PROFILE.xp || 0, SHARED.accXpFor(29))); }
+function levelReady() { const lv = SHARED.accLevel(accXpNow()), c = PROFILE.vault.lvc || []; let n = 0; for (let L = 2; L <= lv; L++) if (!c.includes(L)) n++; return n; }
+function eventReady() {
+  const e = PROFILE.vault.ev, now = Date.now(); if (!SHARED.limitedActive(now) || !e || e.id !== SHARED.LIMITED.id) return 0;
+  return SHARED.EV_MISSIONS.filter(d => !e.mc.includes(d.id) && (e.s[d.stat] || 0) >= d.target).length + SHARED.EV_MILESTONES.filter((m, i) => e.earned >= m.at && !e.ms.includes(i)).length;
+}
+const RW_ICON = { coins: 'coin', diamonds: 'dia', gems: 'gem', crystals: 'cry', stones: 'orb', pxp: 'ticket', tok: 'tok', lan: 'lantern' };
+
 const Menu = {
   open: false, screen: null, back: 'main', endData: null, resetArm: false, shopSel: 'scout',
 
@@ -53,7 +62,7 @@ const Menu = {
   tickCd() {
     const els = document.querySelectorAll('[data-cd]'); if (!els.length) return;
     const now = Date.now();
-    els.forEach(el => { const s = Math.max(0, Math.floor((+el.dataset.cd - now) / 1000)); el.textContent = `${Math.floor(s / 3600)}j ${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}d`; });
+    els.forEach(el => { const s = Math.max(0, Math.floor((+el.dataset.cd - now) / 1000)); el.textContent = s >= 172800 ? `${Math.floor(s / 86400)} hari ${Math.floor(s % 86400 / 3600)} jam` : `${Math.floor(s / 3600)}j ${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}d`; });
   },
   close() { this.open = false; this.screen = null; $('overlay').style.display = 'none'; this.scene(false); },
   /** Latar pemandangan menu (dibuat sekali, berganti sesuai jam WIB) */
@@ -108,7 +117,7 @@ const Menu = {
   badge(n) { return n ? `<span class="badge-dot on">${n}</span>` : ''; },
   rw(r) {
     const I = { coins: '🪙', diamonds: '💎', gems: '💠', crystals: '✨', stones: '🔮' };
-    return Object.keys(I).filter(k => r[k]).map(k => `${I[k]} ${r[k].toLocaleString('id-ID')}`).concat(r.skin ? [`🎨 ${SKINS[r.skin].name}`] : [], r.unit ? [`🗼 ${TOWERS[r.unit.type || r.unit] ? TOWERS[r.unit.type || r.unit].name : r.unit}`] : [], r.pxp ? [`🎫 ${r.pxp} XP`] : [], r.tok ? [`🎟️ ${r.tok}`] : []).join(' • ');
+    return Object.keys(I).filter(k => r[k]).map(k => `${I[k]} ${r[k].toLocaleString('id-ID')}`).concat(r.skin ? [`🎨 ${SKINS[r.skin].name}`] : [], r.unit ? [`🗼 ${TOWERS[r.unit.type || r.unit] ? TOWERS[r.unit.type || r.unit].name : r.unit}`] : [], r.pxp ? [`🎫 ${r.pxp} XP`] : [], r.tok ? [`🎟️ ${r.tok}`] : [], r.lan ? [`🏮 ${r.lan}`] : []).join(' • ');
   },
   /** Index summon: semua unit, bentuknya, peluang & status koleksi */
   gachaIndex() {
@@ -140,6 +149,31 @@ const Menu = {
     }
     return `<div class="ix-top box"><b>📖 Koleksi ${got}/${total}</b><div class="mbar"><div style="width:${got / total * 100}%"></div></div><small class="dim">Unit 🔒 terlihat bentuknya, tapi harus didapat dari Summon.</small></div>
       <div class="ix-wrap"><div class="ix-list">${groups}</div>${det}</div>`;
+  },
+  /** Ikon besar hadiah (unit → gambar unit, skin → palet, lainnya → ikon mata uang) + label singkat */
+  rwBig(rw) {
+    if (rw.unit) { const t = rw.unit.type || rw.unit; return [`<canvas width="44" height="44" data-icon="${t}" data-skin="default" data-evo="0"></canvas>`, TOWERS[t] ? TOWERS[t].name : t]; }
+    if (rw.skin) return [pxImg('paint', 'big'), 'Skin ' + SKINS[rw.skin].name];
+    const k = Object.keys(RW_ICON).find(k => rw[k]); if (!k) return [pxImg('star', 'big'), ''];
+    const more = Object.keys(rw).filter(x => rw[x] && x !== 'premiumUnit').length > 1 ? '+' : '';
+    return [pxImg(RW_ICON[k], 'big'), rw[k].toLocaleString('id-ID') + more];
+  },
+  passRail(ps, lv) {
+    const P = SHARED.PASS;
+    const cell = (tr, t) => {
+      const rw = SHARED.passReward(tr, t, ps.season), got = ps[tr].includes(t), lockP = tr === 'p' && !ps.premium, open = t <= lv && !lockP, [ic, lab] = this.rwBig(rw);
+      const st = got ? 'got' : open ? 'ready' : lockP ? 'lock' : 'wait';
+      return `<button class="pc2 ${tr} ${st}" data-act="${st === 'ready' ? `pclaim:${tr}:${t}` : 'noop'}" title="${esc(this.rw(rw))}" data-nopx>
+        <span class="pc2-ic">${ic}</span><small>${esc(lab)}</small>${got ? `<i class="pc2-st">${pxImg('check')}</i>` : lockP ? `<i class="pc2-st">${pxImg('lock')}</i>` : st === 'ready' ? '<em>AMBIL</em>' : ''}</button>`;
+    };
+    let cols = '';
+    for (let t = 1; t <= P.tiers; t++) cols += `<div class="pcol2 ${t <= lv ? 'on' : ''} ${t === lv + 1 ? 'next' : ''}" data-tier="${t}">${cell('f', t)}<div class="pt2"><b>${t}</b></div>${cell('p', t)}</div>`;
+    return `<div class="prail2"><div class="pr-lab"><span class="pl-f">Gratis</span><span class="pl-mid"></span><span class="pl-p">${pxImg('star')} Premium</span></div>
+      <div class="pr-scroll" id="prScroll">${cols}</div></div>`;
+  },
+  levelCard() {
+    const lv = SHARED.accLevel(accXpNow()), n = levelReady();
+    return `<button class="lvcard" data-act="go:levels"><span class="tierbadge sm"><small>LV</small><b>${lv}</b></span><div><b>⭐ Hadiah Level</b><small>${n ? `${n} hadiah siap diambil!` : 'Lihat hadiah tiap naik level'}</small></div>${this.badge(n)}<i>›</i></button>`;
   },
   passMissions() {
     const now = Date.now(), v = PROFILE.vault, m = SHARED.rollMissions(v, now);
@@ -267,7 +301,7 @@ const Menu = {
           ${this.announce()}
           <header class="lh-top">
             <button class="lh-prof" data-act="go:account">${this.avatar(u, 46)}
-              <div><b>${esc(u ? u.name : 'Tamu')}</b><div class="lvrow"><span class="lvl">Lv ${lv}</span><div class="xpbar"><div style="width:${pct}%"></div></div></div></div></button>
+              <div><b>${esc(u ? u.name : 'Tamu')}</b><div class="lvrow"><span class="lvl">Lv ${lv}</span><div class="xpbar"><div style="width:${pct}%"></div></div></div></div>${this.badge(levelReady())}</button>
             <div class="lh-cur">${this.currency()}</div>
             <div class="lh-sys">${PWA.installed() ? '' : `<button class="sysb dl" data-act="go:download" title="Download aplikasi">${pxi('down')}</button>`}
               <button class="sysb" data-act="go:howto" title="Cara main">${pxi('help')}</button><button class="sysb" data-act="settings:main" title="Pengaturan">${pxi('gear')}</button></div>
@@ -289,6 +323,7 @@ const Menu = {
             <div class="showcase">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
           </section>
           <aside class="lh-right">
+            ${SHARED.limitedActive(now) ? `<button class="rcard r-limited" data-act="go:event"><span class="rc-ic">${pxi('lantern')}</span><div><b>${esc(SHARED.LIMITED.name.toUpperCase())}</b><small>🏮 ${((v.ev && v.ev.id === SHARED.LIMITED.id && v.ev.lan) || 0).toLocaleString('id-ID')} • sisa <span data-cd="${SHARED.limitedEndsAt()}"></span></small></div>${this.badge(eventReady())}</button>` : ''}
             ${evOn ? `<button class="rcard r-event" data-act="go:play"><span class="rc-ic">${pxi('star')}</span><div><b>EVENT AKTIF</b><small>${ev.rewardMul > 1 ? `🪙 ×${ev.rewardMul} ` : ''}${ev.diamondMul > 1 ? `💎 ×${ev.diamondMul}` : ''} hadiah bermain</small></div></button>` : ''}
             <button class="rcard r-pass" data-act="go:pass"><span class="rc-ic">${pxi('ticket')}</span><div><b>SEASON PASS</b><small>Tier ${pt}/${SHARED.PASS.tiers}${ps.premium ? ' • ⭐' : ''}</small><div class="rc-bar"><div style="width:${ppct}%"></div></div></div>${this.badge(passReady())}</button>
             <button class="rcard r-daily" data-act="go:daily"><span class="rc-ic">${pxi('cal')}</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai • reset <span data-cd="' + nextDay + '"></span>' : 'Hadiah 🪙 ' + DAILY_REWARD + ' + 💎'}</small></div></button>
@@ -323,6 +358,8 @@ const Menu = {
       const u = Online.user, row = (act, ic, t, d) => `<button class="mrow" data-act="${act}"><span>${ic}</span><div><b>${t}</b><small>${d}</small></div><i>›</i></button>`;
       return `${this.header('Lainnya')}<div class="mlist">
         ${row('mgo:trade', '🔁', 'Trading', u ? 'Tukar unit dengan teman' : 'Perlu login')}
+        ${row('mgo:levels', '⭐', 'Hadiah Level', levelReady() ? `${levelReady()} hadiah siap diambil` : 'Hadiah tiap naik level')}
+        ${row('mgo:event', '🏮', 'Event Terbatas', SHARED.limitedActive(Date.now()) ? SHARED.LIMITED.name : 'Tidak ada event aktif')}
         ${row('mgo:redeem', '🎁', 'Kode Redeem', 'Tukar kode hadiah')}
         ${row('mgo:scores', '🏆', 'Papan Skor', 'Lokal & global')}
         ${row('mgo:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`)}
@@ -354,26 +391,72 @@ const Menu = {
       const into = ps.xp - lv * P.xpPerTier, pct = lv >= P.tiers ? 100 : into / P.xpPerTier * 100;
       const end = new Date(Date.parse(ps.season + '-01T00:00:00+07:00')); end.setMonth(end.getMonth() + 1);
       const days = Math.max(0, Math.ceil((end - now) / 864e5));
-      const cell = (tr, t) => {
-        const rw = SHARED.passReward(tr, t, ps.season), got = ps[tr].includes(t), open = t <= lv && (tr === 'f' || ps.premium);
-        const first = this.rw(rw).split(' • ')[0].split(' '), more = Object.keys(rw).filter(k => rw[k] && k !== 'premiumUnit').length > 1 ? '+' : '';
-        const ic = rw.unit ? '🗼' : rw.skin ? '🎨' : first[0];
-        const lab = rw.unit ? (TOWERS[rw.unit] ? TOWERS[rw.unit].name : rw.unit) : rw.skin ? SKINS[rw.skin].name : first.slice(1).join(' ') + more;
-        return `<button class="pc ${tr} ${got ? 'got' : open ? 'open' : ''} ${tr === 'p' && !ps.premium ? 'lock' : ''}" ${open && !got ? `data-act="pclaim:${tr}:${t}"` : 'data-act="noop"'} title="${esc(this.rw(rw))}">
-          <span>${ic}</span><small>${esc(lab)}</small>${got ? '<i>✓</i>' : tr === 'p' && !ps.premium ? '<i>🔒</i>' : ''}</button>`;
-      };
-      let cols = '';
-      for (let t = 1; t <= P.tiers; t++) cols += `<div class="pcol ${t <= lv ? 'reached' : ''}"><b>${t}</b>${cell('f', t)}${cell('p', t)}</div>`;
       const ready = passReady() - seasonReady(), tab = this.passTab || 'rail';
-      return `${this.header('🎫 Season Pass')}
-        <div class="box passhead"><div><h3>${SHARED.seasonName(ps.season)}</h3><small class="dim">Berakhir ${days} hari lagi • XP dari bermain & misi</small></div>
-          <div class="plv"><b>Tier ${lv}/${P.tiers}</b><div class="xpbar wide"><div style="width:${pct}%"></div></div><small>${lv >= P.tiers ? 'MAKS' : `${into}/${P.xpPerTier} XP`}</small></div>
-          <div class="prow">${ready ? `<button class="btn" data-act="pclaimall">🎁 Ambil semua (${ready})</button>` : ''}
-          ${ps.premium ? '<span class="rar" style="background:#e040fb">⭐ PREMIUM AKTIF</span>' : `<button class="btn gold" data-act="pbuy">⭐ Premium • 💠 ${P.premiumCost}</button>`}</div></div>
-        <div class="tabs">${[['rail', '🎁 Hadiah Tier'], ['mis', '🎯 Misi Pass', this.badge(seasonReady())], ['shop', '🛍️ Toko Pass']].map(([k, l, b]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="ptab:${k}">${l}${b || ''}</button>`).join('')}
-          <span class="tokchip">🎟️ ${(ps.tok || 0).toLocaleString('id-ID')} Token</span></div>
-        ${tab === 'mis' ? this.passMissions() : tab === 'shop' ? this.passShop() : `<div class="passrail"><div class="pcol plabels"><b>&nbsp;</b><span>Gratis</span><span>⭐ Premium</span></div>${cols}</div>
-        <small class="dim">Klaim tier memberi 🎟️ Token (gratis +${SHARED.PASS_TOK.f}, premium +${SHARED.PASS_TOK.p}). Premium: unit Mitos tier 30, skin eksklusif tier 15. Season reset tiap awal bulan.</small>`}<div id="pullResult"></div>`;
+      return `${this.header('Season Pass')}
+        <div class="box ph2">
+          <div class="ph-l"><small class="ph-k">SEASON PASS</small><h3>${SHARED.seasonName(ps.season).replace('Season ', '')}</h3><small class="dim">Berakhir ${days} hari lagi</small></div>
+          <div class="ph-tier"><div class="tierbadge"><small>TIER</small><b>${lv}</b></div>
+            <div class="ph-xp"><div class="xpbar wide"><div style="width:${pct}%"></div></div><small>${lv >= P.tiers ? 'Tier maksimal' : `${into}/${P.xpPerTier} XP menuju tier ${lv + 1}`}</small></div></div>
+          <div class="ph-r">${ready ? `<button class="btn" data-act="pclaimall">🎁 Ambil semua (${ready})</button>` : ''}
+            ${ps.premium ? '<span class="ph-prem">⭐ Premium aktif</span>' : `<button class="btn blue" data-act="pbuy">⭐ Premium • 💠 ${P.premiumCost}</button>`}</div>
+        </div>
+        <div class="tabs">${[['rail', 'Hadiah Tier'], ['mis', 'Misi Pass', this.badge(seasonReady())], ['shop', 'Toko Pass']].map(([k, l, b]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="ptab:${k}">${l}${b || ''}</button>`).join('')}
+          <span class="tokchip">🎟️ ${(ps.tok || 0).toLocaleString('id-ID')}</span></div>
+        ${tab === 'mis' ? this.passMissions() : tab === 'shop' ? this.passShop() : `${this.passRail(ps, lv)}
+        <small class="dim pnote">XP pass dari bermain & misi. Klaim tier memberi 🎟️ Token (gratis +${SHARED.PASS_TOK.f}, premium +${SHARED.PASS_TOK.p}) untuk Toko Pass. Premium: skin eksklusif tier 15, unit Mitos tier 30.</small>`}<div id="pullResult"></div>`;
+    },
+    levels() {
+      const v = PROFILE.vault, xp = accXpNow(), lv = SHARED.accLevel(xp), c = v.lvc || [], max = SHARED.ACC_MAX;
+      const lo = lv > 1 ? SHARED.accXpFor(lv - 1) : 0, hi = SHARED.accXpFor(lv), pct = lv >= max ? 100 : Math.min(100, (xp - lo) / (hi - lo) * 100);
+      const ready = levelReady(), until = Math.min(max, Math.max(lv + 10, 12));
+      const row = L => {
+        const rw = SHARED.levelReward(L), got = c.includes(L), open = L <= lv && !got, sp = SHARED.LEVEL_SPECIAL[L], [ic] = this.rwBig(sp || rw);
+        return `<div class="lvr ${got ? 'got' : open ? 'ready' : 'wait'} ${sp ? 'sp' : ''}"><span class="lvn">Lv ${L}</span><span class="lvic">${ic}</span>
+          <div class="lvi"><b>${sp ? (sp.unit ? 'Unit ' + TOWERS[sp.unit].name : 'Skin ' + SKINS[sp.skin].name) : 'Hadiah level'}</b><small>${this.rw(rw)}</small></div>
+          ${got ? `<span class="ok">${pxImg('check')}</span>` : `<button class="btn sm ${open ? '' : 'gray'}" ${open ? '' : 'disabled'} data-act="lvclaim:${L}">${open ? 'Ambil' : 'Terkunci'}</button>`}</div>`;
+      };
+      const rows = []; for (let L = 2; L <= until; L++) rows.push(row(L));
+      const specials = Object.keys(SHARED.LEVEL_SPECIAL).map(Number).filter(L => L > until);
+      return `${this.header('Hadiah Level')}
+        <div class="box lvhead"><div class="tierbadge"><small>LEVEL</small><b>${lv}</b></div>
+          <div class="ph-xp"><div class="xpbar wide"><div style="width:${pct}%"></div></div><small>${lv >= max ? 'Level maksimal' : `${(xp - lo).toLocaleString('id-ID')}/${(hi - lo).toLocaleString('id-ID')} XP menuju level ${lv + 1}`}</small></div>
+          ${ready ? `<button class="btn" data-act="lvclaim:all">🎁 Ambil semua (${ready})</button>` : ''}</div>
+        <small class="dim">Setiap naik level kamu dapat 🪙 Koin & 💎 Diamond. Tiap 5 level ✨ Kristal, tiap 10 level 🔮 Batu Evolusi, dan level tertentu memberi unit atau skin spesial. XP didapat dari bermain.</small>
+        <div class="lvlist">${rows.join('')}</div>
+        ${specials.length ? `<div class="box"><h4>⭐ Hadiah spesial berikutnya</h4><div class="lvsp">${specials.map(L => { const sp = SHARED.LEVEL_SPECIAL[L], [ic, lab] = this.rwBig(sp); return `<div class="lvspc"><span class="lvic">${ic}</span><b>Lv ${L}</b><small>${esc(lab)}</small></div>`; }).join('')}</div></div>` : ''}`;
+    },
+    event() {
+      const now = Date.now(), L = SHARED.LIMITED;
+      if (!SHARED.limitedActive(now)) return `${this.header('Event')}<div class="box center-box"><div class="big-ic">${pxImg('lantern', 'huge')}</div><h3>Belum ada event terbatas</h3><p class="dim">Nantikan event berikutnya!</p></div>`;
+      const e = SHARED.rollEvent(PROFILE.vault, now) || { lan: 0, earned: 0, s: {}, mc: [], ms: [], buy: {} }, tab = this.evTab || 'mis';
+      let body;
+      if (tab === 'mis') body = `<div class="box">${SHARED.EV_MISSIONS.map(d => {
+        const pr = Math.min(d.target, e.s[d.stat] || 0), done = pr >= d.target, cl = e.mc.includes(d.id);
+        return `<div class="mis ${cl ? 'claimed' : done ? 'done' : ''}"><div class="mi"><b>${d.name}</b><small>${this.rw(d.reward)}</small>
+          <div class="mbar"><div style="width:${pr / d.target * 100}%"></div><span>${pr}/${d.target}</span></div></div>
+          ${cl ? `<span class="ok">${pxImg('check')}</span>` : `<button class="btn sm ${done ? '' : 'gray'}" ${done ? '' : 'disabled'} data-act="evm:${d.id}">${done ? 'Ambil' : 'Belum'}</button>`}</div>`;
+      }).join('')}</div>`;
+      else if (tab === 'road') {
+        const top = SHARED.EV_MILESTONES[SHARED.EV_MILESTONES.length - 1].at;
+        body = `<div class="box evroad"><div class="evtrack"><div class="evfill" style="width:${Math.min(100, e.earned / top * 100)}%"></div>
+          ${SHARED.EV_MILESTONES.map((m, i) => `<i style="left:${m.at / top * 100}%" class="${e.earned >= m.at ? 'on' : ''}"></i>`).join('')}</div>
+          <small class="dim">Total 🏮 dikumpulkan: <b>${e.earned.toLocaleString('id-ID')}</b> (Lentera yang dibelanjakan tetap dihitung)</small>
+          <div class="evms">${SHARED.EV_MILESTONES.map((m, i) => { const ok = e.earned >= m.at, got = e.ms.includes(i), [ic, lab] = this.rwBig(m.reward);
+            return `<div class="evm ${got ? 'got' : ok ? 'ready' : ''}" data-nopx><span class="lvic">${ic}</span><b>${esc(lab)}</b><small>${pxImg('lantern')} ${m.at.toLocaleString('id-ID')}</small>
+              ${got ? `<span class="ok">${pxImg('check')}</span>` : `<button class="btn sm ${ok ? '' : 'gray'}" ${ok ? '' : 'disabled'} data-act="evms:${i}">${ok ? 'Ambil' : 'Terkunci'}</button>`}</div>`; }).join('')}</div></div>`;
+      } else body = `<div class="pshop">${SHARED.EV_SHOP.map(it => {
+        const left = it.limit - (e.buy[it.id] || 0), owned = it.give.skin && PROFILE.vault.skins.includes(it.give.skin), can = left > 0 && !owned && e.lan >= it.cost;
+        return `<div class="psi ${it.id === 'skin' ? 'r-secret' : ''} ${left && !owned ? '' : 'soldout'}"><span class="psi-ic">${it.icon}</span><b>${it.name}</b>
+          <small>${owned ? 'Sudah dimiliki' : `Stok ${left}/${it.limit}`}</small><button class="btn sm ${can ? '' : 'gray'}" ${can ? '' : 'disabled'} data-act="evbuy:${it.id}">🏮 ${it.cost.toLocaleString('id-ID')}</button></div>`;
+      }).join('')}</div><small class="dim">Lentera & stok hilang saat event berakhir — tukarkan sebelum waktunya habis.</small>`;
+      return `${this.header(L.name)}
+        <div class="box evhead"><span class="evart">${pxImg('lantern', 'huge')}</span>
+          <div class="evinfo"><small class="ph-k">EVENT TERBATAS</small><h3>${esc(L.name)}</h3><p>${SHARED.LIMITED.desc}</p>
+            <small class="dim">⏳ Berakhir dalam <b data-cd="${SHARED.limitedEndsAt()}"></b></small></div>
+          <span class="evbal">🏮 <b>${e.lan.toLocaleString('id-ID')}</b><small>Lentera</small></span></div>
+        <small class="dim">Dapatkan 🏮 dari setiap permainan (wave, boss, menang; Sulit ×1,5) dan dari misi event.</small>
+        <div class="tabs">${[['mis', 'Misi Event'], ['road', 'Hadiah Pencapaian'], ['shop', 'Toko Event']].map(([k, l]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="evtab:${k}">${l}</button>`).join('')}</div>
+        ${body}`;
     },
     redeem() {
       if (!Online.user) return this.needLogin('Kode Redeem', 'Masuk dengan Google untuk menukar kode hadiah.');
@@ -404,7 +487,7 @@ const Menu = {
       if (!u) return `${this.header('Akun')}<div class="box center-box"><div class="big-ic">🧑‍🚀</div><h3>Masuk / Daftar dengan Google</h3>
         <p class="dim">Akun dibuat otomatis saat pertama kali masuk. Dengan akun, progres (koin, tower, trait, evolusi, pencapaian) tersimpan di cloud dan bisa dimainkan di perangkat lain. Kamu juga bisa menambah teman dan mabar.</p>
         ${this.loginBlock()}
-        <small class="dim">Progres yang sudah ada di perangkat ini akan ikut disimpan ke akunmu.</small></div>`;
+        <small class="dim">Progres yang sudah ada di perangkat ini akan ikut disimpan ke akunmu.</small></div>${this.levelCard()}`;
       const ago = Online.lastSync ? Math.max(0, Math.round((Date.now() - Online.lastSync) / 1000)) : null;
       return `${this.header('Akun')}
         <div class="acc">
@@ -413,6 +496,7 @@ const Menu = {
             <div class="field"><label>Nama pemain</label><div class="inrow"><input id="accName" value="${esc(u.name)}" maxlength="20"><button class="btn sm" data-act="rename">Simpan</button></div></div>
             <div class="field"><label>Kode teman</label><div class="inrow"><code class="fcode">${u.friendCode}</code><button class="btn sm blue" data-act="copy:${u.friendCode}">Salin</button></div>
               <small class="dim">Bagikan kode ini agar temanmu bisa menambahkanmu.</small></div>
+            ${this.levelCard()}
           </div>
           <div class="box">
             <h4>☁️ Cloud Save</h4>
@@ -557,7 +641,7 @@ const Menu = {
       if (tab === 'skillx') { this.shopTab = 'skin'; setTimeout(() => this.go('skills'), 0); }
       let body = '';
       if (false) body = '';
-      else if (tab === 'skin') body = `<div class="shopgrid skins">${Object.entries(SKINS).filter(([k]) => k !== 'default').map(([k, sk]) => {
+      else if (tab === 'skin') body = `<div class="shopgrid skins">${Object.entries(SKINS).filter(([k, x]) => k !== 'default' && !x.event).map(([k, sk]) => {
         const own = v.skins.includes(k);
         return `<div class="sitem skin"><canvas width="64" height="64" data-icon="scout" data-skin="${k}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Kosmetik untuk semua unit</small></div>
           ${own ? '<span class="owned">✔ Dimiliki</span>' : `<button class="btn sm purple" data-act="buyskin:${k}">💠 ${sk.price}</button>`}</div>`; }).join('')}</div>
@@ -774,7 +858,7 @@ const Menu = {
           <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
           <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
           <tr><td>Durasi</td><td><b>${this.fmtTime(S.time)}</b></td></tr>
-          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.diamonds ? ` &nbsp; <b>💎 +${d.diamonds}</b>` : ''}${d.crystals ? ` &nbsp; <b>✨ +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}</td></tr></table>
+          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.diamonds ? ` &nbsp; <b>💎 +${d.diamonds}</b>` : ''}${d.crystals ? ` &nbsp; <b>✨ +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}${d.lan ? ` &nbsp; <b>🏮 +${d.lan}</b>` : ''}</td></tr></table>
           ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${TOWERS[m.type].name}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
         ${isMP() ? `<div class="row2"><button class="btn big" data-act="go:mabar">🤝 Mabar Lagi</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`
@@ -802,6 +886,9 @@ const Menu = {
       }
     },
     main() { Online.refreshBadge && Online.refreshBadge(); this.drawIcons(); this.tickCd(); },
+    pass() { this.drawIcons(); const sc = $('prScroll'), nx = sc && (sc.querySelector('.pcol2.next') || sc.querySelector('.pcol2.on:last-child')); if (sc && nx && !this._passKeep) sc.scrollLeft = Math.max(0, nx.offsetLeft - sc.clientWidth / 2 + nx.offsetWidth / 2); },
+    levels() { this.drawIcons(); },
+    event() { this.drawIcons(); this.tickCd(); },
     account() {
       document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); this.drawIcons();
       const f = $('avFile');
@@ -896,6 +983,11 @@ const Menu = {
       case 'mclaim': { const [, kind, id] = a.split(':'); this.eco('missionClaim', { kind, id }, r => '🎯 ' + this.rw(r)).then(() => this.show(this.screen, true)); break; }
       case 'pclaim': { const [, track, t] = a.split(':'); this.eco('passClaim', { track, tier: +t }, r => '🎫 ' + this.rw(r.claimed[0].got)).then(() => this.show('pass', true)); break; }
       case 'ptab': this.passTab = arg; this.show('pass', true); break;
+      case 'lvclaim': this.eco('levelClaim', { lv: arg === 'all' ? 'all' : +arg }, r => r.claimed.length > 1 ? `⭐ ${r.claimed.length} hadiah level diambil!` : '⭐ ' + this.rw(r.claimed[0].got)); break;
+      case 'evtab': this.evTab = arg; this.show('event', true); break;
+      case 'evm': this.eco('evMission', { id: arg }, r => '🏮 ' + this.rw(r)); break;
+      case 'evms': this.eco('evMilestone', { i: arg === 'all' ? 'all' : +arg }, r => '🏮 ' + r.claimed.map(g => this.rw(g)).join(' • ')); break;
+      case 'evbuy': this.eco('evShopBuy', { id: arg }, r => '🏮 ' + this.rw(r.got)); break;
       case 'pshop': { const it = SHARED.PASS_SHOP.find(x => x.id === arg); if (it && (it.cost < 300 || confirm(`Tukar 🎟️ ${it.cost} Token untuk ${it.name}?`))) this.eco('passShopBuy', { id: arg }, r => '🛍️ Didapat: ' + this.rw(r.got)).then(r => { if (r && r.got.unit) this.showPull([r.got.unit]); }); break; }
       case 'pclaimall': this.eco('passClaim', { tier: 'all' }, r => `🎁 ${r.claimed.length} hadiah diambil!`).then(() => this.show('pass', true)); break;
       case 'pbuy': if (confirm(`Aktifkan Season Pass Premium seharga 💠 ${SHARED.PASS.premiumCost} Permata?`)) this.eco('passBuy', {}, () => '⭐ Pass Premium aktif!').then(() => this.show('pass', true)); break;

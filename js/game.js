@@ -861,7 +861,7 @@ function claimPayload(won, abandoned) {
   const cleared = won ? S.wave : Math.max(0, S.wave - 1);
   const uxp = {};
   for (const [type, gain] of Object.entries(S.uxp)) { const u = unitOf(type); if (u.id) uxp[u.id] = Math.round(gain); }
-  return { result: { cleared, won, diff: S.diff, map: MAP.id, mode: S.mode, daily: !!S.daily, bossKills: S.bossKills,
+  return { result: { cleared, won, diff: S.diff, map: MAP.id, mode: S.mode, daily: !!S.daily, bossKills: S.bossKills, kills: S.kills,
     duration: Math.round(S.time), uxp, abandoned: !!abandoned } };
 }
 /** Saat keluar di tengah permainan: hanya kurangi stok skill yang terpakai */
@@ -913,7 +913,7 @@ async function finishGame(won) {
 
   sfx(won ? 'win' : 'lose');
   Menu.endData = { won, record, coins: rw.coins || 0, xp, diamonds: rw.diamonds || 0, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank,
-    dailyReward: rw.dailyReward || 0, crystals: rw.crystals || 0, stones: rw.stones || 0, mastery, used: rw.used || {} };
+    dailyReward: rw.dailyReward || 0, lan: rw.lan || 0, crystals: rw.crystals || 0, stones: rw.stones || 0, mastery, used: rw.used || {} };
   setTimeout(() => Menu.show('end'), 600);
 }
 
@@ -927,7 +927,7 @@ const Eco = {
       this.apply(r.vault);
       return r.result;
     }
-    const res = SHARED.actions[action](PROFILE.vault, payload || {}, { rng: Math.random, now: Date.now(), server: false });
+    const res = SHARED.actions[action](PROFILE.vault, payload || {}, { rng: Math.random, now: Date.now(), server: false, profileXp: PROFILE.xp });
     saveProfile();
     return res;
   },
