@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.3.0] — 2026-11-27
+### Diubah — layar hasil & kerapian
+- **Layar hasil sinematik**: pita emas dengan 1–3 bintang (3 bintang = menang tanpa kehilangan nyawa), judul emas berkilau, konfeti saat menang.
+- **Hadiah tampil sebagai kartu besar** (Koin, XP, Diamond, Kristal, Batu Evo, Kepingan Salju) yang muncul satu per satu.
+- **Statistik jadi grid rapi** (mode & map, wave, musuh, boss, uang, durasi); pencapaian baru jadi chip emas.
+- Header layar tetap menempel saat menggulir; ornamen header disembunyikan di layar kecil; di HP, gambar banner Summon tampil sebelum tombol.
+
 ## [7.2.0] — 2026-11-27
 ### Diubah — visual semua layar menu
 - **Latar menu hidup**: aurora berwarna yang berputar pelan + bintang berkelip.

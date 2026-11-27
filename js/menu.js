@@ -968,23 +968,24 @@ const Menu = {
     },
 
     end() {
-      const d = this.endData;
-      return `<h1 class="${d.won ? 'win' : 'lose'}">${d.won ? '🏆 MENANG!' : '💀 GAME OVER'}</h1>
-        <div class="score">${d.score.toLocaleString('id-ID')} <small>poin • peringkat #${d.rank}</small></div>
-        <div class="end-badges">        ${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.chest ? `<span class="badge">${pxImg(CHEST_IC[d.chest])} ${d.firstWin ? 'Menang pertama hari ini: ' : 'Dapat '}${SHARED.CHESTS[d.chest].name}!</span>` : d.chestFull ? '<span class="badge gray">Slot peti penuh — buka peti di Markas</span>' : ''}${d.lgPts ? `<span class="badge">🏆 +${d.lgPts} poin liga</span>` : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
+      const d = this.endData, hpk = S.maxHp ? S.hp / S.maxHp : 0, stars = d.won ? (hpk >= 0.999 ? 3 : hpk >= 0.5 ? 2 : 1) : 0;
+      const rw = [['🪙', d.coins, 'Koin', 'c-gold'], ['⭐', d.xp, 'XP', 'c-xp'], ['💎', d.diamonds, 'Diamond', 'c-dia'], ['✨', d.crystals, 'Kristal', 'c-cry'], ['🔮', d.stones, 'Batu Evo', 'c-stone'], [SHARED.LIMITED.icon, d.lan, SHARED.LIMITED.token, 'c-lan']]
+        .filter(x => x[1]).map((x, k) => `<div class="erw ${x[3]}" style="--d:${0.5 + k * 0.12}s"><span>${x[0]}</span><b data-count="${x[1]}">+${x[1].toLocaleString('id-ID')}</b><small>${x[2]}</small></div>`).join('');
+      const st = (ic, l, v) => `<div class="est"><span>${ic}</span><b>${v}</b><small>${l}</small></div>`;
+      const conf = d.won ? `<div class="confetti">${Array.from({ length: 36 }, (_, k) => `<i style="--x:${(k * 37) % 100}%;--c:${['#ffd866', '#ff7043', '#4fc3f7', '#69f0ae', '#e040fb', '#fff'][k % 6]};--t:${2.2 + (k % 5) * 0.35}s;--dl:${(k % 9) * 0.18}s;--r:${(k * 53) % 360}deg"></i>`).join('')}</div>` : '';
+      return `${conf}<div class="eban ${d.won ? 'win' : 'lose'}"><div class="estars">${[1, 2, 3].map(k => `<i class="${k <= stars ? 'on' : ''}" style="--d:${0.15 + k * 0.18}s">★</i>`).join('')}</div>
+          <h1 class="${d.won ? 'win' : 'lose'}">${d.won ? 'MENANG!' : 'GAME OVER'}</h1>
+          <div class="score">${d.score.toLocaleString('id-ID')} <small>poin • peringkat #${d.rank}</small></div></div>
+        <div class="end-badges">${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.chest ? `<span class="badge">${pxImg(CHEST_IC[d.chest])} ${d.firstWin ? 'Menang pertama hari ini: ' : 'Dapat '}${SHARED.CHESTS[d.chest].name}!</span>` : d.chestFull ? '<span class="badge gray">Slot peti penuh — buka peti di Markas</span>' : ''}${d.lgPts ? `<span class="badge">🏆 +${d.lgPts} poin liga</span>` : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
         ${d.unlockedSkill ? `<span class="badge purple">⚡ Skill baru: ${d.unlockedSkill.icon} ${d.unlockedSkill.name}</span>` : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}</div>
-        <div class="box endbox"><table>
-          <tr><td>Map</td><td><b>${MAP.name}</b> (${DIFFS[S.diff].name})</td></tr>
-          <tr><td>Mode</td><td><b>${isMP() ? '🤝 Mabar • ' + MODES[S.mode].name : S.daily ? '📅 Tantangan Harian' : MODES[S.mode].name}</b></td></tr>
-          <tr><td>Wave</td><td><b>${S.wave}${S.maxWave === Infinity ? '' : '/' + S.maxWave}</b></td></tr>
-          <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
-          <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
-          <tr><td>Durasi</td><td><b>${this.fmtTime(S.time)}</b></td></tr>
-          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.diamonds ? ` &nbsp; <b>💎 +${d.diamonds}</b>` : ''}${d.crystals ? ` &nbsp; <b>✨ +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}${d.lan ? ` &nbsp; <b>${SHARED.LIMITED.icon} +${d.lan}</b>` : ''}</td></tr></table>
+        <div class="erws">${rw}</div>
+        <div class="box endbox">
+          <div class="ests">${st('🗺️', isMP() ? 'Mabar • ' + MODES[S.mode].name : S.daily ? 'Tantangan Harian' : MAP.name + ' • ' + DIFFS[S.diff].name, MODES[S.mode].name)}${st('🌊', 'Wave', S.wave + (S.maxWave === Infinity ? '' : '/' + S.maxWave))}
+            ${st('🧟', 'Musuh dikalahkan', S.kills.toLocaleString('id-ID'))}${st('👑', 'Boss dikalahkan', S.bossKills)}${st('💰', 'Uang didapat', '$' + S.earned.toLocaleString('id-ID'))}${st('⏱️', 'Durasi', this.fmtTime(S.time))}</div>
           ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${TOWERS[m.type].name}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
-          ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
+          ${d.ach.length ? `<div class="newach">${d.ach.map(a => `<span>🏅 ${a.name}</span>`).join('')}</div>` : ''}</div>
         ${isMP() ? `<div class="row2"><button class="btn big" data-act="go:mabar">🤝 Mabar Lagi</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`
-        : `<div class="row2"><button class="btn big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
+        : `<div class="row2"><button class="btn big gold" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
           <button class="btn blue" data-act="go:play">🗺️ Pilih Map</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`}`;
     },
   },
