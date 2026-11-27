@@ -118,11 +118,20 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   assert(ev.ev && ev.ev.lan > 0 && ev.ev.s.games === 1, 'Lentera didapat dari bermain');
   assert.throws(() => SHARED.actions.evShopBuy(ev, { id: 'mythic' }, ctx), /tidak cukup/);
   ev.ev.lan = 5000; ev.ev.earned = 5000;
-  SHARED.actions.evShopBuy(ev, { id: 'skin' }, ctx); assert(ev.skins.includes('lantern'), 'skin event dibeli');
+  SHARED.actions.evShopBuy(ev, { id: 'skin' }, ctx); assert(ev.skins.includes('winter'), 'skin event dibeli');
   assert.throws(() => SHARED.actions.evShopBuy(ev, { id: 'skin' }, ctx));
   assert.throws(() => SHARED.actions.buySkin(ev, { skin: 'lantern' }, ctx), /tidak dikenal/);
   const ms = SHARED.actions.evMilestone(ev, { i: 'all' }, ctx); assert(ms.claimed.length === 5, 'hadiah pencapaian event');
   assert(!SHARED.limitedActive(Date.parse(SHARED.LIMITED.end + 'T12:00:00+07:00') + 2 * 864e5), 'event berakhir');
   assert.throws(() => SHARED.actions.evMission(ev, { id: 'e_play' }, { ...ctx, now: Date.parse(SHARED.LIMITED.end + 'T12:00:00+07:00') + 2 * 864e5 }), /berakhir/);
+  // Banner Winter: unit eksklusif, pity, hanya saat event
+  const wv = SHARED.newVault(now0, Math.random); wv.diamonds = 1e6;
+  const wr = SHARED.actions.summon(wv, { banner: 'winter', count: 10 }, ctx);
+  for (let i = 0; i < 6; i++) SHARED.actions.summon(wv, { banner: 'winter', count: 10 }, { ...ctx, rng: () => 0.99 });
+  assert(wv.units.some(u => SHARED.UNIT_RARITY[u.type] === 'winter'), 'pity unit Winter');
+  assert(!SHARED.RARITY_ORDER.includes('winter') && SHARED.EXCLUSIVE.includes('winter'), 'Winter tidak ada di summon biasa');
+  assert.throws(() => SHARED.actions.summon(wv, { banner: 'winter', count: 1 }, { ...ctx, now: Date.parse(SHARED.LIMITED.end + 'T12:00:00+07:00') + 3 * 864e5 }), /berakhir/);
+  SHARED.actions.claim(ev, { result: { cleared: 20, won: false, diff: 'normal', map: 'frost', mode: 'normal', bossKills: 2, kills: 300, duration: 2000 } }, { ...ctx, now: now0 + 60000 });
+  assert(ev.ev.s.frost === 1, 'main di map event tercatat');
   console.log('✅ Semua uji misi, season pass & kode redeem lulus');
 })().catch(e => { console.error('❌', e); process.exit(1); });

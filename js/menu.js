@@ -28,7 +28,7 @@ function eventReady() {
   const e = PROFILE.vault.ev, now = Date.now(); if (!SHARED.limitedActive(now) || !e || e.id !== SHARED.LIMITED.id) return 0;
   return SHARED.EV_MISSIONS.filter(d => !e.mc.includes(d.id) && (e.s[d.stat] || 0) >= d.target).length + SHARED.EV_MILESTONES.filter((m, i) => e.earned >= m.at && !e.ms.includes(i)).length;
 }
-const RW_ICON = { coins: 'coin', diamonds: 'dia', gems: 'gem', crystals: 'cry', stones: 'orb', pxp: 'ticket', tok: 'tok', lan: 'lantern' };
+const RW_ICON = { coins: 'coin', diamonds: 'dia', gems: 'gem', crystals: 'cry', stones: 'orb', pxp: 'ticket', tok: 'tok', lan: 'snow' };
 
 const Menu = {
   open: false, screen: null, back: 'main', endData: null, resetArm: false, shopSel: 'scout',
@@ -117,7 +117,7 @@ const Menu = {
   badge(n) { return n ? `<span class="badge-dot on">${n}</span>` : ''; },
   rw(r) {
     const I = { coins: '🪙', diamonds: '💎', gems: '💠', crystals: '✨', stones: '🔮' };
-    return Object.keys(I).filter(k => r[k]).map(k => `${I[k]} ${r[k].toLocaleString('id-ID')}`).concat(r.skin ? [`🎨 ${SKINS[r.skin].name}`] : [], r.unit ? [`🗼 ${TOWERS[r.unit.type || r.unit] ? TOWERS[r.unit.type || r.unit].name : r.unit}`] : [], r.pxp ? [`🎫 ${r.pxp} XP`] : [], r.tok ? [`🎟️ ${r.tok}`] : [], r.lan ? [`🏮 ${r.lan}`] : []).join(' • ');
+    return Object.keys(I).filter(k => r[k]).map(k => `${I[k]} ${r[k].toLocaleString('id-ID')}`).concat(r.skin ? [`🎨 ${SKINS[r.skin].name}`] : [], r.unit ? [`🗼 ${TOWERS[r.unit.type || r.unit] ? TOWERS[r.unit.type || r.unit].name : r.unit}`] : [], r.pxp ? [`🎫 ${r.pxp} XP`] : [], r.tok ? [`🎟️ ${r.tok}`] : [], r.lan ? [`${SHARED.LIMITED.icon} ${r.lan}`] : []).join(' • ');
   },
   /** Index summon: semua unit, bentuknya, peluang & status koleksi */
   gachaIndex() {
@@ -323,7 +323,7 @@ const Menu = {
             <div class="showcase">${show}<div class="sc-plat"></div><button class="sc-edit" data-act="go:units">✎ Atur tim</button></div>
           </section>
           <aside class="lh-right">
-            ${SHARED.limitedActive(now) ? `<button class="rcard r-limited" data-act="go:event"><span class="rc-ic">${pxi('lantern')}</span><div><b>${esc(SHARED.LIMITED.name.toUpperCase())}</b><small>🏮 ${((v.ev && v.ev.id === SHARED.LIMITED.id && v.ev.lan) || 0).toLocaleString('id-ID')} • sisa <span data-cd="${SHARED.limitedEndsAt()}"></span></small></div>${this.badge(eventReady())}</button>` : ''}
+            ${SHARED.limitedActive(now) ? `<button class="rcard r-limited" data-act="go:event"><span class="rc-ic">${pxi('snow')}</span><div><b>${esc(SHARED.LIMITED.name.toUpperCase())}</b><small>${SHARED.LIMITED.icon} ${((v.ev && v.ev.id === SHARED.LIMITED.id && v.ev.lan) || 0).toLocaleString('id-ID')} • sisa <span data-cd="${SHARED.limitedEndsAt()}"></span></small></div>${this.badge(eventReady())}</button>` : ''}
             ${evOn ? `<button class="rcard r-event" data-act="go:play"><span class="rc-ic">${pxi('star')}</span><div><b>EVENT AKTIF</b><small>${ev.rewardMul > 1 ? `🪙 ×${ev.rewardMul} ` : ''}${ev.diamondMul > 1 ? `💎 ×${ev.diamondMul}` : ''} hadiah bermain</small></div></button>` : ''}
             <button class="rcard r-pass" data-act="go:pass"><span class="rc-ic">${pxi('ticket')}</span><div><b>SEASON PASS</b><small>Tier ${pt}/${SHARED.PASS.tiers}${ps.premium ? ' • ⭐' : ''}</small><div class="rc-bar"><div style="width:${ppct}%"></div></div></div>${this.badge(passReady())}</button>
             <button class="rcard r-daily" data-act="go:daily"><span class="rc-ic">${pxi('cal')}</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai • reset <span data-cd="' + nextDay + '"></span>' : 'Hadiah 🪙 ' + DAILY_REWARD + ' + 💎'}</small></div></button>
@@ -359,7 +359,7 @@ const Menu = {
       return `${this.header('Lainnya')}<div class="mlist">
         ${row('mgo:trade', '🔁', 'Trading', u ? 'Tukar unit dengan teman' : 'Perlu login')}
         ${row('mgo:levels', '⭐', 'Hadiah Level', levelReady() ? `${levelReady()} hadiah siap diambil` : 'Hadiah tiap naik level')}
-        ${row('mgo:event', '🏮', 'Event Terbatas', SHARED.limitedActive(Date.now()) ? SHARED.LIMITED.name : 'Tidak ada event aktif')}
+        ${row('mgo:event', '❄️', 'Event Terbatas', SHARED.limitedActive(Date.now()) ? SHARED.LIMITED.name : 'Tidak ada event aktif')}
         ${row('mgo:redeem', '🎁', 'Kode Redeem', 'Tukar kode hadiah')}
         ${row('mgo:scores', '🏆', 'Papan Skor', 'Lokal & global')}
         ${row('mgo:achievements', '🏅', 'Pencapaian', `${PROFILE.achievements.length}/${ACHIEVEMENTS.length}`)}
@@ -427,7 +427,7 @@ const Menu = {
     },
     event() {
       const now = Date.now(), L = SHARED.LIMITED;
-      if (!SHARED.limitedActive(now)) return `${this.header('Event')}<div class="box center-box"><div class="big-ic">${pxImg('lantern', 'huge')}</div><h3>Belum ada event terbatas</h3><p class="dim">Nantikan event berikutnya!</p></div>`;
+      if (!SHARED.limitedActive(now)) return `${this.header('Event')}<div class="box center-box"><div class="big-ic">${pxImg('snow', 'huge')}</div><h3>Belum ada event terbatas</h3><p class="dim">Nantikan event berikutnya!</p></div>`;
       const e = SHARED.rollEvent(PROFILE.vault, now) || { lan: 0, earned: 0, s: {}, mc: [], ms: [], buy: {} }, tab = this.evTab || 'mis';
       let body;
       if (tab === 'mis') body = `<div class="box">${SHARED.EV_MISSIONS.map(d => {
@@ -440,22 +440,28 @@ const Menu = {
         const top = SHARED.EV_MILESTONES[SHARED.EV_MILESTONES.length - 1].at;
         body = `<div class="box evroad"><div class="evtrack"><div class="evfill" style="width:${Math.min(100, e.earned / top * 100)}%"></div>
           ${SHARED.EV_MILESTONES.map((m, i) => `<i style="left:${m.at / top * 100}%" class="${e.earned >= m.at ? 'on' : ''}"></i>`).join('')}</div>
-          <small class="dim">Total 🏮 dikumpulkan: <b>${e.earned.toLocaleString('id-ID')}</b> (Lentera yang dibelanjakan tetap dihitung)</small>
+          <small class="dim">Total ${SHARED.LIMITED.icon} dikumpulkan: <b>${e.earned.toLocaleString('id-ID')}</b> (yang sudah dibelanjakan tetap dihitung)</small>
           <div class="evms">${SHARED.EV_MILESTONES.map((m, i) => { const ok = e.earned >= m.at, got = e.ms.includes(i), [ic, lab] = this.rwBig(m.reward);
-            return `<div class="evm ${got ? 'got' : ok ? 'ready' : ''}" data-nopx><span class="lvic">${ic}</span><b>${esc(lab)}</b><small>${pxImg('lantern')} ${m.at.toLocaleString('id-ID')}</small>
+            return `<div class="evm ${got ? 'got' : ok ? 'ready' : ''}" data-nopx><span class="lvic">${ic}</span><b>${esc(lab)}</b><small>${SHARED.LIMITED.icon} ${m.at.toLocaleString('id-ID')}</small>
               ${got ? `<span class="ok">${pxImg('check')}</span>` : `<button class="btn sm ${ok ? '' : 'gray'}" ${ok ? '' : 'disabled'} data-act="evms:${i}">${ok ? 'Ambil' : 'Terkunci'}</button>`}</div>`; }).join('')}</div></div>`;
-      } else body = `<div class="pshop">${SHARED.EV_SHOP.map(it => {
+      } else if (tab === 'units') body = `<div class="evunits">${SHARED.unitsOfRarity('winter').map(t => { const sk = UNIT_SKILLS[t] || {}, own = PROFILE.vault.units.some(u => u.type === t);
+          return `<div class="box evu"><canvas width="110" height="110" data-icon="${t}" data-skin="default" data-evo="0"></canvas><div><b>${TOWERS[t].name}</b> ${this.rarityTag(t)} ${own ? '<span class="rar" style="background:#43a047">Dimiliki</span>' : ''}
+            <small class="dim">${TOWERS[t].role}</small><p>${TOWERS[t].desc}</p>${sk.passive ? `<small><b>Pasif:</b> ${sk.passive.name} — ${sk.passive.desc}</small><br>` : ''}${sk.active ? `<small><b>Aktif:</b> ${sk.active.name} — ${sk.active.desc}</small>` : ''}</div></div>`; }).join('')}</div>
+        <small class="dim">Hanya dari ❄️ Banner Winter selama event: peluang unit Winter ${(SHARED.WINTER_GACHA.rate * 100).toFixed(1)}% per tarikan (Yeti ${Math.round(SHARED.WINTER_GACHA.yeti * 100)}% dari itu), dijamin di tarikan ke-${SHARED.WINTER_GACHA.pity}.</small>
+        <div class="row2"><button class="btn" data-act="evgo:gacha">❄️ Ke Banner Winter</button></div>`;
+      else body = `<div class="pshop">${SHARED.EV_SHOP.map(it => {
         const left = it.limit - (e.buy[it.id] || 0), owned = it.give.skin && PROFILE.vault.skins.includes(it.give.skin), can = left > 0 && !owned && e.lan >= it.cost;
         return `<div class="psi ${it.id === 'skin' ? 'r-secret' : ''} ${left && !owned ? '' : 'soldout'}"><span class="psi-ic">${it.icon}</span><b>${it.name}</b>
-          <small>${owned ? 'Sudah dimiliki' : `Stok ${left}/${it.limit}`}</small><button class="btn sm ${can ? '' : 'gray'}" ${can ? '' : 'disabled'} data-act="evbuy:${it.id}">🏮 ${it.cost.toLocaleString('id-ID')}</button></div>`;
-      }).join('')}</div><small class="dim">Lentera & stok hilang saat event berakhir — tukarkan sebelum waktunya habis.</small>`;
+          <small>${owned ? 'Sudah dimiliki' : `Stok ${left}/${it.limit}`}</small><button class="btn sm ${can ? '' : 'gray'}" ${can ? '' : 'disabled'} data-act="evbuy:${it.id}">${SHARED.LIMITED.icon} ${it.cost.toLocaleString('id-ID')}</button></div>`;
+      }).join('')}</div><small class="dim">${SHARED.LIMITED.token} & stok hilang saat event berakhir — tukarkan sebelum waktunya habis.</small>`;
       return `${this.header(L.name)}
-        <div class="box evhead"><span class="evart">${pxImg('lantern', 'huge')}</span>
+        <div class="box evhead"><span class="evart">${pxImg('snow', 'huge')}</span>
           <div class="evinfo"><small class="ph-k">EVENT TERBATAS</small><h3>${esc(L.name)}</h3><p>${SHARED.LIMITED.desc}</p>
             <small class="dim">⏳ Berakhir dalam <b data-cd="${SHARED.limitedEndsAt()}"></b></small></div>
-          <span class="evbal">🏮 <b>${e.lan.toLocaleString('id-ID')}</b><small>Lentera</small></span></div>
-        <small class="dim">Dapatkan 🏮 dari setiap permainan (wave, boss, menang; Sulit ×1,5) dan dari misi event.</small>
-        <div class="tabs">${[['mis', 'Misi Event'], ['road', 'Hadiah Pencapaian'], ['shop', 'Toko Event']].map(([k, l]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="evtab:${k}">${l}</button>`).join('')}</div>
+          <span class="evbal">${SHARED.LIMITED.icon} <b>${e.lan.toLocaleString('id-ID')}</b><small>${SHARED.LIMITED.token}</small></span></div>
+        <small class="dim">Dapatkan ${SHARED.LIMITED.icon} dari setiap permainan (wave, boss, menang; Sulit ×1,5; map event Lembah Beku ×1,5) dan dari misi event.</small>
+        <div class="evlinks"><button class="btn blue sm" data-act="evgo:gacha">❄️ Banner Winter — unit eksklusif</button><button class="btn sm" data-act="evgo:frost">🗺️ Main di Lembah Beku</button></div>
+        <div class="tabs">${[['mis', 'Misi Event'], ['road', 'Hadiah Pencapaian'], ['shop', 'Toko Event'], ['units', 'Unit Eksklusif']].map(([k, l]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="evtab:${k}">${l}</button>`).join('')}</div>
         ${body}`;
     },
     redeem() {
@@ -568,7 +574,7 @@ const Menu = {
             <div class="rslots" id="lobbyPlayers">${slots}</div>
             <div class="box rset" id="lobbySettings">
               <div class="rset-head"><h4>🗺️ Pilih Map</h4>${host ? '' : '<small class="dim">Hanya host yang bisa mengubah</small>'}</div>
-              <div class="rmaps">${MAPS.map((x, i) => `<button class="rmap ${i === r.map ? 'on' : ''}" data-act="lobby-map:${i}" ${host ? '' : 'disabled'}>
+              <div class="rmaps">${MAPS.map((x, i) => !mapOpen(x) ? '' : `<button class="rmap ${i === r.map ? 'on' : ''}" data-act="lobby-map:${i}" ${host ? '' : 'disabled'}>
                 <canvas width="160" height="96" data-map="${i}"></canvas><b>${x.name}</b><small>${'★'.repeat(x.stars)}</small></button>`).join('')}</div>
               <small class="dim rdesc">${esc(m.desc)}</small>
               <div class="ropts"><div><span>Kesulitan</span>${seg('lobby-diff', Object.entries(DIFFS).map(([k, d]) => [k, d.name]), r.diff)}</div>
@@ -590,8 +596,9 @@ const Menu = {
     play() {
       return `${this.header('Pilih Map')}
         <div class="cards">${MAPS.map((m, i) => {
+          if (!mapOpen(m)) return '';
           const b = PROFILE.best[bestKey(m.id, DIFF, MODE)] || 0, won = MODE === 'classic' && b >= DIFFS[DIFF].waves;
-          return `<div class="card ${MAP === m ? 'sel' : ''}" data-act="map:${i}">
+          return `<div class="card ${MAP === m ? 'sel' : ''} ${m.event ? 'evmap' : ''}" data-act="map:${i}">${m.event ? '<span class="evtag">❄️ EVENT</span>' : ''}
             <canvas width="200" height="120" data-map="${i}"></canvas>
             <div class="nm">${m.name} ${won ? '🏆' : ''}</div>
             <div class="stars">${'★'.repeat(m.stars)}${'☆'.repeat(4 - m.stars)}</div>
@@ -655,8 +662,9 @@ const Menu = {
     },
 
     gacha() {
-      const ban = this.banner || 'std', v = PROFILE.vault, feat = SHARED.featuredUnit(Date.now());
-      const tabs = `<div class="tabs">${Object.entries(GACHA.banners).map(([k, b]) => `<button class="tab ${ban === k ? 'on' : ''}" data-act="banner:${k}">${b.name}</button>`).join('')}<button class="tab ${ban === 'index' ? 'on' : ''}" data-act="banner:index">📖 Index Unit</button></div>`;
+      let ban = this.banner || 'std'; const v = PROFILE.vault, feat = SHARED.featuredUnit(Date.now());
+      if (GACHA.banners[ban] && GACHA.banners[ban].event && !SHARED.limitedActive(Date.now())) ban = this.banner = 'std';
+      const tabs = `<div class="tabs">${Object.entries(GACHA.banners).filter(([k, b]) => !b.event || SHARED.limitedActive(Date.now())).map(([k, b]) => `<button class="tab ${ban === k ? 'on' : ''}" data-act="banner:${k}">${b.name}</button>`).join('')}<button class="tab ${ban === 'index' ? 'on' : ''}" data-act="banner:index">📖 Index Unit</button></div>`;
       if (ban === 'index') return `${this.header('Summon')}${tabs}${this.gachaIndex()}`;
       const lucky = ban === 'lucky', cfg = lucky ? LUCKY : GACHA, cur = lucky ? 'gems' : 'diamonds', icon = lucky ? '💠' : '💎', bal = v[cur] || 0;
       const rates = Object.entries(cfg.rates).map(([r, p]) => `<span class="rate r-${r}" style="--rc:${RARITY[r].color}">${RARITY[r].name} ${p}%</span>`).join('');
@@ -664,7 +672,9 @@ const Menu = {
         <div class="gacha box ${ban}">
           <div class="gleft">
             <h3>${GACHA.banners[ban].name}</h3><p class="dim">${GACHA.banners[ban].desc}</p>
-            ${ban === 'feat' ? `<div class="featured"><canvas width="96" height="96" data-icon="${feat}" data-skin="default" data-evo="0"></canvas><div><small>UNIT UNGGULAN HARI INI</small><b>${TOWERS[feat].name}</b>${this.rarityTag(feat)}<small>${TOWERS[feat].desc}</small></div></div>`
+            ${ban === 'winter' ? `<div class="wban">${SHARED.unitsOfRarity('winter').map(t => `<div class="wbu"><canvas width="96" height="96" data-icon="${t}" data-skin="default" data-evo="0"></canvas><b>${TOWERS[t].name}</b><small>${t === 'yeti' ? (SHARED.WINTER_GACHA.rate * SHARED.WINTER_GACHA.yeti * 100).toFixed(2) : (SHARED.WINTER_GACHA.rate * (1 - SHARED.WINTER_GACHA.yeti) * 100).toFixed(2)}%</small></div>`).join('')}</div>
+              <p class="dim">❄️ Unit Winter dijamin dalam <b>${SHARED.WINTER_GACHA.pity - ((v.pity || {}).wex || 0)}</b> tarikan • berakhir <span data-cd="${SHARED.limitedEndsAt()}"></span></p>`
+            : ban === 'feat' ? `<div class="featured"><canvas width="96" height="96" data-icon="${feat}" data-skin="default" data-evo="0"></canvas><div><small>UNIT UNGGULAN HARI INI</small><b>${TOWERS[feat].name}</b>${this.rarityTag(feat)}<small>${TOWERS[feat].desc}</small></div></div>`
               : `<div class="gacha-art">${lucky ? '🍀' : '🎰'}</div>`}
             <div class="rates">${rates}</div>
             <p class="dim">Pity: <b>${v.pity[ban] || 0}/${cfg.pity}</b> — Legendaris dijamin di tarikan ke-${cfg.pity}. 10× menjamin minimal 1 ${lucky ? 'Legendaris' : 'Epik'}.</p>
@@ -858,7 +868,7 @@ const Menu = {
           <tr><td>Musuh dikalahkan</td><td><b>${S.kills}</b> (boss ${S.bossKills})</td></tr>
           <tr><td>Uang didapat</td><td><b>$${S.earned.toLocaleString('id-ID')}</b></td></tr>
           <tr><td>Durasi</td><td><b>${this.fmtTime(S.time)}</b></td></tr>
-          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.diamonds ? ` &nbsp; <b>💎 +${d.diamonds}</b>` : ''}${d.crystals ? ` &nbsp; <b>✨ +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}${d.lan ? ` &nbsp; <b>🏮 +${d.lan}</b>` : ''}</td></tr></table>
+          <tr><td>Hadiah</td><td><b class="gold">🪙 +${d.coins}</b> &nbsp; <b class="xpc">+${d.xp} XP</b>${d.diamonds ? ` &nbsp; <b>💎 +${d.diamonds}</b>` : ''}${d.crystals ? ` &nbsp; <b>✨ +${d.crystals}</b>` : ''}${d.stones ? ` &nbsp; <b>🔮 +${d.stones}</b>` : ''}${d.lan ? ` &nbsp; <b>${SHARED.LIMITED.icon} +${d.lan}</b>` : ''}</td></tr></table>
           ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${TOWERS[m.type].name}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `🏅 ${a.name}`).join('<br>')}</div>` : ''}</div>
         ${isMP() ? `<div class="row2"><button class="btn big" data-act="go:mabar">🤝 Mabar Lagi</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`
@@ -872,7 +882,7 @@ const Menu = {
     daily() { this.after.play(); },
     units() { this.drawIcons(); },
     shop() { this.drawIcons(); document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); },
-    gacha() { this.drawIcons(); },
+    gacha() { this.drawIcons(); this.tickCd(); },
     trade() { this.drawIcons(); document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); if (Online.loggedIn && !this.tradeData) this.loadTrades(); },
     tradeNew() {
       this.drawIcons();
@@ -985,9 +995,10 @@ const Menu = {
       case 'ptab': this.passTab = arg; this.show('pass', true); break;
       case 'lvclaim': this.eco('levelClaim', { lv: arg === 'all' ? 'all' : +arg }, r => r.claimed.length > 1 ? `⭐ ${r.claimed.length} hadiah level diambil!` : '⭐ ' + this.rw(r.claimed[0].got)); break;
       case 'evtab': this.evTab = arg; this.show('event', true); break;
-      case 'evm': this.eco('evMission', { id: arg }, r => '🏮 ' + this.rw(r)); break;
-      case 'evms': this.eco('evMilestone', { i: arg === 'all' ? 'all' : +arg }, r => '🏮 ' + r.claimed.map(g => this.rw(g)).join(' • ')); break;
-      case 'evbuy': this.eco('evShopBuy', { id: arg }, r => '🏮 ' + this.rw(r.got)); break;
+      case 'evm': this.eco('evMission', { id: arg }, r => this.rw(r)); break;
+      case 'evms': this.eco('evMilestone', { i: arg === 'all' ? 'all' : +arg }, r => r.claimed.map(g => this.rw(g)).join(' • ')); break;
+      case 'evbuy': this.eco('evShopBuy', { id: arg }, r => '🎁 ' + this.rw(r.got)); break;
+      case 'evgo': if (arg === 'gacha') { this.banner = 'winter'; this.go('gacha'); } else { const i = MAPS.findIndex(m => m.id === arg); if (i >= 0) { MAP = MAPS[i]; loadMap(MAP); } this.go('play'); } break;
       case 'pshop': { const it = SHARED.PASS_SHOP.find(x => x.id === arg); if (it && (it.cost < 300 || confirm(`Tukar 🎟️ ${it.cost} Token untuk ${it.name}?`))) this.eco('passShopBuy', { id: arg }, r => '🛍️ Didapat: ' + this.rw(r.got)).then(r => { if (r && r.got.unit) this.showPull([r.got.unit]); }); break; }
       case 'pclaimall': this.eco('passClaim', { tier: 'all' }, r => `🎁 ${r.claimed.length} hadiah diambil!`).then(() => this.show('pass', true)); break;
       case 'pbuy': if (confirm(`Aktifkan Season Pass Premium seharga 💠 ${SHARED.PASS.premiumCost} Permata?`)) this.eco('passBuy', {}, () => '⭐ Pass Premium aktif!').then(() => this.show('pass', true)); break;
@@ -1267,6 +1278,7 @@ function autoFullscreen() {
 }
 function startGame(opts = {}) {
   sfx('click');
+  if (!opts.daily && !mapOpen(MAP)) { MAP = MAPS[0]; loadMap(MAP); UI.toast('Map event sudah berakhir'); }
   SaveGame.clear();
   newGame(opts);
   PROFILE.stats.games++; saveProfile(); checkAchievements(null);

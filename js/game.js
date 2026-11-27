@@ -126,7 +126,7 @@ function dailyChallenge() {
   let seed = [...date].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 2147483647, 7) || 1;
   const rnd = () => ((seed = seed * 16807 % 2147483647) / 2147483647);
   for (let i = 0; i < 3; i++) rnd();
-  const map = Math.floor(rnd() * MAPS.length), diff = rnd() < 0.6 ? 'normal' : 'hard';
+  const map = Math.floor(rnd() * BASE_MAPS), diff = rnd() < 0.6 ? 'normal' : 'hard';
   const keys = Object.keys(MODIFIERS), mods = [];
   while (mods.length < 2) {
     const k = keys[Math.floor(rnd() * keys.length)];

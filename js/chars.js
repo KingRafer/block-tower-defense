@@ -34,6 +34,8 @@ const CHARS = {
   cosmic:    { shirt: '#1a237e', pants: '#0d1240', hat: 'galaxycrown', hatC: '#ffd54f', face: 'starface', outfit: ['robe', 'stars'], back: 'starcape', weapon: 'starorb', robe: true },
   goldminer: { shirt: '#8d6e63', pants: '#1e5aa8', hat: 'minerhat', hatC: '#ffc107', face: 'beard', faceC: '#6d4c41', outfit: ['overalls'], back: 'goldsack', weapon: 'pickaxe' },
   nuke:      { special: true },
+  snowman:   { special: true },
+  yeti:      { special: true },
   dragon:    { special: true },
 };
 /* Tinggi penutup kepala (untuk mahkota evolusi) */
@@ -292,4 +294,44 @@ function drawDragon(t, x, y, sk, body) {
   R(12, -5, 4, 3.5, '#ffeb3b'); R(14, -4.5, 1.5, 2.5, '#111', false); R(22, 3, 4, 2, '#fff', false); R(24, -1, 2, 1.5, '#111', false);
   if ((t.recoil || 0) > 0.2) { C(30, 1, 3 + t.recoil * 3, '#ff6d00', false); C(30, 1, 1.5 + t.recoil * 1.5, '#fff59d', false); }
   ctx.restore();
+}
+
+/* ---------- unit Winter ---------- */
+function drawSnowman(t, x, y, sk) {
+  const tt = time(), snow = sk.body && !sk.rainbow ? shade(sk.body, 40) : '#f5fbff', sh = '#c7dbe8', scarf = sk.gun || '#e53935';
+  C(x, y - 2, 13, snow); ctx.fillStyle = sh; ctx.beginPath(); ctx.arc(x + 4, y + 1, 9, 0, 7); ctx.globalAlpha *= 0.35; ctx.fill(); ctx.globalAlpha /= 0.35;
+  C(x, y - 20, 9.5, snow);
+  for (let i = 0; i < 2; i++) C(x, y - 6 + i * 6, 1.6, '#37474f', false);
+  R(x - 9, y - 13, 18, 4, scarf); R(x + 3, y - 11, 4, 9, shade(scarf, -25));
+  C(x - 3.5, y - 22, 1.4, '#212121', false); C(x + 3.5, y - 22, 1.4, '#212121', false);
+  P([x, y - 19.5, x + 9, y - 18, x, y - 17.5], '#ff8f00');
+  for (let i = 0; i < 5; i++) C(x - 4 + i * 2, y - 15.5 + Math.abs(i - 2) * 0.4, 0.7, '#212121', false);
+  // topi
+  R(x - 9, y - 29, 18, 2.5, '#263238'); R(x - 6, y - 39, 12, 10, '#263238'); R(x - 6, y - 32, 12, 2, scarf, false);
+  // tangan ranting + bola salju mengikuti arah bidik
+  const a = t.angle || 0, ax = Math.cos(a), ay = Math.sin(a);
+  ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(x - 8, y - 5); ctx.lineTo(x - 18, y - 13); ctx.moveTo(x - 15, y - 11); ctx.lineTo(x - 17, y - 16);
+  ctx.moveTo(x + 8 * ax, y - 5 + 4 * ay); ctx.lineTo(x + 18 * ax, y - 8 + 12 * ay); ctx.stroke();
+  if ((t.recoil || 0) < 0.3) C(x + 19 * ax, y - 9 + 12 * ay, 3.2 + Math.sin(tt * 3) * 0.2, '#ffffff');
+}
+function drawYeti(t, x, y, sk) {
+  const tt = time(), fur = sk.body && !sk.rainbow ? sk.body : '#eaf4fb', furD = shade(fur.startsWith('#') ? fur : '#eaf4fb', -45), face = '#7fa8c4';
+  const stomp = (t.recoil || 0) * 3, br = Math.sin(tt * 2) * 0.8;
+  // kaki
+  R(x - 13, y + 1, 9, 8, furD); R(x + 4, y + 1, 9, 8, furD);
+  // badan besar berbulu
+  ctx.fillStyle = fur; ctx.strokeStyle = OL; ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(x - 17, y + 3); ctx.lineTo(x - 19, y - 18 + br); ctx.lineTo(x - 12, y - 30 + br); ctx.lineTo(x + 12, y - 30 + br); ctx.lineTo(x + 19, y - 18 + br); ctx.lineTo(x + 17, y + 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  for (let i = 0; i < 6; i++) P([x - 16 + i * 6.4, y + 3, x - 13 + i * 6.4, y + 7, x - 10 + i * 6.4, y + 3], fur, false);
+  R(x - 9, y - 16, 18, 16, shade('#eaf4fb', -18), false);
+  // lengan (menghentak)
+  R(x - 25, y - 22 + stomp, 9, 18, fur); R(x + 16, y - 22 + stomp, 9, 18, fur);
+  R(x - 26, y - 6 + stomp, 11, 6, furD); R(x + 15, y - 6 + stomp, 11, 6, furD);
+  // wajah
+  R(x - 8, y - 27 + br, 16, 11, face); C(x - 3.5, y - 23 + br, 1.6, '#0d47a1', false); C(x + 3.5, y - 23 + br, 1.6, '#0d47a1', false);
+  R(x - 4, y - 19.5 + br, 8, 2.5, '#263238', false); R(x - 3, y - 19.5 + br, 1.5, 1.5, '#fff', false); R(x + 1.5, y - 19.5 + br, 1.5, 1.5, '#fff', false);
+  // tanduk es
+  P([x - 11, y - 29 + br, x - 15, y - 39 + br, x - 7, y - 30 + br], '#b3e5fc'); P([x + 11, y - 29 + br, x + 15, y - 39 + br, x + 7, y - 30 + br], '#b3e5fc');
+  if ((t.recoil || 0) > 0.3) { ctx.strokeStyle = 'rgba(179,229,252,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + 8, 24 + t.recoil * 10, 7 + t.recoil * 3, 0, 0, 7); ctx.stroke(); }
 }

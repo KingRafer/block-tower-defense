@@ -213,6 +213,7 @@ const PXI = {
   lock: ['......', '...kkk', '..kS..', '..kS..', '.kkkkk', '.kyyyy', '.kyyyk', '.kyyyk', '.kyyyy', '.kYYYY', '.kkkkk', '......'],
   check: ['............', '.kkkkkkkkkk.', '.kggggggggk.', '.kgggggggwk.', '.kggggggwgk.', '.kgwgggwggk.', '.kgwwgwgggk.', '.kggwwggggk.', '.kgggwggggk.', '.kGGGGGGGGk.', '.kkkkkkkkkk.', '............'],
   lantern: ['.....k', '....kk', '..kYYY', '.krrrr', 'krwrrr', 'krwrrr', 'krrrrr', 'kRrrrr', '.kRRRR', '..kYYY', '...kky', '....ky'],
+  snow: ['.....kk.....', '..k.kwwk.k..', '.kwkkwwkkwk.', '..kwkwwkwk..', '.kkkwwwwkkk.', 'kwwwwbbwwwwk', 'kwwwwbbwwwwk', '.kkkwwwwkkk.', '..kwkwwkwk..', '.kwkkwwkkwk.', '..k.kwwk.k..', '.....kk.....'],
   play: ['..kk........', '..kwk.......', '..kwwk......', '..kwwwk.....', '..kwwwwk....', '..kwwwwwk...', '..kwwwwwk...', '..kwwwwk....', '..kwwwk.....', '..kwwk......', '..kwk.......', '..kk........'],
 };
 function pxiRows(name) {
@@ -228,7 +229,7 @@ function drawPxi(c) {
 
 /* Emoji → ikon pixel (otomatis di semua menu, popup & notifikasi) */
 const PXE = { '🪙': 'coin', '💎': 'dia', '💠': 'gem', '✨': 'cry', '🔮': 'orb', '🎟': 'tok', '🎫': 'ticket', '🗼': 'tower', '🎨': 'paint', '🎁': 'gift',
-  '🎯': 'target', '⚡': 'bolt', '📅': 'cal', '⚙': 'gear', '⭐': 'star', '🔒': 'lock', '✅': 'check', '🏮': 'lantern' };
+  '🎯': 'target', '⚡': 'bolt', '📅': 'cal', '⚙': 'gear', '⭐': 'star', '🔒': 'lock', '✅': 'check', '🏮': 'lantern', '❄': 'snow' };
 const PXE_RE = new RegExp('(' + Object.keys(PXE).join('|') + ')\uFE0F?', 'g');
 const pxUrls = {};
 function pxUrl(name) {

@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '5.2.0';
+const VERSION = '5.3.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
@@ -25,7 +25,12 @@ const MAPS = [
   { id:'lava', name:'Gunung Lava', stars:4, desc:'Jalur pendek! Hanya untuk pemain berpengalaman.',
     path:[[-1,6],[5,6],[5,2],[10,2],[10,9],[15,9],[15,4],[21,4]],
     th:{g1:'#4e342e',g2:'#463029',p1:'#212121',p2:'#262626',tree:'#ff5722',rock:'#616161',bg:'#3e2723',lava:true} },
+  { id:'frost', name:'Lembah Beku', stars:3, event:true, desc:'❄️ Map event Winter! Danau beku berliku. Kepingan Salju ×1,5.',
+    path:[[-1,1],[3,1],[3,6],[1,6],[1,10],[7,10],[7,3],[11,3],[11,9],[15,9],[15,2],[18,2],[18,7],[21,7]],
+    th:{g1:'#e8f4fa',g2:'#dbeef7',p1:'#8fb8cf',p2:'#84aec6',tree:'#2e6b4a',rock:'#a7c0cf',bg:'#bcdcea',snow:true,ice:true} },
 ];
+const BASE_MAPS = MAPS.filter(m => !m.event).length;      // map biasa (map event selalu di akhir)
+const mapOpen = m => !m.event || SHARED.limitedActive(Date.now());
 
 /* ---------------- KESULITAN ---------------- */
 const DIFFS = {
@@ -257,6 +262,24 @@ Object.assign(TOWERS, {
       {name:'Urat Emas',      cost:1800, dmg:8,  range:3.4, rate:0.55, goldHit:16, hidden:true},
       {name:'Raja Tambang',   cost:3600, dmg:13, range:3.6, rate:0.5,  goldHit:24, hidden:true, pierceArmor:true}]},
 });
+/* ---------------- UNIT EKSKLUSIF WINTER (Banner Winter, selama event) ---------------- */
+Object.assign(TOWERS, {
+  snowman: { name:'Manusia Salju', color:'#e3f2fd', limit:3, role:'Winter • Kontrol',
+    desc:'Eksklusif event Winter. Melempar bola salju yang meledak, memperlambat musuh di area.',
+    levels:[
+      {name:'Manusia Salju',  cost:900,  dmg:8,  range:3.4, rate:1.1, splash:0.9, slow:0.3},
+      {name:'Bola Salju Besar',cost:800, dmg:14, range:3.6, rate:1.0, splash:1.0, slow:0.35},
+      {name:'Badai Salju',    cost:1900, dmg:24, range:3.9, rate:0.9, splash:1.2, slow:0.4, hidden:true},
+      {name:'Es Abadi',       cost:4200, dmg:42, range:4.2, rate:0.8, splash:1.3, slow:0.45, hidden:true, pierceArmor:true},
+      {name:'Raja Salju',     cost:8500, dmg:72, range:4.5, rate:0.7, splash:1.5, slow:0.5,  hidden:true, pierceArmor:true}]},
+  yeti: { name:'Yeti', color:'#90caf9', limit:1, role:'Winter • Penghancur',
+    desc:'Eksklusif event Winter. Hentakan es raksasa yang melukai & memperlambat semua musuh di sekitarnya, kuat melawan boss.',
+    levels:[
+      {name:'Yeti',           cost:4000,  dmg:28,  range:2.4, rate:0.9,  aura:true, slow:0.35, pierceArmor:true, bossMul:1.3},
+      {name:'Cakar Es',       cost:3800,  dmg:50,  range:2.6, rate:0.85, aura:true, slow:0.4,  pierceArmor:true, bossMul:1.4},
+      {name:'Raungan Beku',   cost:8000,  dmg:95,  range:2.9, rate:0.8,  aura:true, slow:0.45, pierceArmor:true, bossMul:1.5, hidden:true},
+      {name:'Yeti Purba',     cost:17000, dmg:180, range:3.2, rate:0.7,  aura:true, slow:0.55, pierceArmor:true, bossMul:1.8, hidden:true}]},
+});
 const TOWER_ORDER = [...UNIT_TYPES].sort((a, b) => RARITY[UNIT_RARITY[a]].rank - RARITY[UNIT_RARITY[b]].rank);
 const DEFAULT_LOADOUT = [...STARTER_UNITS];
 /* Jenis proyektil (tower lain memakai tembakan langsung) */
@@ -306,7 +329,7 @@ const ACHIEVEMENTS = [
   { id:'towers_100',  name:'Arsitek',          desc:'Pasang 100 tower',               coins:200, test:(p)=>p.stats.towersPlaced>=100 },
   { id:'perfect',     name:'Tanpa Cela',       desc:'Menang tanpa kehilangan nyawa',  coins:500, test:(p,g)=>g && g.won && g.hp>=g.maxHp },
   { id:'hard_win',    name:'Legenda',          desc:'Menang di kesulitan Sulit',      coins:1000,test:(p,g)=>g && g.won && g.diff==='hard' },
-  { id:'all_maps',    name:'Penjelajah',       desc:'Menang di semua map',            coins:800, test:(p)=>MAPS.every(m=>Object.keys(DIFFS).some(d=>(p.best[m.id+'_'+d]||0)>=DIFFS[d].waves)) },
+  { id:'all_maps',    name:'Penjelajah',       desc:'Menang di semua map',            coins:800, test:(p)=>MAPS.filter(m=>!m.event).every(m=>Object.keys(DIFFS).some(d=>(p.best[m.id+'_'+d]||0)>=DIFFS[d].waves)) },
   { id:'collector',   name:'Kolektor',         desc:'Miliki semua jenis unit',               coins:300, test:(p)=>UNIT_TYPES.every(k=>p.vault.units.some(u=>u.type===k)) },
   { id:'rich',        name:'Sultan',           desc:'Dapatkan $50.000 dalam satu game', coins:300, test:(p,g)=>g && g.earned>=50000 },
 ];
@@ -401,6 +424,8 @@ const EVOS = {
   wizard:    { name:'Penyihir Waktu',color:'#311b92', perk:'freeze',   mul:{ dmg:1.35, chainAdd:2 }, desc:'Sihir 20% membekukan musuh 1 detik, +2 lompatan.' },
   reaper:    { name:'Dewa Kematian', color:'#000000', perk:null,       mul:{ dmg:1.5, slowAdd:0.1, range:1.15 }, desc:'Aura +50% damage, +10% perlambatan, +15% jangkauan.' },
   cosmic:    { name:'Pencipta Semesta', color:'#000051', perk:'crit', mul:{ dmg:1.45, chainAdd:3 }, desc:'Bintang melompat +3 dan 25% critical.' },
+  snowman:   { name:'Raja Es',       color:'#81d4fa', perk:'freeze',   mul:{ dmg:1.4, splash:1.2 }, desc:'20% peluang membekukan musuh 1 detik, ledakan salju lebih luas.' },
+  yeti:      { name:'Yeti Purbakala',color:'#4fc3f7', perk:null,       mul:{ dmg:1.5, slowAdd:0.1, range:1.15 }, desc:'Hentakan +50% damage, +10% perlambatan, +15% jangkauan.' },
   goldminer: { name:'Juragan Emas',  color:'#ff6f00', perk:null,       mul:{ dmg:1.3, goldHit:1.5 }, desc:'Emas per pukulan +50%.' },
   angel:     { name:'Serafim Emas',  color:'#ffd54f', perk:'crit',     mul:{ dmg:1.4, range:1.1 },  desc:'25% peluang sinar critical 3× damage.' },
 };

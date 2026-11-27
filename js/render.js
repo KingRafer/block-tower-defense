@@ -6,6 +6,13 @@
 const cv = document.getElementById('game');
 let ctx = cv.getContext('2d');
 let fps = 60, fpsAcc = 0, fpsFrames = 0;
+/* Resolusi arena mengikuti ukuran layar (maks 2×) agar gambar tajam */
+let RES = 1, resCheck = 0;
+function fitRes() {
+  const r = cv.getBoundingClientRect(); if (!r.width) return;
+  const want = Math.min(2, Math.max(1, Math.ceil(r.width * (window.devicePixelRatio || 1) / W * 2) / 2));
+  if (want !== RES || cv.width !== Math.round(W * want)) { RES = want; cv.width = Math.round(W * RES); cv.height = Math.round(H * RES); }
+}
 
 function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
@@ -39,6 +46,7 @@ function drawMapStatic(g) {
     g.fillStyle = isP ? ((c + r) % 2 ? th.p1 : th.p2) : ((c + r) % 2 ? th.g1 : th.g2);
     g.fillRect(c * T, r * T, T, T);
     if (isP) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(c * T + 6, r * T + 6, 10, 6); g.fillRect(c * T + 28, r * T + 30, 12, 6); }
+    else if (th.ice && (c * 5 + r * 7) % 9 === 0) { g.fillStyle = '#b9e2f3'; g.fillRect(c * T + 6, r * T + 10, 30, 22); g.fillStyle = '#e8f7ff'; g.fillRect(c * T + 10, r * T + 13, 10, 3); g.fillRect(c * T + 24, r * T + 24, 6, 2); }
     else if (th.lava && (c * 7 + r * 3) % 11 === 0) { g.fillStyle = '#ff6d00'; g.fillRect(c * T + 12, r * T + 14, 18, 6); g.fillRect(c * T + 20, r * T + 20, 8, 14); }
     if (SET.grid) { g.strokeStyle = 'rgba(0,0,0,.08)'; g.lineWidth = 1; g.strokeRect(c * T, r * T, T, T); }
   }
@@ -61,12 +69,12 @@ function drawMapStatic(g) {
   }
 }
 function drawMap() {
-  const key = MAP.id + SET.grid;
+  const key = MAP.id + SET.grid + RES;
   if (mapCacheKey !== key) {
-    mapCache = document.createElement('canvas'); mapCache.width = W; mapCache.height = H;
-    drawMapStatic(mapCache.getContext('2d')); mapCacheKey = key;
+    mapCache = document.createElement('canvas'); mapCache.width = W * RES; mapCache.height = H * RES;
+    const mg = mapCache.getContext('2d'); mg.scale(RES, RES); drawMapStatic(mg); mapCacheKey = key;
   }
-  ctx.drawImage(mapCache, 0, 0);
+  ctx.drawImage(mapCache, 0, 0, W, H);
   // portal spawn
   const sy = MAP.path[0][1] * T, pulse = 0.5 + Math.sin(S.time * 4) * 0.2;
   ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0, sy + 4, 12, T - 8);
@@ -106,36 +114,12 @@ function drawAccessory(acc, x, y, sk) {
   else if (acc === 'horn') { ctx.fillStyle = '#212121'; ctx.fillRect(x - 10, y - 33, 4, 7); ctx.fillRect(x + 6, y - 33, 4, 7); }
   else if (acc === 'santa') { ctx.fillStyle = '#d32f2f'; ctx.beginPath(); ctx.moveTo(x - 9, y - 27); ctx.lineTo(x + 9, y - 27); ctx.lineTo(x + 12, y - 38); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(x - 10, y - 28, 20, 3); ctx.fillRect(x + 10, y - 40, 4, 4); }
   else if (acc === 'antenna') { ctx.fillStyle = '#90a4ae'; ctx.fillRect(x - 1, y - 36, 2, 9); ctx.fillStyle = '#00e676'; ctx.fillRect(x - 2, y - 38, 4, 4); }
+  else if (acc === 'beanie') { ctx.fillStyle = '#4fc3f7'; ctx.beginPath(); ctx.arc(x, y - 26, 10, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 10.5, y - 27, 21, 4); ctx.beginPath(); ctx.arc(x, y - 37, 3.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#e1f5fe'; for (let i = 0; i < 3; i++) ctx.fillRect(x - 6 + i * 5, y - 33, 2, 2); }
   else if (acc === 'halo') { ctx.strokeStyle = '#fff59d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - 33, 9, 3, 0, 0, 7); ctx.stroke(); }
 }
-/* ---------- gaya pixel untuk unit ----------
- * Unit digambar ke kanvas kecil (½ resolusi) lalu diperbesar tanpa smoothing,
- * diberi garis tepi gelap 1px agar serasi dengan latar pixel-art. */
-const PIX = { sc: 0.5, bx: 64, top: 84, bot: 30, a: null, b: null, hard: false };
-function pixelSprite(x, y, draw) {
-  const w = Math.ceil(PIX.bx * 2 * PIX.sc), h = Math.ceil((PIX.top + PIX.bot) * PIX.sc);
-  if (!PIX.a) { PIX.a = document.createElement('canvas'); PIX.b = document.createElement('canvas'); }
-  const A = PIX.a, B = PIX.b;
-  if (A.width !== w + 2 || A.height !== h + 2) { A.width = B.width = w + 2; A.height = B.height = h + 2; }
-  const ga = A.getContext('2d'), gb = B.getContext('2d'), main = ctx;
-  ga.setTransform(1, 0, 0, 1, 0, 0); ga.clearRect(0, 0, A.width, A.height); ga.globalAlpha = 1;
-  ga.setTransform(PIX.sc, 0, 0, PIX.sc, 1 + (PIX.bx - x) * PIX.sc, 1 + (PIX.top - y) * PIX.sc);
-  ctx = ga;
-  try { draw(); } finally { ctx = main; }
-  if (PIX.hard) {   // ikon menu: alpha dibuat tegas (tanpa anti-alias)
-    const im = ga.getImageData(0, 0, A.width, A.height), d = im.data;
-    for (let i = 3; i < d.length; i += 4) d[i] = d[i] > 100 ? 255 : 0;
-    ga.putImageData(im, 0, 0);
-  }
-  gb.setTransform(1, 0, 0, 1, 0, 0); gb.clearRect(0, 0, B.width, B.height); gb.globalAlpha = 1;
-  gb.globalCompositeOperation = 'source-over';
-  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) gb.drawImage(A, dx, dy);
-  gb.globalCompositeOperation = 'source-in'; gb.fillStyle = '#141a1f'; gb.fillRect(0, 0, B.width, B.height);
-  gb.globalCompositeOperation = 'source-over'; gb.drawImage(A, 0, 0);
-  const sm = main.imageSmoothingEnabled; main.imageSmoothingEnabled = false;
-  main.drawImage(B, x - PIX.bx - 1 / PIX.sc, y - PIX.top - 1 / PIX.sc, B.width / PIX.sc, B.height / PIX.sc);
-  main.imageSmoothingEnabled = sm;
-}
+/* Unit digambar langsung dalam resolusi penuh (tajam di layar HP/retina) */
+function pixelSprite(x, y, draw) { draw(); }
 function drawTower(t, ghost) {
   const unit = ghost ? unitOf(t.type) : t;
   const evo = !!unit.evo, sk = SKINS[(ghost ? unit.skin : t.skin) || 'default'] || SKINS.default;
@@ -156,6 +140,8 @@ function drawTower(t, ghost) {
     if (t.type === 'farm') drawFarm(t, x, y, sk);
     else if (t.type === 'nuke') drawNuke(t, x, y, sk, body);
     else if (t.type === 'dragon') drawDragon(t, x, y, sk, body);
+    else if (t.type === 'snowman') drawSnowman(t, x, y, sk);
+    else if (t.type === 'yeti') drawYeti(t, x, y, sk);
     else drawHero(t, x, y, sk, evo, base);
   });
   for (let i = 0; i < t.level; i++) {
@@ -172,10 +158,17 @@ function drawTower(t, ghost) {
 function drawUnitIcon(canvas, type, skin, evo) {
   const g = canvas.getContext('2d'), prev = ctx;
   g.clearRect(0, 0, canvas.width, canvas.height);
-  g.save(); g.scale(canvas.width / 64, canvas.height / 64); g.imageSmoothingEnabled = false;
-  ctx = g; PIX.hard = true;
+  // resolusi kanvas mengikuti ukuran tampil × devicePixelRatio agar tidak buram
+  const dpr = Math.min(3, window.devicePixelRatio || 1), cw = canvas.clientWidth, chh = canvas.clientHeight;
+  if (cw > 0 && chh > 0) {
+    const tw = Math.round(cw * dpr), th = Math.round(chh * dpr);
+    if (canvas.width !== tw || canvas.height !== th) { canvas.style.width = cw + 'px'; canvas.style.height = chh + 'px'; canvas.width = tw; canvas.height = th; }
+  }
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  g.save(); g.scale(canvas.width / 64, canvas.height / 64); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  ctx = g;
   try { drawTower({ type, x: 32, y: 40, level: 0, angle: -0.6, recoil: 0, evo, skin: skin || 'default', owner: null }, false); }
-  finally { ctx = prev; PIX.hard = false; g.restore(); }
+  finally { ctx = prev; g.restore(); }
 }
 
 /* ---------------- MUSUH ---------------- */
@@ -230,6 +223,8 @@ function drawBossBar() {
 
 /* ---------------- FRAME ---------------- */
 function draw(dt) {
+  if (--resCheck <= 0) { resCheck = 30; fitRes(); }
+  ctx.setTransform(RES, 0, 0, RES, 0, 0);
   ctx.save();
   if (S.shake > 0) { ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake); S.shake *= 0.85; if (S.shake < 0.5) S.shake = 0; }
   drawMap();

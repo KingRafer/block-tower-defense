@@ -1,5 +1,18 @@
 # Changelog
 
+## [5.3.0] — 2026-11-27
+### Ditambahkan
+- **Event Winter: Festival Musim Dingin** (27 Nov 2026 – 10 Jan 2027) menggantikan Festival Lentera. Token event: ❄️ Kepingan Salju.
+- **Skin Musim Dingin** (topi kupluk rajut + nuansa es) — dari Toko Event atau hadiah pencapaian 4.000 ❄️.
+- **❄️ Banner Winter** di Summon (hanya selama event) dengan **2 unit eksklusif** yang tidak ada di banner lain:
+  **Manusia Salju** (bola salju meledak + memperlambat; aktif *Badai Salju* membekukan area) dan
+  **Yeti** (hentakan es di sekitar, kuat melawan boss; aktif *Hentakan Gletser*). Peluang 2,5% per tarikan, dijamin di tarikan ke-70.
+- **Map event Lembah Beku**: danau beku berliku, hanya bisa dimainkan selama event, Kepingan Salju ×1,5. Ada misi event khusus map ini.
+- Tab **Unit Eksklusif** di layar event.
+### Diubah
+- Tampilan karakter kembali **standar dan tajam** (tidak buram): ikon unit digambar sesuai resolusi layar (HP/retina),
+  dan arena permainan dirender hingga 2× resolusi.
+
 ## [5.2.0] — 2026-11-27
 ### Ditambahkan
 - **Event terbatas: Festival Lentera** (27 Nov – 11 Des 2026). Kumpulkan 🏮 Lentera dari setiap permainan (wave, boss, menang; Sulit ×1,5), selesaikan 6 misi event,

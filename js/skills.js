@@ -27,6 +27,8 @@ const ATK_STYLE = {
   angel:     { p: 'holy',    col: '#fff59d', imp: 'holy' },
   cosmic:    { p: 'star',    col: '#ea80fc', imp: 'magic' },
   goldminer: { p: 'pick',    col: '#ffd54f', imp: 'gold' },
+  snowman:   { p: 'orb',     col: '#ffffff', imp: 'ice' },
+  yeti:      { p: 'ice',     col: '#b3e5fc', imp: 'ice' },
 };
 
 /** Efek serangan (visual) — dipakai host & tamu mabar */
@@ -170,6 +172,10 @@ const UNIT_SKILLS = {
                active:  { name: 'Lautan Api', icon: '🐉', kind: 'rain', n: 8, mul: 1.5, r: 1.3, cd: 40, desc: '8 bola api menghujani musuh dalam jangkauan.' } },
   reaper:    { passive: { name: 'Penuai', kind: 'killGold', gold: 10, desc: '+$10 setiap musuh yang dibunuh.' },
                active:  { name: 'Panen Jiwa', icon: '💀', kind: 'reap', th: 0.35, mul: 5, cd: 50, desc: 'Musuh (bukan boss) dalam jangkauan dengan HP < 35% langsung mati; sisanya terkena 5× damage.' } },
+  snowman:   { passive: { name: 'Hawa Dingin', kind: 'slowHit', ch: 0.35, slow: 0.5, desc: '35% peluang memperlambat musuh 50%.' },
+               active:  { name: 'Badai Salju', icon: '❄️', kind: 'freezeArea', dur: 3, cd: 40, desc: 'Membekukan semua musuh dalam jangkauan 3 detik (boss setengahnya).' } },
+  yeti:      { passive: { name: 'Pemburu Raksasa', kind: 'bossDmg', mul: 1.35, desc: '+35% damage ke boss & mini-boss.' },
+               active:  { name: 'Hentakan Gletser', icon: '🧊', kind: 'blast', mul: 6, r: 2.6, center: 'self', cd: 40, desc: 'Hentakan es di sekitar Yeti (6× damage, area luas).' } },
   cosmic:    { passive: { name: 'Gravitasi', kind: 'slowHit', ch: 0.3, slow: 0.5, desc: '30% peluang memperlambat musuh 50%.' },
                active:  { name: 'Lubang Hitam', icon: '🌌', kind: 'blackhole', back: 2.5, mul: 4, cd: 55, desc: 'Menarik musuh dalam jangkauan mundur 2,5 petak & memberi 4× damage.' } },
 };

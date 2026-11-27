@@ -19,9 +19,10 @@
     mythic:    { name: 'Mitos',      color: '#ff1744', rank: 4 },
     secret:    { name: 'Rahasia',    color: '#00e5ff', rank: 5 },
     beta:      { name: 'Beta',       color: '#26c6da', rank: 3, exclusive: true },
+    winter:    { name: 'Winter',     color: '#4fc3f7', rank: 4, exclusive: true },
   };
   /* Kelangkaan eksklusif: tidak bisa didapat dari Summon */
-  const EXCLUSIVE = ['beta'];
+  const EXCLUSIVE = ['beta', 'winter'];
   const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic', 'secret'];
 
   /* ---------------- UNIT ---------------- */
@@ -33,6 +34,7 @@
     nuke: 'mythic', dragon: 'mythic', angel: 'mythic',
     reaper: 'secret', cosmic: 'secret',
     goldminer: 'beta',
+    snowman: 'winter', yeti: 'winter',
   };
   const UNIT_TYPES = Object.keys(UNIT_RARITY);
   const STARTER_UNITS = ['scout', 'sniper', 'demoman', 'farm'];
@@ -78,6 +80,7 @@
     ninja:   { name: 'Ninja',     price: 300, icon: '🥷', body: '#212121', head: '#212121', gun: '#c62828', acc: 'band',  eyes: '#fff' },
     robot:   { name: 'Robot',     price: 400, icon: '🤖', body: '#90a4ae', head: '#cfd8dc', gun: '#37474f', acc: 'antenna', eyes: '#00e676' },
     rainbow: { name: 'Pelangi',   price: 600, icon: '🌈', rainbow: true, acc: 'halo', glow: '#ffffff' },
+    winter:  { name: 'Musim Dingin', price: 0, icon: '⛄', event: true, body: '#e3f2fd', head: '#ffe0b2', gun: '#4fc3f7', acc: 'beanie', glow: '#b3e5fc' },
     lantern: { name: 'Lentera',   price: 0,   icon: '🏮', event: true, body: '#b71c1c', head: '#ffe0b2', gun: '#ffb300', acc: 'crown', glow: '#ffb74d' },
   };
   /* Skin yang bisa dibeli / dipakai hadiah pass (skin event tidak termasuk) */
@@ -130,9 +133,12 @@
     banners: {
       std:   { name: 'Banner Standar', currency: 'diamonds', desc: 'Semua unit tersedia. Pakai 💎 Diamond yang didapat dari bermain.' },
       feat:  { name: 'Banner Unggulan', currency: 'diamonds', desc: 'Peluang 50% unit unggulan saat dapat Legendaris/Mitos. Berganti setiap hari.' },
+      winter: { name: '❄️ Banner Winter', currency: 'diamonds', event: true, desc: 'Hanya selama event musim dingin! Peluang mendapat unit eksklusif Winter: Manusia Salju & Yeti. Tidak ada di banner lain.' },
       lucky: { name: '🍀 Lucky Summon', currency: 'gems', desc: 'Pakai 💠 Permata (top up). Peluang Legendaris & Mitos jauh lebih tinggi, pity lebih cepat, 10× menjamin Legendaris.' },
     },
   };
+  /* Banner Winter: unit eksklusif event (selain itu sama dengan banner standar) */
+  const WINTER_GACHA = { rate: 0.025, pity: 70, yeti: 0.3 };
   /* Lucky Summon (Permata hasil top up) */
   const LUCKY = { cost1: 10, cost10: 90, pity: 30, rates: { common: 25, rare: 37, epic: 27, legendary: 9, mythic: 1.85, secret: 0.15 } };
   const unitsOfRarity = r => UNIT_TYPES.filter(t => UNIT_RARITY[t] === r);
@@ -143,12 +149,13 @@
     const s = dayStr(now).split('-').reduce((a, x) => a * 31 + +x, 7);
     return pool[s % pool.length];
   }
-  const SCRAP = { common: { coins: 15 }, rare: { coins: 40 }, epic: { coins: 100, crystals: 1 }, legendary: { coins: 300, stones: 1 }, mythic: { coins: 1000, stones: 3 }, secret: { coins: 4000, stones: 8 }, beta: { coins: 200 } };
+  const SCRAP = { common: { coins: 15 }, rare: { coins: 40 }, epic: { coins: 100, crystals: 1 }, legendary: { coins: 300, stones: 1 }, mythic: { coins: 1000, stones: 3 }, secret: { coins: 4000, stones: 8 }, beta: { coins: 200 }, winter: { coins: 1500, stones: 4 } };
   /* Jual otomatis saat summon: hanya kelangkaan ini yang boleh di-auto-sell */
   const AUTO_SELL_OK = ['common', 'rare', 'epic', 'legendary'];
 
   /* ---------------- HADIAH ---------------- */
-  const MAP_STARS = { grass: 1, desert: 2, snow: 3, lava: 4 };
+  const MAP_STARS = { grass: 1, desert: 2, snow: 3, lava: 4, frost: 3 };
+  const EVENT_MAPS = ['frost'];   // map event: hanya bisa dimainkan selama event, Kepingan Salju ×1,5
   const DIFF_INFO = { easy: { waves: 20, coinMul: 0.6 }, normal: { waves: 30, coinMul: 1.0 }, hard: { waves: 40, coinMul: 1.8 } };
   const DAILY_WAVES = 20, DAILY_REWARD = 500;
   const ACH_REWARDS = {
@@ -317,29 +324,31 @@
 
   /* ---------------- EVENT TERBATAS ---------------- */
   // Bisa diubah dari panel developer (global.limited). Token event: 🏮 Lentera.
-  const LIMITED = { id: 'lentera-2026', name: 'Festival Lentera', start: '2026-11-27', end: '2026-12-11', on: true,
-    desc: 'Kumpulkan 🏮 Lentera dari setiap permainan, selesaikan misi event, dan tukarkan dengan hadiah eksklusif sebelum festival berakhir!' };
+  const LIMITED = { id: 'winter-2026', name: 'Festival Musim Dingin', start: '2026-11-27', end: '2027-01-10', on: true,
+    token: 'Kepingan Salju', icon: '❄️',
+    desc: 'Kumpulkan ❄️ Kepingan Salju dari setiap permainan (map event Lembah Beku ×1,5), selesaikan misi event, summon unit eksklusif di Banner Winter, dan tukarkan hadiah sebelum musim dingin berakhir!' };
   const EV_MISSIONS = [
     { id: 'e_play',   name: 'Mainkan 12 permainan',     stat: 'games',    target: 12,  reward: { lan: 150, diamonds: 100 } },
+    { id: 'e_frost',  name: 'Main 5 kali di Lembah Beku', stat: 'frost',  target: 5,   reward: { lan: 250, diamonds: 150 } },
     { id: 'e_wave',   name: 'Selesaikan 250 wave',      stat: 'waves',    target: 250, reward: { lan: 200, coins: 3000 } },
     { id: 'e_boss',   name: 'Kalahkan 30 boss',         stat: 'bosses',   target: 30,  reward: { lan: 200, stones: 2 } },
     { id: 'e_win',    name: 'Menang 8 kali',            stat: 'wins',     target: 8,   reward: { lan: 250, crystals: 8 } },
     { id: 'e_hard',   name: 'Menang 2 kali di Sulit',   stat: 'hardWins', target: 2,   reward: { lan: 300, diamonds: 300 } },
     { id: 'e_summon', name: 'Summon 30 kali',           stat: 'summons',  target: 30,  reward: { lan: 150, diamonds: 150 } },
   ];
-  /* Hadiah pencapaian: berdasarkan total Lentera yang pernah dikumpulkan selama event */
+  /* Hadiah pencapaian: berdasarkan total token yang pernah dikumpulkan selama event */
   const EV_MILESTONES = [
     { at: 300, reward: { diamonds: 150 } }, { at: 800, reward: { crystals: 6, coins: 3000 } }, { at: 1500, reward: { stones: 3 } },
-    { at: 2500, reward: { diamonds: 400 } }, { at: 4000, reward: { skin: 'lantern' } }, { at: 6000, reward: { unit: 'dragon' } },
+    { at: 2500, reward: { diamonds: 500 } }, { at: 4000, reward: { skin: 'winter' } }, { at: 6000, reward: { diamonds: 1000, stones: 3 } },
   ];
   const EV_SHOP = [
-    { id: 'skin',   name: 'Skin Lentera (eksklusif)', icon: '🏮', cost: 1200, limit: 1,  give: { skin: 'lantern' } },
-    { id: 'legend', name: 'Unit Legendaris Acak',     icon: '🌟', cost: 600,  limit: 2,  give: { rarityUnit: 'legendary' } },
-    { id: 'mythic', name: 'Unit Mitos Acak',          icon: '🔥', cost: 1800, limit: 1,  give: { rarityUnit: 'mythic' } },
-    { id: 'dia',    name: '400 Diamond',              icon: '💎', cost: 160,  limit: 5,  give: { diamonds: 400 } },
-    { id: 'stone',  name: '3 Batu Evolusi',           icon: '🔮', cost: 150,  limit: 5,  give: { stones: 3 } },
-    { id: 'cry',    name: '10 Kristal Trait',         icon: '✨', cost: 120,  limit: 5,  give: { crystals: 10 } },
-    { id: 'coin',   name: '8.000 Koin',               icon: '🪙', cost: 80,   limit: 10, give: { coins: 8000 } },
+    { id: 'skin',   name: 'Skin Musim Dingin',    icon: '⛄', cost: 1200, limit: 1,  give: { skin: 'winter' } },
+    { id: 'legend', name: 'Unit Legendaris Acak', icon: '🌟', cost: 600,  limit: 2,  give: { rarityUnit: 'legendary' } },
+    { id: 'mythic', name: 'Unit Mitos Acak',      icon: '🔥', cost: 1800, limit: 1,  give: { rarityUnit: 'mythic' } },
+    { id: 'dia',    name: '400 Diamond',          icon: '💎', cost: 160,  limit: 5,  give: { diamonds: 400 } },
+    { id: 'stone',  name: '3 Batu Evolusi',       icon: '🔮', cost: 150,  limit: 5,  give: { stones: 3 } },
+    { id: 'cry',    name: '10 Kristal Trait',     icon: '✨', cost: 120,  limit: 5,  give: { crystals: 10 } },
+    { id: 'coin',   name: '8.000 Koin',           icon: '🪙', cost: 80,   limit: 10, give: { coins: 8000 } },
   ];
   const limitedActive = now => { const d = dayStr(now); return LIMITED.on !== false && d >= LIMITED.start && d <= LIMITED.end; };
   const limitedEndsAt = () => Date.parse(LIMITED.end + 'T23:59:59+07:00');
@@ -360,11 +369,20 @@
   const actions = {
     summon(v, p, ctx) {
       const banner = GACHA.banners[p.banner] ? p.banner : 'std', n = p.count === 10 ? 10 : 1;
+      if (GACHA.banners[banner].event && !limitedActive(ctx.now)) throw err('Banner event sudah berakhir');
       const lucky = banner === 'lucky', cfg = lucky ? LUCKY : GACHA;
       pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
       bumpMissions(v, ctx.now, { summons: n }); bumpEvent(v, ctx.now, { summons: n }, 0);
       const featured = featuredUnit(ctx.now), out = [], sold = {};
       for (let i = 0; i < n; i++) {
+        if (banner === 'winter') {   // unit eksklusif Winter (pity tersendiri)
+          v.pity.wex = (v.pity.wex || 0) + 1;
+          if (ctx.rng() < WINTER_GACHA.rate || v.pity.wex >= WINTER_GACHA.pity) {
+            v.pity.wex = 0;
+            const u = makeUnit(ctx.rng() < WINTER_GACHA.yeti ? 'yeti' : 'snowman', ctx.rng, ctx.now + i);
+            v.units.push(u); out.push(u); continue;
+          }
+        }
         v.pity[banner] = (v.pity[banner] || 0) + 1;
         let r = weighted(ctx.rng, cfg.rates);
         if (v.pity[banner] >= cfg.pity && RARITY[r].rank < 3) r = 'legendary';
@@ -483,8 +501,9 @@
       const axp = Math.round(cleared * 20 * DIFF_INFO[diff].coinMul + kills * 0.5 + (won ? 300 : 0));
       v.axp = (v.axp || 0) + axp;
       // event terbatas
-      const lan = Math.min(500, Math.round((cleared * 3 + bossKills * 15 + (won ? 80 : 0)) * (diff === 'hard' ? 1.5 : 1)));
-      const evLan = bumpEvent(v, ctx.now, { games: 1, waves: cleared, bosses: bossKills, wins: won ? 1 : 0, hardWins: won && diff === 'hard' ? 1 : 0 }, lan);
+      const evMap = EVENT_MAPS.includes(r.map);
+      const lan = Math.min(700, Math.round((cleared * 3 + bossKills * 15 + (won ? 80 : 0)) * (diff === 'hard' ? 1.5 : 1) * (evMap ? 1.5 : 1)));
+      const evLan = bumpEvent(v, ctx.now, { games: 1, waves: cleared, bosses: bossKills, wins: won ? 1 : 0, hardWins: won && diff === 'hard' ? 1 : 0, frost: evMap ? 1 : 0 }, lan);
       const mastery = [];
       for (const [id, g] of Object.entries(r.uxp || {})) {
         const u = v.units.find(x => x.id === id); if (!u) continue;
@@ -577,7 +596,7 @@
       const it = EV_SHOP.find(x => x.id === p.id); if (!it) throw err('Item tidak ada');
       const n = e.buy[it.id] || 0;
       if (n >= it.limit) throw err('Stok item ini habis');
-      if (e.lan < it.cost) throw err('Lentera tidak cukup');
+      if (e.lan < it.cost) throw err(LIMITED.token + ' tidak cukup');
       const g = { ...it.give };
       if (g.rarityUnit) { const pool = unitsOfRarity(g.rarityUnit); g.unit = pool[Math.floor(ctx.rng() * pool.length)]; delete g.rarityUnit; }
       if (g.skin && v.skins.includes(g.skin)) throw err('Skin ini sudah kamu miliki');
@@ -626,6 +645,7 @@
     LIMITED.name = typeof Lm.name === 'string' && Lm.name.trim() ? Lm.name.trim().slice(0, 40) : D2.name;
     LIMITED.start = isDay(Lm.start) ? Lm.start : D2.start; LIMITED.end = isDay(Lm.end) ? Lm.end : D2.end;
     LIMITED.on = Lm.on === undefined ? D2.on : !!Lm.on;
+    LIMITED.token = typeof Lm.token === 'string' && Lm.token.trim() ? Lm.token.trim().slice(0, 30) : D2.token;
   }
 
   return {
@@ -634,6 +654,6 @@
     MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
     newVault, makeUnit, fixVault, actions, SKILL_PRICES, FREE_SKILLS, EVENT, DEFAULTS, applyGlobal,
     EXCLUSIVE, AUTO_SELL_OK, MISSIONS, missionProgress, rollMissions, PASS, PASS_SHOP, PASS_TOK, rollPass, passTier, passReward, seasonName, seasonStr, giveReward,
-    shopSkins, ACC_MAX, accXpFor, accLevel, levelReward, LEVEL_SPECIAL, seedAxp, LIMITED, EV_MISSIONS, EV_MILESTONES, EV_SHOP, limitedActive, limitedEndsAt, rollEvent,
+    shopSkins, WINTER_GACHA, EVENT_MAPS, ACC_MAX, accXpFor, accLevel, levelReward, LEVEL_SPECIAL, seedAxp, LIMITED, EV_MISSIONS, EV_MILESTONES, EV_SHOP, limitedActive, limitedEndsAt, rollEvent,
   };
 });

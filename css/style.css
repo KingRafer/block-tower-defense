@@ -1535,7 +1535,7 @@ canvas#game { border-color: var(--k-ink) !important; border-radius: 8px !importa
 input[type=text], input:not([type]), .inrow input { background: var(--k-well) !important; border: 2px solid var(--k-ink) !important; border-radius: 5px !important; }
 input:focus { border-color: var(--k-gold) !important; }
 /* v5.2 unit bergaya pixel */
-canvas[data-icon], canvas.ico, canvas.pico, canvas#game { image-rendering: pixelated; }
+canvas[data-icon], canvas.ico, canvas.pico, canvas#game { image-rendering: auto; }
 img.pxe { width: 1.15em; height: 1.15em; image-rendering: pixelated; vertical-align: -0.2em; display: inline-block; margin: 0 .05em; }
 
 /* ---------- v5.2 ikon pixel di mata uang ---------- */
@@ -1628,3 +1628,16 @@ img.pxe.huge { width: 72px; height: 72px; }
   .evinfo p { font-size: 12px; }
   .lh-right:has(.r-limited) .r-daily { display: none; }
 }
+
+/* ---------- v5.3 event Winter ---------- */
+.evhead { background: #1f3443 !important; } .evinfo h3 { color: #bfe9ff; } .r-limited { border-color: #4fc3f7 !important; background: #1f3443 !important; } .r-limited b { color: #bfe9ff; }
+.evfill { background: #4fc3f7; } .evart { background: #15232d; }
+.evlinks { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
+.evunits { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; width: 100%; }
+.evu { display: flex !important; gap: 12px; align-items: flex-start; } .evu canvas { width: 110px; height: 110px; flex: 0 0 auto; background: #15232d; border: 2px solid var(--k-ink); border-radius: 6px; }
+.evu p { margin: 4px 0; font-size: 13px; } .evu > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wban { display: flex; gap: 12px; justify-content: center; margin: 6px 0; }
+.wbu { display: flex; flex-direction: column; align-items: center; background: #15232d; border: 2px solid #4fc3f7; border-radius: 6px; padding: 6px 10px; }
+.wbu canvas { width: 96px; height: 96px; } .wbu small { color: #bfe9ff; font-weight: 700; }
+.gacha.winter { background: #1f3443 !important; }
+.card.evmap { position: relative; border-color: #4fc3f7 !important; } .evtag { position: absolute; top: 6px; left: 6px; z-index: 1; background: #4fc3f7; color: #0b2230; font: 700 11px var(--font-h); padding: 2px 6px; border-radius: 3px; }
