@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.3.1] — 2026-11-27
+### Diubah
+- **❄️ Banner Winter kini memakai ❄️ Kepingan Salju (koin Winter)**, bukan Diamond: ×1 = 60, ×10 = 540. Unit Winter dijamin di tarikan ke-50.
+- **Skin Musim Dingin** dibeli dengan ❄️ Kepingan Salju (1.200) — tampil di Toko → Skin (bagian Skin Event) dan Toko Event.
+
 ## [5.3.0] — 2026-11-27
 ### Ditambahkan
 - **Event Winter: Festival Musim Dingin** (27 Nov 2026 – 10 Jan 2027) menggantikan Festival Lentera. Token event: ❄️ Kepingan Salju.

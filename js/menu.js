@@ -447,7 +447,7 @@ const Menu = {
       } else if (tab === 'units') body = `<div class="evunits">${SHARED.unitsOfRarity('winter').map(t => { const sk = UNIT_SKILLS[t] || {}, own = PROFILE.vault.units.some(u => u.type === t);
           return `<div class="box evu"><canvas width="110" height="110" data-icon="${t}" data-skin="default" data-evo="0"></canvas><div><b>${TOWERS[t].name}</b> ${this.rarityTag(t)} ${own ? '<span class="rar" style="background:#43a047">Dimiliki</span>' : ''}
             <small class="dim">${TOWERS[t].role}</small><p>${TOWERS[t].desc}</p>${sk.passive ? `<small><b>Pasif:</b> ${sk.passive.name} — ${sk.passive.desc}</small><br>` : ''}${sk.active ? `<small><b>Aktif:</b> ${sk.active.name} — ${sk.active.desc}</small>` : ''}</div></div>`; }).join('')}</div>
-        <small class="dim">Hanya dari ❄️ Banner Winter selama event: peluang unit Winter ${(SHARED.WINTER_GACHA.rate * 100).toFixed(1)}% per tarikan (Yeti ${Math.round(SHARED.WINTER_GACHA.yeti * 100)}% dari itu), dijamin di tarikan ke-${SHARED.WINTER_GACHA.pity}.</small>
+        <small class="dim">Hanya dari ❄️ Banner Winter selama event: peluang unit Winter ${(SHARED.WINTER_GACHA.rate * 100).toFixed(1)}% per tarikan (Yeti ${Math.round(SHARED.WINTER_GACHA.yeti * 100)}% dari itu), dijamin di tarikan ke-${SHARED.WINTER_GACHA.pity}. Biaya ${SHARED.LIMITED.icon} ${SHARED.WINTER_GACHA.cost1} per tarikan.</small>
         <div class="row2"><button class="btn" data-act="evgo:gacha">❄️ Ke Banner Winter</button></div>`;
       else body = `<div class="pshop">${SHARED.EV_SHOP.map(it => {
         const left = it.limit - (e.buy[it.id] || 0), owned = it.give.skin && PROFILE.vault.skins.includes(it.give.skin), can = left > 0 && !owned && e.lan >= it.cost;
@@ -648,7 +648,10 @@ const Menu = {
       if (tab === 'skillx') { this.shopTab = 'skin'; setTimeout(() => this.go('skills'), 0); }
       let body = '';
       if (false) body = '';
-      else if (tab === 'skin') body = `<div class="shopgrid skins">${Object.entries(SKINS).filter(([k, x]) => k !== 'default' && !x.event).map(([k, sk]) => {
+      else if (tab === 'skin') body = `${SHARED.limitedActive(Date.now()) ? (() => { const it = SHARED.EV_SHOP.find(x => x.give.skin), sk = it && SKINS[it.give.skin]; if (!sk) return ''; const e = SHARED.rollEvent(v, Date.now()), own = v.skins.includes(it.give.skin), can = !own && e && e.lan >= it.cost;
+            return `<h4>❄️ Skin Event</h4><div class="shopgrid skins"><div class="sitem skin evskin"><canvas width="64" height="64" data-icon="scout" data-skin="${it.give.skin}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Eksklusif event • dibeli dengan ${SHARED.LIMITED.token}</small></div>
+              ${own ? '<span class="owned">✔ Dimiliki</span>' : `<button class="btn sm ${can ? '' : 'gray'}" ${can ? '' : 'disabled'} data-act="evbuy:${it.id}">${SHARED.LIMITED.icon} ${it.cost.toLocaleString('id-ID')}</button>`}</div></div>`; })() : ''}
+          <h4>Skin Permata</h4><div class="shopgrid skins">${Object.entries(SKINS).filter(([k, x]) => k !== 'default' && !x.event).map(([k, sk]) => {
         const own = v.skins.includes(k);
         return `<div class="sitem skin"><canvas width="64" height="64" data-icon="scout" data-skin="${k}" data-evo="0"></canvas><div class="sinfo"><b>${sk.icon} ${sk.name}</b><small class="dim">Kosmetik untuk semua unit</small></div>
           ${own ? '<span class="owned">✔ Dimiliki</span>' : `<button class="btn sm purple" data-act="buyskin:${k}">💠 ${sk.price}</button>`}</div>`; }).join('')}</div>
@@ -666,8 +669,9 @@ const Menu = {
       if (GACHA.banners[ban] && GACHA.banners[ban].event && !SHARED.limitedActive(Date.now())) ban = this.banner = 'std';
       const tabs = `<div class="tabs">${Object.entries(GACHA.banners).filter(([k, b]) => !b.event || SHARED.limitedActive(Date.now())).map(([k, b]) => `<button class="tab ${ban === k ? 'on' : ''}" data-act="banner:${k}">${b.name}</button>`).join('')}<button class="tab ${ban === 'index' ? 'on' : ''}" data-act="banner:index">📖 Index Unit</button></div>`;
       if (ban === 'index') return `${this.header('Summon')}${tabs}${this.gachaIndex()}`;
-      const lucky = ban === 'lucky', cfg = lucky ? LUCKY : GACHA, cur = lucky ? 'gems' : 'diamonds', icon = lucky ? '💠' : '💎', bal = v[cur] || 0;
-      const rates = Object.entries(cfg.rates).map(([r, p]) => `<span class="rate r-${r}" style="--rc:${RARITY[r].color}">${RARITY[r].name} ${p}%</span>`).join('');
+      const lucky = ban === 'lucky', win = ban === 'winter', cfg = lucky ? LUCKY : win ? SHARED.WINTER_GACHA : GACHA, cur = lucky ? 'gems' : 'diamonds', icon = win ? SHARED.LIMITED.icon : lucky ? '💠' : '💎';
+      const evb = win && SHARED.rollEvent(v, Date.now()), bal = win ? (evb ? evb.lan : 0) : v[cur] || 0;
+      const rates = Object.entries((lucky ? LUCKY : GACHA).rates).map(([r, p]) => `<span class="rate r-${r}" style="--rc:${RARITY[r].color}">${RARITY[r].name} ${p}%</span>`).join('');
       return `${this.header('Summon')}${tabs}
         <div class="gacha box ${ban}">
           <div class="gleft">
@@ -677,14 +681,15 @@ const Menu = {
             : ban === 'feat' ? `<div class="featured"><canvas width="96" height="96" data-icon="${feat}" data-skin="default" data-evo="0"></canvas><div><small>UNIT UNGGULAN HARI INI</small><b>${TOWERS[feat].name}</b>${this.rarityTag(feat)}<small>${TOWERS[feat].desc}</small></div></div>`
               : `<div class="gacha-art">${lucky ? '🍀' : '🎰'}</div>`}
             <div class="rates">${rates}</div>
-            <p class="dim">Pity: <b>${v.pity[ban] || 0}/${cfg.pity}</b> — Legendaris dijamin di tarikan ke-${cfg.pity}. 10× menjamin minimal 1 ${lucky ? 'Legendaris' : 'Epik'}.</p>
+            <p class="dim">Pity: <b>${v.pity[ban] || 0}/${GACHA.pity}</b> — Legendaris dijamin di tarikan ke-${lucky ? LUCKY.pity : GACHA.pity}. 10× menjamin minimal 1 ${lucky ? 'Legendaris' : 'Epik'}.</p>
             <button class="btn sm gray" data-act="banner:index">📖 Lihat semua unit & peluangnya</button>
           </div>
           <div class="gright">
-            <div class="gem-bal ${lucky ? '' : 'dia'}">${icon} ${bal.toLocaleString('id-ID')}</div>
+            <div class="gem-bal ${lucky ? '' : win ? 'wcoin' : 'dia'}">${icon} ${bal.toLocaleString('id-ID')}</div>
             <button class="btn big gold" data-act="pull:1" ${bal < cfg.cost1 ? 'disabled' : ''}>Summon ×1 <small>${icon} ${cfg.cost1}</small></button>
             <button class="btn big" data-act="pull:10" ${bal < cfg.cost10 ? 'disabled' : ''}>Summon ×10 <small>${icon} ${cfg.cost10} (hemat 10%)</small></button>
-            ${lucky ? `<button class="btn gray" data-act="shoptab:topup">💠 Top Up Permata</button>` : `<small class="dim center">💎 Diamond didapat dari menyelesaikan wave, mengalahkan boss, menang, login harian & pencapaian.</small>`}
+            ${win ? `<small class="dim center">${SHARED.LIMITED.icon} ${SHARED.LIMITED.token} didapat dari setiap permainan (map Lembah Beku ×1,5) dan misi event.</small><button class="btn gray sm" data-act="go:event">❄️ Buka Event</button>`
+              : lucky ? `<button class="btn gray" data-act="shoptab:topup">💠 Top Up Permata</button>` : `<small class="dim center">💎 Diamond didapat dari menyelesaikan wave, mengalahkan boss, menang, login harian & pencapaian.</small>`}
           </div>
         </div>
         <div id="pullResult"></div>`;

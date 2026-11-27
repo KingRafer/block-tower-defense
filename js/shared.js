@@ -133,12 +133,12 @@
     banners: {
       std:   { name: 'Banner Standar', currency: 'diamonds', desc: 'Semua unit tersedia. Pakai 💎 Diamond yang didapat dari bermain.' },
       feat:  { name: 'Banner Unggulan', currency: 'diamonds', desc: 'Peluang 50% unit unggulan saat dapat Legendaris/Mitos. Berganti setiap hari.' },
-      winter: { name: '❄️ Banner Winter', currency: 'diamonds', event: true, desc: 'Hanya selama event musim dingin! Peluang mendapat unit eksklusif Winter: Manusia Salju & Yeti. Tidak ada di banner lain.' },
+      winter: { name: '❄️ Banner Winter', currency: 'lan', event: true, desc: 'Pakai ❄️ Kepingan Salju (koin Winter) dari bermain & misi event. Peluang mendapat unit eksklusif Winter: Manusia Salju & Yeti — tidak ada di banner lain.' },
       lucky: { name: '🍀 Lucky Summon', currency: 'gems', desc: 'Pakai 💠 Permata (top up). Peluang Legendaris & Mitos jauh lebih tinggi, pity lebih cepat, 10× menjamin Legendaris.' },
     },
   };
   /* Banner Winter: unit eksklusif event (selain itu sama dengan banner standar) */
-  const WINTER_GACHA = { rate: 0.025, pity: 70, yeti: 0.3 };
+  const WINTER_GACHA = { rate: 0.025, pity: 50, yeti: 0.3, cost1: 60, cost10: 540 };   // biaya dalam ❄️ Kepingan Salju
   /* Lucky Summon (Permata hasil top up) */
   const LUCKY = { cost1: 10, cost10: 90, pity: 30, rates: { common: 25, rare: 37, epic: 27, legendary: 9, mythic: 1.85, secret: 0.15 } };
   const unitsOfRarity = r => UNIT_TYPES.filter(t => UNIT_RARITY[t] === r);
@@ -371,7 +371,11 @@
       const banner = GACHA.banners[p.banner] ? p.banner : 'std', n = p.count === 10 ? 10 : 1;
       if (GACHA.banners[banner].event && !limitedActive(ctx.now)) throw err('Banner event sudah berakhir');
       const lucky = banner === 'lucky', cfg = lucky ? LUCKY : GACHA;
-      pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
+      if (banner === 'winter') {   // dibayar dengan koin Winter (token event)
+        const e = rollEvent(v, ctx.now), cost = n === 10 ? WINTER_GACHA.cost10 : WINTER_GACHA.cost1;
+        if (!e || e.lan < cost) throw err(LIMITED.token + ' tidak cukup');
+        e.lan -= cost;
+      } else pay(v, lucky ? 'gems' : 'diamonds', n === 10 ? cfg.cost10 : cfg.cost1);
       bumpMissions(v, ctx.now, { summons: n }); bumpEvent(v, ctx.now, { summons: n }, 0);
       const featured = featuredUnit(ctx.now), out = [], sold = {};
       for (let i = 0; i < n; i++) {

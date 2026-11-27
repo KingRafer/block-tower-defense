@@ -1641,3 +1641,4 @@ img.pxe.huge { width: 72px; height: 72px; }
 .wbu canvas { width: 96px; height: 96px; } .wbu small { color: #bfe9ff; font-weight: 700; }
 .gacha.winter { background: #1f3443 !important; }
 .card.evmap { position: relative; border-color: #4fc3f7 !important; } .evtag { position: absolute; top: 6px; left: 6px; z-index: 1; background: #4fc3f7; color: #0b2230; font: 700 11px var(--font-h); padding: 2px 6px; border-radius: 3px; }
+.gem-bal.wcoin { color: #bfe9ff; } .evskin { border-color: #4fc3f7 !important; }
