@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.3.0] — 2026-11-27
+### Diubah — lobby lebih ringkas & lega
+- Semua panel lobby sedikit **tembus pandang** agar pemandangan kastil tetap terlihat.
+- **Desktop**: menu kiri jadi rel ikon ramping, kartu kanan lebih kecil, slot peti satu baris di atas Misi Harian, tombol MAIN & MABAR lebih ramping.
+- **HP potret**: kartu Festival/Pass/Tantangan/Markas jadi 4 ikon ringkas, slot peti & menu lebih pendek, tombol MAIN/MABAR lebih kecil.
+- **HP lanskap**: menu ikon & kartu kanan mengecil.
+
 ## [6.2.1] — 2026-11-27
 ### Diubah
 - Banner **Unit Unggulan** dihapus dari lobby agar panggung tim & pemandangan kastil lebih lega (unit unggulan tetap ada di menu Summon).
