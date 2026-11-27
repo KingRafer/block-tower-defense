@@ -199,7 +199,7 @@ function startWave() {
   S.wave++; S.state = 'wave'; S.spawnQ = buildWave(S.wave); S.waveTime = 0; S.waveTotal = S.spawnQ.length;
   sfx('wave');
   const bt = S.wave % 10 === 0 ? `⚠️ BOSS WAVE ${S.wave}` : `WAVE ${S.wave}`, bc = S.wave % 10 === 0 ? '#e040fb' : '#fff';
-  UI.banner(bt, bc); fxEmit(['n', bt, bc, 1600, 'wave']);
+  vfxWave(S.wave, S.wave % 10 === 0); fxEmit(['n', bt, bc, 1600, 'wave']);
   UI.refreshAll();
 }
 /** Bonus akhir wave (dinaikkan di awal agar pembangunan tower tidak terlalu lambat) */
@@ -414,7 +414,7 @@ function kill(e, src) {
   const rw = Math.round(e.reward * (src ? lvl(src).rewardMul : 1));
   addCashAll(rw); S.kills++;
   if (src) { src.kills++; addUxp(src.owner, src.type, 1); Skills.onKill(src, e); }
-  puff(e.x, e.y, e.color, e.boss ? 30 : 8);
+  puff(e.x, e.y, e.color, e.boss ? 30 : 8); vfxKill(e);
   if (e.boss) { S.bossKills++; PROFILE.stats.bossKills++; S.shake = SET.shake ? 10 : 0; sfx('boom'); UI.toast('👑 Boss dikalahkan! +$' + e.reward); fxEmit(['k']); checkAchievements(summary()); }
   if (e.split) for (let i = 0; i < (e.splitN || 2); i++) spawn(e.split, e);
   if (e.bomber) {      // ledakan yang membuat tower di dekatnya pingsan
@@ -509,7 +509,7 @@ function placeTower(type, c, r, pid = S.me) {
   const t = makeTower(type, c, r, pid);
   S.towers.push(t);
   if (pid === S.me) { tip('placed'); PROFILE.stats.towersPlaced++; }
-  sfx('place'); puff(t.x, t.y, '#fff'); fxEmit(['p', t.x | 0, t.y | 0, '#fff', 8, 'place']);
+  sfx('place'); puff(t.x, t.y, '#fff'); vfxPlace(t); fxEmit(['p', t.x | 0, t.y | 0, '#fff', 8, 'place']);
   UI.refreshAll();
   return t;
 }
@@ -522,7 +522,7 @@ function upgradeTower(t, pid = S.me) {
   const cost = costOf(t.type, t.level + 1, t.owner);
   if (pcash(pid) < cost) { if (pid === S.me) sfx('error'); return; }
   spend(pid, cost); t.spent += cost; t.level++; t.L = computeL(t.type, t.level, unitFor(t.type, t.owner));
-  sfx('upgrade'); puff(t.x, t.y, '#ffd54f', 12); fxEmit(['p', t.x | 0, t.y | 0, '#ffd54f', 12, 'upgrade']);
+  sfx('upgrade'); puff(t.x, t.y, '#ffd54f', 12); vfxUpgrade(t); fxEmit(['p', t.x | 0, t.y | 0, '#ffd54f', 12, 'upgrade']);
   addText(t.x, t.y - 30, lvl(t).name + '!', '#ffd54f', 1); fxEmit(['x', t.x, t.y - 30, lvl(t).name + '!', '#ffd54f', 1]);
   if (isMax(t) && pid === S.me) { PROFILE.stats.maxed++; checkAchievements(summary()); }
   UI.refreshAll();

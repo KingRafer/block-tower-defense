@@ -1,5 +1,16 @@
 # Changelog
 
+## [6.1.0] — 2026-11-27
+### Diubah — efek & tampilan dalam game
+- **Banner wave sinematik**: pita emas melintang dengan kilau menyapu; Boss Wave memakai pita ungu, kilat merah & guncangan layar.
+- **Efek kematian zombie**: jiwa tengkorak melayang, koin emas berputar, noda di tanah yang memudar perlahan; boss meledak dengan gelombang kejut.
+- **Pasang & upgrade tower**: cincin debu saat ditaruh, pilar cahaya emas berkilau saat naik level.
+- **Proyektil bercahaya**: peluru punya jejak cahaya, bola api & nuklir berpendar.
+- **Angka damage "pop"** membesar sesaat saat muncul.
+- **Vinyet bahaya**: tepi layar berdenyut merah saat nyawa base kritis atau boss sedang di arena.
+- **Bar boss berhias**: bingkai emas, ujung permata, jejak damage putih & garis segmen.
+- **HUD bergaya kerajaan**: panel kayu berlis emas, bar wave/nyawa bergradasi (nyawa berkedip saat kritis), slot tower dengan cahaya warna tier, slot terpilih emas, tombol skill timbul, panel tower & notifikasi senada.
+
 ## [6.0.0] — 2026-11-27
 ### Diubah — tampilan arena permainan
 - **Medan baru bergaya pixel-art** di semua map: rumput bertekstur dengan jumbai & bunga liar (tanpa pola papan catur), pasir dengan jejak angin,

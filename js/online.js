@@ -525,7 +525,7 @@ const MP = {
         case 's': S.effects.push({ kind: 'shock', x: f[1], y: f[2], r: f[3], col: f[4], life: f[5], max: f[5] }); sfx('stun'); break;
         case 'p': puff(f[1], f[2], f[3], f[4]); if (f[5]) sfx(f[5]); break;
         case 'x': addText(f[1], f[2], f[3], f[4], f[5]); break;
-        case 'n': UI.banner(f[1], f[2], f[3]); if (f[4]) sfx(f[4]); break;
+        case 'n': if (f[4] === 'wave' && typeof vfxWave === 'function') vfxWave(parseInt(String(f[1]).replace(/\D/g, '')) || 1, /BOSS/.test(f[1])); else UI.banner(f[1], f[2], f[3]); if (f[4]) sfx(f[4]); break;
         case 'k': PROFILE.stats.bossKills++; UI.toast('👑 Boss dikalahkan!'); break;
       }
     }

@@ -367,12 +367,143 @@ function drawEnemy(e) {
 function drawBossBar() {
   const bosses = S.enemies.filter(e => e.boss || e.miniboss);
   bosses.slice(0, 2).forEach((b, i) => {
-    const bw = 420, x = W / 2 - bw / 2, y = 14 + i * 34, pct = Math.max(0, b.hp / b.maxHp);
-    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(x - 4, y - 4, bw + 8, 26);
-    ctx.fillStyle = '#4a148c'; ctx.fillRect(x, y, bw, 18);
-    ctx.fillStyle = '#e040fb'; ctx.fillRect(x, y, bw * pct, 18);
-    outlinedText(`${b.boss ? '👑' : '🗿'} ${b.name} — ${fmtNum(b.hp)} / ${fmtNum(b.maxHp)}`, W / 2, y + 14, 13, '#fff');
+    const bw = 440, x = W / 2 - bw / 2, y = 16 + i * 40, pct = Math.max(0, b.hp / b.maxHp);
+    b._dh = b._dh == null ? pct : Math.max(pct, b._dh - 0.004);           // jejak damage
+    const ac = b.boss ? '#e040fb' : '#ff7043';
+    ctx.fillStyle = '#0e0a12'; ctx.fillRect(x - 6, y - 6, bw + 12, 30);
+    ctx.fillStyle = b.boss ? '#b8862b' : '#8d6e63'; ctx.fillRect(x - 4, y - 4, bw + 8, 26);
+    ctx.fillStyle = '#1a0f22'; ctx.fillRect(x, y, bw, 18);
+    ctx.fillStyle = '#fff'; ctx.fillRect(x, y, bw * b._dh, 18);
+    const g = ctx.createLinearGradient(0, y, 0, y + 18); g.addColorStop(0, b.boss ? '#f48fb1' : '#ffab91'); g.addColorStop(0.5, ac); g.addColorStop(1, b.boss ? '#6a1b9a' : '#bf360c');
+    ctx.fillStyle = g; ctx.fillRect(x, y, bw * pct, 18);
+    ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(x, y + 2, bw * pct, 3);
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let q = 1; q < 10; q++) ctx.fillRect(x + bw * q / 10, y, 1, 18);
+    // ujung berhias
+    for (const sx of [x - 14, x + bw + 14]) { ctx.save(); ctx.translate(sx, y + 9); ctx.rotate(Math.PI / 4); ctx.fillStyle = '#0e0a12'; ctx.fillRect(-10, -10, 20, 20); ctx.fillStyle = b.boss ? '#f2c14e' : '#a1887f'; ctx.fillRect(-7, -7, 14, 14); ctx.fillStyle = ac; ctx.fillRect(-3, -3, 6, 6); ctx.restore(); }
+    outlinedText(`${b.boss ? '👑' : '🗿'} ${b.name}  ${fmtNum(b.hp)} / ${fmtNum(b.maxHp)}`, W / 2, y + 14, 13, '#fff');
   });
+}
+
+
+/* =========================================================
+ * VFX v6.1: banner wave sinematik, efek kematian (jiwa, koin, noda),
+ * debu penempatan, pilar cahaya upgrade, kilat boss, vinyet bahaya,
+ * glow proyektil & bar boss berhias.
+ * ========================================================= */
+const VFX = { s: null, decals: [], wbn: null, flash: 0 };
+const vfxLow = () => SET.quality === 'low';
+function vfxSync() { if (VFX.s !== S) { VFX.s = S; VFX.decals.length = 0; VFX.wbn = null; VFX.flash = 0; } }
+function vfxWave(n, boss) { vfxSync(); VFX.wbn = { t: 0, max: boss ? 2.6 : 1.8, n, boss }; if (boss) { VFX.flash = 0.7; if (SET.shake && S) S.shake = 9; } }
+function vfxKill(e) {
+  if (!S) return; vfxSync();
+  const big = e.boss || e.miniboss;
+  if (!vfxLow()) {
+    if (VFX.decals.length > 45) VFX.decals.shift();
+    VFX.decals.push({ x: e.x, y: e.y + 8, r: (big ? 24 : 9) + Math.random() * 4, col: e.boss ? '#311b92' : '#2e4d1a', t: 0, sd: Math.random() * 99 });
+    S.effects.push({ kind: 'soul', x: e.x, y: e.y - 8, life: big ? 1.4 : 0.8, max: big ? 1.4 : 0.8, big });
+  }
+  S.effects.push({ kind: 'coin', x: e.x, y: e.y - 12, vx: (Math.random() - 0.5) * 60, life: 0.65, max: 0.65 });
+  if (big) S.effects.push({ kind: 'ring2', x: e.x, y: e.y, r: e.boss ? 140 : 80, col: '#e040fb', life: 0.8, max: 0.8 });
+}
+function vfxPlace(t) { if (S) S.effects.push({ kind: 'dust', x: t.x, y: t.y + 14, life: 0.55, max: 0.55 }); }
+function vfxUpgrade(t) { if (S) S.effects.push({ kind: 'beam', x: t.x, y: t.y + 10, life: 0.8, max: 0.8 }); }
+
+function drawDecals(dt) {
+  vfxSync();
+  for (const d of VFX.decals) {
+    d.t += dt; const a = Math.max(0, 0.42 * (1 - d.t / 7)); if (!a) continue;
+    ctx.globalAlpha = a; ctx.fillStyle = d.col;
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.45, 0, 0, 7); ctx.fill();
+    for (let i = 0; i < 4; i++) { const an = d.sd + i * 1.7, rr = d.r * (0.9 + hash2(i, d.sd | 0) * 0.5); ctx.fillRect(d.x + Math.cos(an) * rr - 2, d.y + Math.sin(an) * rr * 0.45 - 1, 4, 3); }
+  }
+  ctx.globalAlpha = 1;
+  VFX.decals = VFX.decals.filter(d => d.t < 7);
+}
+function drawVfx(f, k) {
+  const a = 1 - k;                                  // 0 → 1 seiring waktu
+  if (f.kind === 'soul') {
+    const s = f.big ? 2 : 1, y = f.y - a * 34 * s, x = f.x + Math.sin(a * 9) * 3 * s;
+    ctx.fillStyle = 'rgba(225,245,254,.9)';
+    ctx.fillRect(x - 5 * s, y - 6 * s, 10 * s, 8 * s); ctx.fillRect(x - 3 * s, y + 2 * s, 6 * s, 3 * s);
+    ctx.fillStyle = '#263238'; ctx.fillRect(x - 3.5 * s, y - 3 * s, 2.5 * s, 2.5 * s); ctx.fillRect(x + 1 * s, y - 3 * s, 2.5 * s, 2.5 * s);
+    ctx.fillStyle = 'rgba(178,235,242,.35)'; ctx.fillRect(x - 3 * s, y + 5 * s, 6 * s, 6 * s * a);
+  } else if (f.kind === 'coin') {
+    const x = f.x + f.vx * a * f.max, y = f.y - 150 * a * f.max + 200 * (a * f.max) ** 2, w = Math.abs(Math.cos(a * 18)) * 6 + 1;
+    ctx.fillStyle = '#8d6e00'; ctx.beginPath(); ctx.ellipse(x, y, w + 1.5, 7.5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.ellipse(x, y, w, 6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff8e1'; ctx.fillRect(x - w * 0.4, y - 3, Math.max(1, w * 0.35), 3);
+  } else if (f.kind === 'ring2') {
+    ctx.strokeStyle = f.col; ctx.lineWidth = 2 + 8 * k; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * a, 0, 7); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * a * 0.8, 0, 7); ctx.stroke();
+  } else if (f.kind === 'dust') {
+    ctx.strokeStyle = 'rgba(215,190,150,.8)'; ctx.lineWidth = 4 * k + 1; ctx.beginPath(); ctx.ellipse(f.x, f.y, 10 + a * 30, 4 + a * 11, 0, 0, 7); ctx.stroke();
+    ctx.fillStyle = 'rgba(230,210,175,.85)';
+    for (let i = 0; i < 8; i++) { const an = i / 8 * 6.283, r = 12 + a * 26; ctx.fillRect(f.x + Math.cos(an) * r - 3, f.y + Math.sin(an) * r * 0.4 - 3 - a * 8, 6 * k + 1, 6 * k + 1); }
+  } else if (f.kind === 'beam') {
+    const w = 30 * (k < 0.8 ? k / 0.8 : 1), h = 110;
+    const g = ctx.createLinearGradient(0, f.y - h, 0, f.y); g.addColorStop(0, 'rgba(255,236,150,0)'); g.addColorStop(1, 'rgba(255,214,79,.75)');
+    ctx.fillStyle = g; ctx.fillRect(f.x - w / 2, f.y - h, w, h);
+    ctx.fillStyle = 'rgba(255,255,240,.9)'; ctx.fillRect(f.x - w / 6, f.y - h, w / 3, h);
+    ctx.fillStyle = '#fff59d';
+    for (let i = 0; i < 6; i++) { const sx = f.x + Math.sin(i * 2.4 + a * 5) * 20, sy = f.y - ((a * 90 + i * 19) % 100); ctx.fillRect(sx - 2, sy - 2, 4, 4); }
+    ctx.strokeStyle = 'rgba(255,214,79,.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(f.x, f.y, 14 + a * 22, 5 + a * 8, 0, 0, 7); ctx.stroke();
+  }
+}
+function drawProjGlow(p) {
+  if (vfxLow()) return;
+  if (p.kind === 'fire' || p.kind === 'nuke') {
+    ctx.fillStyle = p.kind === 'fire' ? 'rgba(255,145,0,.25)' : 'rgba(255,235,59,.2)';
+    ctx.beginPath(); ctx.arc(0, 0, 14, 0, 7); ctx.fill();
+  } else if (p.kind !== 'shell') {
+    const L = p.big ? 18 : 14, g = ctx.createLinearGradient(-L * 3, 0, -L / 2, 0);
+    g.addColorStop(0, 'rgba(255,224,130,0)'); g.addColorStop(1, p.big ? 'rgba(206,147,216,.7)' : 'rgba(255,224,130,.7)');
+    ctx.fillStyle = g; ctx.fillRect(-L * 3, -2, L * 2.5, 4);
+  }
+}
+function drawVignette() {
+  const low = S.hp / (S.maxHp || 100), boss = S.enemies.some(e => e.boss);
+  let a = 0;
+  if (low < 0.35) a = 0.38 + Math.sin(S.time * 6) * 0.12;
+  else if (boss) a = 0.1 + Math.sin(S.time * 3) * 0.05;
+  if (VFX.flash > 0) a = Math.max(a, VFX.flash * 0.6);
+  if (a <= 0.01) return;
+  const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.62);
+  g.addColorStop(0, 'rgba(183,28,28,0)'); g.addColorStop(1, `rgba(183,28,28,${a})`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+function drawWaveBanner(dt) {
+  const b = VFX.wbn; if (!b) return;
+  b.t += dt; if (b.t >= b.max) { VFX.wbn = null; return; }
+  const t = b.t, inK = Math.min(1, t / 0.28), out = Math.max(0, (t - (b.max - 0.35)) / 0.35), e = 1 - (1 - inK) ** 3;
+  const cy = H * 0.38, bh = b.boss ? 92 : 74, al = 1 - out;
+  ctx.save(); ctx.globalAlpha = al;
+  // pita
+  const half = (W / 2 + 40) * e;
+  const gb = ctx.createLinearGradient(W / 2 - half, 0, W / 2 + half, 0);
+  const mid = b.boss ? 'rgba(49,10,60,.9)' : 'rgba(22,16,10,.86)';
+  gb.addColorStop(0, 'rgba(0,0,0,0)'); gb.addColorStop(0.18, mid); gb.addColorStop(0.82, mid); gb.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gb; ctx.fillRect(W / 2 - half, cy - bh / 2, half * 2, bh);
+  const edge = b.boss ? '#e040fb' : '#f2c14e';
+  const ge = ctx.createLinearGradient(W / 2 - half, 0, W / 2 + half, 0);
+  ge.addColorStop(0, 'rgba(0,0,0,0)'); ge.addColorStop(0.2, edge); ge.addColorStop(0.8, edge); ge.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = ge; ctx.fillRect(W / 2 - half, cy - bh / 2 - 3, half * 2, 3); ctx.fillRect(W / 2 - half, cy + bh / 2, half * 2, 3);
+  // kilau menyapu
+  const sx = W * ((t / b.max) * 1.6 - 0.3);
+  const gs = ctx.createLinearGradient(sx - 60, 0, sx + 60, 0);
+  gs.addColorStop(0, 'rgba(255,255,255,0)'); gs.addColorStop(0.5, 'rgba(255,255,255,.14)'); gs.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gs; ctx.fillRect(sx - 60, cy - bh / 2, 120, bh);
+  // teks
+  const sc = 1 + (1 - e) * 0.6 + (t < 0.4 ? Math.sin(t / 0.4 * Math.PI) * 0.08 : 0);
+  ctx.translate(W / 2 + (1 - e) * -120, cy); ctx.scale(sc, sc);
+  const fnt = s => `700 ${s}px "Pixelify Sans","Segoe UI",Arial`;
+  ctx.textAlign = 'center';
+  const main = (b.boss ? 'BOSS WAVE ' : 'WAVE ') + b.n;
+  ctx.font = fnt(b.boss ? 52 : 46); ctx.lineWidth = 8; ctx.strokeStyle = '#000'; ctx.lineJoin = 'round';
+  ctx.strokeText(main, 0, 10); ctx.fillStyle = b.boss ? '#ea80fc' : '#ffe9a8'; ctx.fillText(main, 0, 10);
+  ctx.fillStyle = b.boss ? '#fff' : '#fff8e1'; ctx.globalAlpha = al * 0.35; ctx.fillText(main, 0, 6); ctx.globalAlpha = al;
+  ctx.font = fnt(16); ctx.lineWidth = 4; const sub = b.boss ? '⚠ Raja zombie datang — bertahanlah!' : (S.maxWave ? `${S.maxWave - b.n} wave lagi menuju kemenangan` : 'Bersiaplah!');
+  ctx.strokeText(sub, 0, b.boss ? 38 : 32); ctx.fillStyle = b.boss ? '#ffcdd2' : '#d7ccc8'; ctx.fillText(sub, 0, b.boss ? 38 : 32);
+  ctx.restore();
 }
 
 /* ---------------- FRAME ---------------- */
@@ -382,6 +513,7 @@ function draw(dt) {
   ctx.save();
   if (S.shake > 0) { ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake); S.shake *= 0.85; if (S.shake < 0.5) S.shake = 0; }
   drawMap();
+  drawDecals(dt);
 
   const sel = S.selected;
   if (SET.range && sel && sel.type !== 'farm') {
@@ -396,7 +528,7 @@ function draw(dt) {
   if (sel) { ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 3; ctx.strokeRect(sel.c * T + 2, sel.r * T + 2, T - 4, T - 4); }
 
   for (const p of S.projectiles) {
-    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); drawProjGlow(p);
     if (p.kind === 'fire') { ctx.fillStyle = '#ff6d00'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 7); ctx.fill(); ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(2, 0, 3.5, 0, 7); ctx.fill(); }
     else if (p.kind === 'shell') { ctx.fillStyle = '#212121'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 7); ctx.fill(); }
     else if (p.kind === 'nuke') { ctx.fillStyle = '#9e9e9e'; ctx.fillRect(-12, -5, 24, 10); ctx.fillStyle = '#e53935'; ctx.fillRect(8, -5, 6, 10); ctx.fillStyle = '#ffeb3b'; ctx.fillRect(-16, -3, 4, 6); }
@@ -421,6 +553,7 @@ function draw(dt) {
       ctx.strokeStyle = f.col || '#e040fb'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - k * 0.8), 0, 7); ctx.stroke();
     } else if (f.kind === 'smoke') { ctx.fillStyle = 'rgba(160,160,160,.6)'; ctx.beginPath(); ctx.arc(f.x, f.y, 3 + (1 - k) * 5, 0, 7); ctx.fill(); }
     else if (f.kind === 'part') { ctx.fillStyle = f.col; ctx.fillRect(f.x, f.y, f.s, f.s); }
+    else drawVfx(f, k);
   }
   ctx.globalAlpha = 1;
 
@@ -453,10 +586,12 @@ function draw(dt) {
   if (S.radarT > 0) { ctx.strokeStyle = 'rgba(179,136,255,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W / 2, H / 2, (S.time * 300) % 600, 0, 7); ctx.stroke(); }
   if (S.freezeT > 0) { ctx.fillStyle = `rgba(129,212,250,${Math.min(0.18, S.freezeT * 0.06)})`; ctx.fillRect(0, 0, W, H); }
 
-  for (const x of S.texts) { ctx.globalAlpha = Math.min(1, x.life / x.max * 2); outlinedText(x.txt, x.x, x.y, 15, x.col); }
+  for (const x of S.texts) { const ag = x.max - x.life, pop = ag < 0.14 ? 1 + (0.14 - ag) / 0.14 * 0.7 : 1; ctx.globalAlpha = Math.min(1, x.life / x.max * 2); outlinedText(x.txt, x.x, x.y, Math.round(15 * pop * (x.col !== '#fff' ? 1.1 : 1)), x.col); }
   ctx.globalAlpha = 1;
   drawAmbient(dt);
+  drawVignette(); if (VFX.flash > 0) VFX.flash = Math.max(0, VFX.flash - dt);
   drawBossBar();
+  drawWaveBanner(dt);
   if (S.autoSkip && S.state === 'ready' && S.wave < S.maxWave) outlinedText(`Wave berikutnya dalam ${Math.max(1, Math.ceil(S.autoTimer))}...`, W / 2, H - 16, 18, '#fff');
   else if (S.autoSkip && S.autoSkipT != null && canSkip()) outlinedText(`Auto skip dalam ${Math.max(1, Math.ceil(S.autoSkipT))}... (+$${skipBonusAmt()})`, W / 2, H - 16, 18, '#ffd54f');
 

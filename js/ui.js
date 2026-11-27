@@ -25,7 +25,7 @@ const UI = {
     const hpPct = Math.max(0, S.hp / S.maxHp * 100);
     $('hudHp').textContent = Math.max(0, Math.ceil(S.hp));
     $('hudHpBar').style.width = hpPct + '%';
-    $('hudHpBar').style.background = hpPct > 50 ? '#66bb6a' : hpPct > 25 ? '#ffca28' : '#ef5350';
+    $('hudHpBar').className = hpPct > 50 ? '' : hpPct > 25 ? 'mid' : 'crit'; $('hudHpBar').closest('.stat').classList.toggle('low', hpPct <= 25);
     $('hudEnemies').textContent = S.enemies.length + S.spawnQ.length;
     const sb = $('startBtn');
     sb.disabled = S.state !== 'ready';
