@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.2.0] — 2026-11-27
+### Diubah — tata letak lobby
+- **Desktop**: menu kiri jadi satu kolom ramping (ikon + nama), papan Unit Unggulan lebih ringkas di atas panggung tim, panggung & unit lebih besar, tombol "Atur tim" di tengah bawah panggung.
+- **Dok bawah**: slot peti (2×2) di kiri, **MAIN & MABAR berdampingan** di tengah, widget **Misi Harian** di kanan bawah.
+- **HP potret**: kartu Festival/Pass/Tantangan/Markas di atas (2×2), baris slot peti, pemandangan kastil + panggung tim di tengah, papan unggulan tepat di atas tombol MAIN.
+- **HP lanskap**: MAIN & MABAR berdampingan di bawah panggung.
+- Slot peti kosong kini berlabel "Kosong" dengan bingkai putus-putus.
+
 ## [6.1.0] — 2026-11-27
 ### Diubah — efek & tampilan dalam game
 - **Banner wave sinematik**: pita emas melintang dengan kilau menyapu; Boss Wave memakai pita ungu, kilat merah & guncangan layar.

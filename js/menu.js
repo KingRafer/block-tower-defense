@@ -392,7 +392,7 @@ const Menu = {
             : `<button class="bigplay" data-act="go:play"><span class="bp-ic">${pxi('play')}</span><div><b>MAIN</b><small>${MAP.name} • ${DIFFS[DIFF].name}</small></div></button>`}
           </div>
           <button class="lh-coop" data-act="go:mabar"><span>${pxi('swords')}</span><div><b>MABAR</b><small>Co-op 2–4 pemain</small></div></button>
-          <div class="lh-chests">${Array.from({ length: SHARED.CHEST_SLOTS }, (_, i) => { const c = (v.chests || [])[i]; if (!c) return '<button class="lhc empty" data-act="go:base" title="Slot peti kosong — menang untuk mendapat peti"></button>';
+          <div class="lh-chests">${Array.from({ length: SHARED.CHEST_SLOTS }, (_, i) => { const c = (v.chests || [])[i]; if (!c) return `<button class="lhc empty" data-act="go:base" title="Slot peti kosong — menang untuk mendapat peti">${pxi('chest')}<small>Kosong</small></button>`;
             const rd = chestReady(c, now); return `<button class="lhc ${rd ? 'ready' : c.at ? 'run' : ''}" data-act="go:base" title="${SHARED.CHESTS[c.k].name}">${pxi(CHEST_IC[c.k])}<small>${rd ? 'BUKA' : c.at ? `<span data-cd="${c.at + SHARED.CHESTS[c.k].min * 60000}"></span>` : SHARED.CHESTS[c.k].min >= 60 ? SHARED.CHESTS[c.k].min / 60 + 'j' : SHARED.CHESTS[c.k].min + 'm'}</small></button>`; }).join('')}</div>
           <div class="lh-foot">v${VERSION} • ${Online.available ? '🟢 Online' : '⚪ Offline'}</div>
         </div>`;
