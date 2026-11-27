@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.6.0] — 2026-11-27
+### Ditambahkan — Markas (alasan untuk kembali setiap hari)
+- **Peti Hadiah**: menang atau mencapai wave 10 memberi peti (Kayu 15 menit, Perak 1 jam, Emas 3 jam, Ajaib 8 jam). 4 slot, dibuka satu per satu dengan timer
+  atau langsung dengan 💎. Isi: koin, diamond, kristal, batu evolusi, dan peluang unit (Emas: Epik, Ajaib: Epik/Legendaris). Ada animasi buka peti.
+  **Menang pertama setiap hari = Peti Emas.** Slot peti tampil di lobby (desktop).
+- **Tambang Markas**: menghasilkan 🪙 & 💎 walau tidak bermain (penuh dalam 7–16 jam), bisa di-upgrade sampai Lv 10.
+- **Liga Mingguan**: poin dari setiap permainan, 6 tier (Perunggu → Legenda), hadiah tier diambil setelah minggu berakhir.
+- **Koleksi Unit**: hadiah saat jumlah jenis unit mencapai 6, 10, 15, 20, 25, 30, 35.
+- Login harian kini tampil sebagai kalender 7 hari di Markas.
+- **Pengingat istirahat** tiap 1 jam bermain (bisa dimatikan di Pengaturan).
+- Layar hasil menampilkan peti yang didapat & poin liga.
+
 ## [5.5.0] — 2026-11-27
 ### Diubah
 - **Peluang gacha dibuat sedikit lebih sulit**:

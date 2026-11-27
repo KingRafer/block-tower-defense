@@ -187,6 +187,8 @@
     if (!Array.isArray(v.autoSell)) v.autoSell = [];
     if (!v.missions || typeof v.missions !== 'object') v.missions = {};
     if (v.pass && typeof v.pass !== 'object') v.pass = null;
+    if (!v.mine || typeof v.mine !== 'object') v.mine = { lv: 1, at: Date.now() };
+    if (!Array.isArray(v.chests)) v.chests = [];
     return v;
   }
   function makeUnit(type, rng, now, extra) {
@@ -370,6 +372,55 @@
     return lan;
   }
 
+  /* ---------------- MARKAS: PETI, TAMBANG, LIGA, KOLEKSI ---------------- */
+  /* Peti dari bermain: 4 slot, dibuka bergantian dengan timer (bisa dipercepat pakai 💎) */
+  const CHESTS = {
+    wood:   { name: 'Peti Kayu',  min: 15,  w: 55, rw: { coins: [150, 300], crystals: [0, 1] } },
+    silver: { name: 'Peti Perak', min: 60,  w: 30, rw: { coins: [400, 700], crystals: [1, 2], diamonds: [10, 20] } },
+    gold:   { name: 'Peti Emas',  min: 180, w: 12, rw: { coins: [1000, 1600], crystals: [2, 4], stones: [0, 1], diamonds: [30, 60] }, unit: { epic: 0.12 } },
+    magic:  { name: 'Peti Ajaib', min: 480, w: 3,  rw: { coins: [2500, 4000], crystals: [5, 8], stones: [1, 3], diamonds: [80, 140] }, unit: { legendary: 0.2, epic: 0.8 } },
+  };
+  const CHEST_SLOTS = 4;
+  const chestSkipCost = (kind, start, now) => { const left = start ? Math.max(0, start + CHESTS[kind].min * 60000 - now) : CHESTS[kind].min * 60000; return Math.max(3, Math.ceil(left / 120000)); };
+  function dropChest(v, rng, opt) {
+    if (!Array.isArray(v.chests)) v.chests = [];
+    if (v.chests.length >= CHEST_SLOTS) return null;
+    let kind = opt.kind;
+    if (!kind) { const w = { ...Object.fromEntries(Object.entries(CHESTS).map(([k, c]) => [k, c.w])) }; if (opt.hard) { w.gold *= 1.8; w.magic *= 2; } kind = weighted(rng, w); }
+    v.chests.push({ k: kind, at: 0 }); return kind;
+  }
+  /* Tambang Markas: menghasilkan koin & diamond saat tidak bermain (maks beberapa jam) */
+  const MINE = { max: 10, coinsPerH: lv => 50 + lv * 40, diaPerH: lv => 1 + lv * 0.6, capH: lv => 6 + lv, upCost: lv => 600 * lv * lv };
+  function rollMine(v, now) { if (!v.mine || typeof v.mine !== 'object') v.mine = { lv: 1, at: now }; return v.mine; }
+  function mineStored(v, now) {
+    const m = rollMine(v, now), h = Math.min(MINE.capH(m.lv), Math.max(0, now - m.at) / 3600e3);
+    return { h, cap: MINE.capH(m.lv), coins: Math.floor(h * MINE.coinsPerH(m.lv)), diamonds: Math.floor(h * MINE.diaPerH(m.lv)) };
+  }
+  /* Liga mingguan: poin dari setiap permainan, hadiah sesuai tier di akhir minggu */
+  const LEAGUE = [
+    { name: 'Perunggu', at: 0,     color: '#c68642', rw: { diamonds: 40, coins: 500 } },
+    { name: 'Perak',    at: 2000,  color: '#b0bec5', rw: { diamonds: 120, coins: 1500 } },
+    { name: 'Emas',     at: 6000,  color: '#ffd54f', rw: { diamonds: 250, coins: 3000, crystals: 4 } },
+    { name: 'Platinum', at: 12000, color: '#80deea', rw: { diamonds: 400, coins: 5000, stones: 2 } },
+    { name: 'Berlian',  at: 20000, color: '#82b1ff', rw: { diamonds: 650, coins: 8000, stones: 3 } },
+    { name: 'Legenda',  at: 35000, color: '#ff8a65', rw: { diamonds: 1000, coins: 12000, stones: 5, crystals: 10 } },
+  ];
+  const leagueTier = pts => { let t = 0; LEAGUE.forEach((L, i) => { if (pts >= L.at) t = i; }); return t; };
+  function rollLeague(v, now) {
+    const wk = weekStr(now);
+    if (!v.lg || typeof v.lg !== 'object') v.lg = { wk, pts: 0, prev: null };
+    if (v.lg.wk !== wk) { v.lg.prev = v.lg.pts > 0 ? { wk: v.lg.wk, pts: v.lg.pts, claimed: false } : null; v.lg.wk = wk; v.lg.pts = 0; }
+    return v.lg;
+  }
+  /* Koleksi: hadiah saat jumlah jenis unit yang dimiliki mencapai target */
+  const COLLECTION = [
+    { n: 6, rw: { diamonds: 100 } }, { n: 10, rw: { diamonds: 200, crystals: 3 } }, { n: 15, rw: { diamonds: 300, stones: 2 } },
+    { n: 20, rw: { diamonds: 500, stones: 3 } }, { n: 25, rw: { diamonds: 800, stones: 4, crystals: 6 } }, { n: 30, rw: { diamonds: 1200, stones: 6 } },
+    { n: 35, rw: { diamonds: 2000, stones: 8, crystals: 10 } },
+  ];
+  const uniqueTypes = v => new Set(v.units.map(u => u.type)).size;
+  const rint = (rng, [a, b]) => a + Math.floor(rng() * (b - a + 1));
+
   /* ---------------- AKSI ---------------- */
   /* Setiap aksi: (vault, payload, ctx{rng, now, server}) → hasil. Vault diubah langsung. */
   const actions = {
@@ -509,6 +560,12 @@
       const evMap = EVENT_MAPS.includes(r.map);
       const lan = Math.min(700, Math.round((cleared * 3 + bossKills * 15 + (won ? 80 : 0)) * (diff === 'hard' ? 1.5 : 1) * (evMap ? 1.5 : 1)));
       const evLan = bumpEvent(v, ctx.now, { games: 1, waves: cleared, bosses: bossKills, wins: won ? 1 : 0, hardWins: won && diff === 'hard' ? 1 : 0, frost: evMap ? 1 : 0 }, lan);
+      // Markas: peti (menang / ≥10 wave), poin liga, bonus menang pertama hari ini
+      let chest = null, firstWin = false;
+      if (won && (!v.fw || v.fw !== today)) { v.fw = today; firstWin = true; chest = dropChest(v, ctx.rng, { kind: 'gold' }); }
+      else if (won || cleared >= 10) chest = dropChest(v, ctx.rng, { hard: diff === 'hard' });
+      const lg = rollLeague(v, ctx.now), lgPts = Math.round((cleared * 10 + bossKills * 50 + (won ? 200 : 0)) * (diff === 'hard' ? 1.5 : diff === 'easy' ? 0.6 : 1));
+      lg.pts += lgPts;
       const mastery = [];
       for (const [id, g] of Object.entries(r.uxp || {})) {
         const u = v.units.find(x => x.id === id); if (!u) continue;
@@ -516,7 +573,7 @@
         const before = unitLevel(u.xp); u.xp += gain;
         mastery.push({ unitId: id, type: u.type, gain, lv: unitLevel(u.xp), up: unitLevel(u.xp) > before });
       }
-      return { ...rw, pxp, axp, lan: evLan, dailyFirstWin, dailyReward: dailyFirstWin ? DAILY_REWARD : 0, mastery, used, cleared };
+      return { ...rw, pxp, axp, lan: evLan, chest, firstWin, lgPts, dailyFirstWin, dailyReward: dailyFirstWin ? DAILY_REWARD : 0, mastery, used, cleared };
     },
     dailyLogin(v, p, ctx) {
       const today = dayStr(ctx.now);
@@ -608,6 +665,44 @@
       e.lan -= it.cost; e.buy[it.id] = n + 1;
       return { item: it.id, got: giveReward(v, g, ctx.rng, ctx.now) };
     },
+    chestStart(v, p, ctx) {
+      const c = (v.chests || [])[p.i | 0]; if (!c) throw err('Peti tidak ada');
+      if (c.at) throw err('Peti sedang dibuka');
+      if (v.chests.some(x => x.at && ctx.now - x.at < CHESTS[x.k].min * 60000)) throw err('Tunggu peti lain selesai dibuka');
+      c.at = ctx.now; return { i: p.i | 0 };
+    },
+    chestOpen(v, p, ctx) {
+      const i = p.i | 0, c = (v.chests || [])[i]; if (!c) throw err('Peti tidak ada');
+      const ready = c.at && ctx.now - c.at >= CHESTS[c.k].min * 60000;
+      if (!ready) { if (!p.skip) throw err('Peti belum siap'); pay(v, 'diamonds', chestSkipCost(c.k, c.at, ctx.now)); }
+      const def = CHESTS[c.k], rw = {};
+      for (const [k, range] of Object.entries(def.rw)) { const n = rint(ctx.rng, range); if (n) rw[k] = n; }
+      if (def.unit) { const roll = ctx.rng(); let acc = 0; for (const [r, ch] of Object.entries(def.unit)) { acc += ch; if (roll < acc) { const pool = unitsOfRarity(r); rw.unit = pool[Math.floor(ctx.rng() * pool.length)]; break; } } }
+      v.chests.splice(i, 1);
+      return { kind: c.k, got: giveReward(v, rw, ctx.rng, ctx.now) };
+    },
+    mineClaim(v, p, ctx) {
+      const st = mineStored(v, ctx.now); if (st.coins <= 0 && st.diamonds <= 0) throw err('Tambang belum menghasilkan');
+      v.mine.at = ctx.now; return giveReward(v, { coins: st.coins, diamonds: st.diamonds }, ctx.rng, ctx.now);
+    },
+    mineUp(v, p, ctx) {
+      const m = rollMine(v, ctx.now); if (m.lv >= MINE.max) throw err('Tambang sudah level maksimal');
+      const st = mineStored(v, ctx.now); pay(v, 'coins', MINE.upCost(m.lv));
+      if (st.coins || st.diamonds) giveReward(v, { coins: st.coins, diamonds: st.diamonds }, ctx.rng, ctx.now);
+      m.lv++; m.at = ctx.now; return { lv: m.lv };
+    },
+    leagueClaim(v, p, ctx) {
+      const lg = rollLeague(v, ctx.now); if (!lg.prev || lg.prev.claimed) throw err('Tidak ada hadiah liga');
+      lg.prev.claimed = true; const t = leagueTier(lg.prev.pts);
+      return { tier: t, got: giveReward(v, LEAGUE[t].rw, ctx.rng, ctx.now) };
+    },
+    collectionClaim(v, p, ctx) {
+      if (!Array.isArray(v.col)) v.col = [];
+      const i = p.i | 0, c = COLLECTION[i]; if (!c) throw err('Hadiah tidak ada');
+      if (v.col.includes(i)) throw err('Sudah diambil');
+      if (uniqueTypes(v) < c.n) throw err('Koleksi belum cukup');
+      v.col.push(i); return giveReward(v, c.rw, ctx.rng, ctx.now);
+    },
     achClaim(v, p) {
       if (!(p.id in ACH_REWARDS)) throw err('Pencapaian tidak dikenal');
       if (v.achClaimed.includes(p.id)) return { already: true };
@@ -659,6 +754,6 @@
     MAP_STARS, DIFF_INFO, DAILY_WAVES, DAILY_REWARD, ACH_REWARDS, ACH_DIAMONDS, DAILY_LOGIN, rewardsFor,
     newVault, makeUnit, fixVault, actions, SKILL_PRICES, FREE_SKILLS, EVENT, DEFAULTS, applyGlobal,
     EXCLUSIVE, AUTO_SELL_OK, MISSIONS, missionProgress, rollMissions, PASS, PASS_SHOP, PASS_TOK, rollPass, passTier, passReward, seasonName, seasonStr, giveReward,
-    shopSkins, WINTER_GACHA, EVENT_UNITS, eventUnits, EVENT_MAPS, ACC_MAX, accXpFor, accLevel, levelReward, LEVEL_SPECIAL, seedAxp, LIMITED, EV_MISSIONS, EV_MILESTONES, EV_SHOP, limitedActive, limitedEndsAt, rollEvent,
+    shopSkins, CHESTS, CHEST_SLOTS, chestSkipCost, MINE, rollMine, mineStored, LEAGUE, leagueTier, rollLeague, COLLECTION, uniqueTypes, weekStr, WINTER_GACHA, EVENT_UNITS, eventUnits, EVENT_MAPS, ACC_MAX, accXpFor, accLevel, levelReward, LEVEL_SPECIAL, seedAxp, LIMITED, EV_MISSIONS, EV_MILESTONES, EV_SHOP, limitedActive, limitedEndsAt, rollEvent,
   };
 });

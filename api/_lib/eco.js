@@ -9,7 +9,7 @@
 const crypto = require('crypto');
 const SHARED = require('../../js/shared.js');
 
-const VAULT_KEYS = ['coins', 'gems', 'diamonds', 'skills', 'crystals', 'stones', 'skins', 'skillUses', 'pity', 'achClaimed', 'daily', 'dailyWon', 'lastClaimAt', 'pulls', 'missions', 'pass', 'autoSell', 'axp', 'axpSeed', 'lvc', 'ev'];
+const VAULT_KEYS = ['coins', 'gems', 'diamonds', 'skills', 'crystals', 'stones', 'skins', 'skillUses', 'pity', 'achClaimed', 'daily', 'dailyWon', 'lastClaimAt', 'pulls', 'missions', 'pass', 'autoSell', 'axp', 'axpSeed', 'lvc', 'ev', 'chests', 'mine', 'lg', 'fw', 'col'];
 const err = (status, message) => Object.assign(new Error(message), { status });
 const rng = () => crypto.randomBytes(4).readUInt32BE(0) / 4294967296;
 const unitDoc = (u, owner) => ({ _id: u.id, owner, type: u.type, trait: u.trait || null, evo: !!u.evo, xp: u.xp | 0, skin: u.skin || 'default', lock: !!u.lock, tradable: u.tradable !== false, at: u.at || Date.now() });

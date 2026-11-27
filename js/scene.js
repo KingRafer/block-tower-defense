@@ -216,6 +216,11 @@ const PXI = {
   snow: ['.....kk.....', '..k.kwwk.k..', '.kwkkwwkkwk.', '..kwkwwkwk..', '.kkkwwwwkkk.', 'kwwwwbbwwwwk', 'kwwwwbbwwwwk', '.kkkwwwwkkk.', '..kwkwwkwk..', '.kwkkwwkkwk.', '..k.kwwk.k..', '.....kk.....'],
   play: ['..kk........', '..kwk.......', '..kwwk......', '..kwwwk.....', '..kwwwwk....', '..kwwwwwk...', '..kwwwwwk...', '..kwwwwk....', '..kwwwk.....', '..kwwk......', '..kwk.......', '..kk........'],
 };
+/* varian warna peti */
+for (const [nm, map] of [['chestS', { o: 's', O: 'S', y: 'w' }], ['chestG', { o: 'y', O: 'Y', y: 'w' }], ['chestM', { o: 'p', O: 'P', y: 'c' }]])
+  PXI[nm] = PXI.chest.map(r => [...r].map(ch => map[ch] || ch).join(''));
+PXI.pick = ['..........kk', '.........kSk', '..kkkk..kSk.', '.kSSSSkkSk..', 'kSk..kSSk...', 'kk..kSSok...', '....kSkook..', '...kSk..ook.', '..kSk....ook', '.kSk......ok', 'kSk........k', 'kk..........'];
+PXI.trophy = ['kkkkkk', 'kyyyyy', 'kykyyy', '.kyyyy', '..kyyy', '...kyy', '....ky', '....ky', '...kYY', '..kYYY', '..kkkk', '......'];
 function pxiRows(name) {
   let rows = PXI[name] || PXI.star;
   if (rows.length === 6) rows = rows.concat(rows.slice().reverse());

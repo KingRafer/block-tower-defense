@@ -28,6 +28,15 @@ function eventReady() {
   const e = PROFILE.vault.ev, now = Date.now(); if (!SHARED.limitedActive(now) || !e || e.id !== SHARED.LIMITED.id) return 0;
   return SHARED.EV_MISSIONS.filter(d => !e.mc.includes(d.id) && (e.s[d.stat] || 0) >= d.target).length + SHARED.EV_MILESTONES.filter((m, i) => e.earned >= m.at && !e.ms.includes(i)).length;
 }
+const CHEST_IC = { wood: 'chest', silver: 'chestS', gold: 'chestG', magic: 'chestM' };
+const chestReady = (c, now) => c.at && now - c.at >= SHARED.CHESTS[c.k].min * 60000;
+function baseReady() {
+  const v = PROFILE.vault, now = Date.now(); let n = (v.chests || []).filter(c => chestReady(c, now)).length;
+  const ms = SHARED.mineStored(v, now); if (ms.h >= ms.cap) n++;
+  const lg = SHARED.rollLeague(v, now); if (lg.prev && !lg.prev.claimed) n++;
+  const u = SHARED.uniqueTypes(v); n += SHARED.COLLECTION.filter((c, i) => u >= c.n && !(v.col || []).includes(i)).length;
+  return n;
+}
 const RW_ICON = { coins: 'coin', diamonds: 'dia', gems: 'gem', crystals: 'cry', stones: 'orb', pxp: 'ticket', tok: 'tok', lan: 'snow' };
 
 const Menu = {
@@ -62,7 +71,7 @@ const Menu = {
   tickCd() {
     const els = document.querySelectorAll('[data-cd]'); if (!els.length) return;
     const now = Date.now();
-    els.forEach(el => { const s = Math.max(0, Math.floor((+el.dataset.cd - now) / 1000)); el.textContent = s >= 172800 ? `${Math.floor(s / 86400)} hari ${Math.floor(s % 86400 / 3600)} jam` : `${Math.floor(s / 3600)}j ${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}d`; });
+    els.forEach(el => { const s = Math.max(0, Math.floor((+el.dataset.cd - now) / 1000)); el.textContent = s >= 172800 ? `${Math.floor(s / 86400)} hari ${Math.floor(s % 86400 / 3600)} jam` : s < 3600 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}d` : `${Math.floor(s / 3600)}j ${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}d`; });
   },
   close() { this.open = false; this.screen = null; $('overlay').style.display = 'none'; this.scene(false); },
   /** Latar pemandangan menu (dibuat sekali, berganti sesuai jam WIB) */
@@ -174,6 +183,15 @@ const Menu = {
   evoPreview(type, skin) {
     return `<div class="evo-pv"><div><canvas width="96" height="96" data-icon="${type}" data-skin="${skin || 'default'}" data-evo="0"></canvas><small>${TOWERS[type].name}</small></div>
       <span class="evo-arrow">➜</span><div class="ev-after" style="--ac:${typeof evoAccent === 'function' ? evoAccent(type) : '#ffd54f'}"><canvas width="96" height="96" data-icon="${type}" data-skin="${skin || 'default'}" data-evo="1"></canvas><small>${EVOS[type].name}</small></div></div>`;
+  },
+  chestReveal(r) {
+    const el = document.createElement('div'); el.className = 'evomodal';
+    const got = r.got || {}, items = Object.keys(RW_ICON).filter(k => got[k]).map(k => `<div class="cr-it">${pxImg(RW_ICON[k], 'big')}<b>+${got[k].toLocaleString('id-ID')}</b></div>`);
+    if (got.unit) items.push(`<div class="cr-it unit"><canvas width="64" height="64" data-icon="${got.unit.type}" data-skin="default" data-evo="0"></canvas><b>${TOWERS[got.unit.type].name}</b></div>`);
+    el.innerHTML = `<div class="evm-box cbox" style="--ac:#ffd54f"><small class="ph-k">${SHARED.CHESTS[r.kind].name.toUpperCase()}</small>
+      <div class="cr-chest">${pxImg(CHEST_IC[r.kind], 'huge')}</div><div class="cr-items">${items.join('')}</div><button class="btn big">Ambil</button></div>`;
+    document.body.appendChild(el); this.drawIcons(el);
+    const close = () => el.remove(); el.querySelector('.btn').onclick = close; el.addEventListener('click', e => { if (e.target === el) close(); });
   },
   /** Animasi evolusi: kilat cahaya lalu bentuk baru + daftar perubahan */
   evoReveal(u) {
@@ -365,7 +383,7 @@ const Menu = {
             ${evOn ? `<button class="rcard r-event" data-act="go:play"><span class="rc-ic">${pxi('star')}</span><div><b>EVENT AKTIF</b><small>${ev.rewardMul > 1 ? `🪙 ×${ev.rewardMul} ` : ''}${ev.diamondMul > 1 ? `💎 ×${ev.diamondMul}` : ''} hadiah bermain</small></div></button>` : ''}
             <button class="rcard r-pass" data-act="go:pass"><span class="rc-ic">${pxi('ticket')}</span><div><b>SEASON PASS</b><small>Tier ${pt}/${SHARED.PASS.tiers}${ps.premium ? ' • ⭐' : ''}</small><div class="rc-bar"><div style="width:${ppct}%"></div></div></div>${this.badge(passReady())}</button>
             <button class="rcard r-daily" data-act="go:daily"><span class="rc-ic">${pxi('cal')}</span><div><b>TANTANGAN HARIAN</b><small>${dailyState().won ? '✅ Selesai • reset <span data-cd="' + nextDay + '"></span>' : 'Hadiah 🪙 ' + DAILY_REWARD + ' + 💎'}</small></div></button>
-            <div class="rcard r-login"><span class="rc-ic">${pxi('gift')}</span><div><b>LOGIN HARIAN</b><small>Hari ke-${streak || 1} • besok 💎 ${nextLogin}</small><small class="dim">Berikutnya <span data-cd="${nextDay}"></span></small></div></div>
+            <button class="rcard r-base" data-act="go:base"><span class="rc-ic">${pxi('chestG')}</span><div><b>MARKAS</b><small>Peti ${(v.chests || []).length}/${SHARED.CHEST_SLOTS} • Tambang ${Math.floor(SHARED.mineStored(v, now).h / SHARED.mineStored(v, now).cap * 100)}%</small><small class="dim">Liga ${SHARED.LEAGUE[SHARED.leagueTier(SHARED.rollLeague(v, now).pts)].name} • login hari ke-${streak || 1}</small></div>${this.badge(baseReady())}</button>
           </aside>
           <button class="lh-mis" data-act="go:missions"><b>${pxi('target', 'sm')} MISI HARIAN</b>${misW}</button>
           <div class="lh-play">
@@ -374,6 +392,8 @@ const Menu = {
             : `<button class="bigplay" data-act="go:play"><span class="bp-ic">${pxi('play')}</span><div><b>MAIN</b><small>${MAP.name} • ${DIFFS[DIFF].name}</small></div></button>`}
           </div>
           <button class="lh-coop" data-act="go:mabar"><span>${pxi('swords')}</span><div><b>MABAR</b><small>Co-op 2–4 pemain</small></div></button>
+          <div class="lh-chests">${Array.from({ length: SHARED.CHEST_SLOTS }, (_, i) => { const c = (v.chests || [])[i]; if (!c) return '<button class="lhc empty" data-act="go:base" title="Slot peti kosong — menang untuk mendapat peti"></button>';
+            const rd = chestReady(c, now); return `<button class="lhc ${rd ? 'ready' : c.at ? 'run' : ''}" data-act="go:base" title="${SHARED.CHESTS[c.k].name}">${pxi(CHEST_IC[c.k])}<small>${rd ? 'BUKA' : c.at ? `<span data-cd="${c.at + SHARED.CHESTS[c.k].min * 60000}"></span>` : SHARED.CHESTS[c.k].min >= 60 ? SHARED.CHESTS[c.k].min / 60 + 'j' : SHARED.CHESTS[c.k].min + 'm'}</small></button>`; }).join('')}</div>
           <div class="lh-foot">v${VERSION} • ${Online.available ? '🟢 Online' : '⚪ Offline'}</div>
         </div>`;
     },
@@ -396,6 +416,7 @@ const Menu = {
       const u = Online.user, row = (act, ic, t, d) => `<button class="mrow" data-act="${act}"><span>${ic}</span><div><b>${t}</b><small>${d}</small></div><i>›</i></button>`;
       return `${this.header('Lainnya')}<div class="mlist">
         ${row('mgo:trade', '🔁', 'Trading', u ? 'Tukar unit dengan teman' : 'Perlu login')}
+        ${row('mgo:base', '🏰', 'Markas', 'Peti, Tambang, Liga & Koleksi')}
         ${row('mgo:levels', '⭐', 'Hadiah Level', levelReady() ? `${levelReady()} hadiah siap diambil` : 'Hadiah tiap naik level')}
         ${row('mgo:event', '❄️', 'Event Terbatas', SHARED.limitedActive(Date.now()) ? SHARED.LIMITED.name : 'Tidak ada event aktif')}
         ${row('mgo:redeem', '🎁', 'Kode Redeem', 'Tukar kode hadiah')}
@@ -501,6 +522,49 @@ const Menu = {
         <div class="evlinks"><button class="btn blue sm" data-act="evgo:gacha">❄️ Banner Winter — unit eksklusif</button><button class="btn sm" data-act="evgo:frost">🗺️ Main di Lembah Beku</button></div>
         <div class="tabs">${[['mis', 'Misi Event'], ['road', 'Hadiah Pencapaian'], ['shop', 'Toko Event'], ['units', 'Unit Eksklusif']].map(([k, l]) => `<button class="tab ${tab === k ? 'on' : ''}" data-act="evtab:${k}">${l}</button>`).join('')}</div>
         ${body}`;
+    },
+    base() {
+      const v = PROFILE.vault, now = Date.now(), CH = SHARED.CHESTS;
+      const anyRun = (v.chests || []).some(c => c.at && !chestReady(c, now));
+      const slots = Array.from({ length: SHARED.CHEST_SLOTS }, (_, i) => {
+        const c = (v.chests || [])[i];
+        if (!c) return `<div class="cslot empty"><span class="cs-ic">${pxImg('chest', 'big')}</span><b>Kosong</b><small>Menang / capai wave 10 untuk dapat peti</small></div>`;
+        const d = CH[c.k], rd = chestReady(c, now), dur = d.min >= 60 ? d.min / 60 + ' jam' : d.min + ' menit';
+        return `<div class="cslot k-${c.k} ${rd ? 'ready' : c.at ? 'run' : ''}"><span class="cs-ic">${pxImg(CHEST_IC[c.k], 'big')}</span><b>${d.name}</b>
+          ${rd ? `<button class="btn sm" data-act="chop:${i}">BUKA!</button>`
+          : c.at ? `<small>⏳ <span data-cd="${c.at + d.min * 60000}"></span></small><button class="btn sm blue" data-act="chsk:${i}">Buka sekarang 💎 ${SHARED.chestSkipCost(c.k, c.at, now)}</button>`
+          : `<small>${dur}</small>${anyRun ? `<button class="btn sm gray" data-act="chsk:${i}">💎 ${SHARED.chestSkipCost(c.k, 0, now)}</button>` : `<button class="btn sm" data-act="chst:${i}">Mulai buka</button>`}`}</div>`;
+      }).join('');
+      const m = SHARED.rollMine(v, now), ms = SHARED.mineStored(v, now), M = SHARED.MINE, mpct = Math.min(100, ms.h / ms.cap * 100);
+      const lg = SHARED.rollLeague(v, now), t = SHARED.leagueTier(lg.pts), L = SHARED.LEAGUE, nx = L[t + 1];
+      const wkEnd = Date.parse(SHARED.weekStr(now) + 'T00:00:00+07:00') + 7 * 864e5;
+      const lpct = nx ? (lg.pts - L[t].at) / (nx.at - L[t].at) * 100 : 100, uq = SHARED.uniqueTypes(v);
+      const streak = (v.daily || {}).streak || 0, nextDay = Date.parse(SHARED.dayStr(now + 864e5) + 'T00:00:00+07:00');
+      return `${this.header('Markas')}
+        <div class="basegrid">
+          <div class="box bx-chest"><h3>${pxImg('chestG')} Peti Hadiah <small class="dim">${(v.chests || []).length}/${SHARED.CHEST_SLOTS}</small></h3>
+            <small class="dim">Menang pertama hari ini = Peti Emas. Peti dibuka satu per satu dengan timer — kembali lagi nanti untuk membukanya.</small>
+            <div class="cslots">${slots}</div></div>
+          <div class="box bx-mine"><h3>${pxImg('pick')} Tambang Markas <small class="dim">Lv ${m.lv}/${M.max}</small></h3>
+            <small class="dim">Menghasilkan 🪙 ${M.coinsPerH(m.lv)}/jam & 💎 ${M.diaPerH(m.lv).toFixed(1)}/jam walau kamu tidak bermain. Penuh setelah ${ms.cap} jam.</small>
+            <div class="mine-st"><span>🪙 <b>${ms.coins.toLocaleString('id-ID')}</b></span><span>💎 <b>${ms.diamonds}</b></span></div>
+            <div class="mbar"><div style="width:${mpct}%"></div><span>${mpct >= 100 ? 'PENUH — ambil sekarang!' : Math.floor(mpct) + '%'}</span></div>
+            <div class="row2"><button class="btn" data-act="mine" ${ms.coins || ms.diamonds ? '' : 'disabled'}>Ambil hasil</button>
+              ${m.lv < M.max ? `<button class="btn blue" data-act="mineup" ${v.coins >= M.upCost(m.lv) ? '' : 'disabled'}>⬆ Lv ${m.lv + 1} • 🪙 ${M.upCost(m.lv).toLocaleString('id-ID')}</button>` : '<span class="rar" style="background:#43a047">Level maksimal</span>'}</div></div>
+          <div class="box bx-league" style="--lc:${L[t].color}"><h3>${pxImg('trophy')} Liga Mingguan</h3>
+            <div class="lg-row"><span class="lg-badge">${L[t].name}</span><div class="ph-xp"><div class="xpbar wide"><div style="width:${lpct}%"></div></div>
+              <small>${lg.pts.toLocaleString('id-ID')} poin${nx ? ` • ${(nx.at - lg.pts).toLocaleString('id-ID')} lagi ke ${nx.name}` : ' • tier tertinggi!'}</small></div></div>
+            <small class="dim">Poin dari setiap permainan (wave, boss, menang; Sulit ×1,5). Hadiah tier diberikan setelah minggu berakhir • reset <span data-cd="${wkEnd}"></span></small>
+            <div class="lg-tiers">${L.map((x, i) => `<span class="${i <= t ? 'on' : ''}" style="--lc:${x.color}" title="${this.rw(x.rw)}">${x.name}</span>`).join('')}</div>
+            <small>Hadiah ${L[t].name}: ${this.rw(L[t].rw)}</small>
+            ${lg.prev && !lg.prev.claimed ? `<button class="btn" data-act="lgc">🏆 Ambil hadiah minggu lalu (${L[SHARED.leagueTier(lg.prev.pts)].name})</button>` : ''}</div>
+          <div class="box bx-col"><h3>📖 Koleksi Unit <small class="dim">${uq} jenis</small></h3>
+            <div class="colms">${SHARED.COLLECTION.map((c, i) => { const got = (v.col || []).includes(i), ok = uq >= c.n;
+              return `<div class="colm ${got ? 'got' : ok ? 'ready' : ''}"><b>${c.n} jenis</b><small>${this.rw(c.rw)}</small>${got ? `<span class="ok">${pxImg('check')}</span>` : `<button class="btn sm ${ok ? '' : 'gray'}" ${ok ? '' : 'disabled'} data-act="colc:${i}">${ok ? 'Ambil' : `${uq}/${c.n}`}</button>`}</div>`; }).join('')}</div></div>
+          <div class="box bx-login"><h3>${pxImg('gift')} Login Harian</h3><p>Hari ke-${streak || 1} • besok 💎 ${SHARED.DAILY_LOGIN[streak % SHARED.DAILY_LOGIN.length]}</p>
+            <div class="login7">${SHARED.DAILY_LOGIN.map((d, i) => `<span class="${i < ((streak - 1) % 7) + 1 ? 'on' : ''}">H${i + 1}<b>💎${d}</b></span>`).join('')}</div>
+            <small class="dim">Login setiap hari untuk menjaga rangkaian • hari berikutnya <span data-cd="${nextDay}"></span></small></div>
+        </div>`;
     },
     redeem() {
       if (!Online.user) return this.needLogin('Kode Redeem', 'Masuk dengan Google untuk menukar kode hadiah.');
@@ -822,7 +886,7 @@ const Menu = {
           <h4>🔊 Audio</h4>${tg('sound', 'Efek suara')}${sl('sfxVol', 'Volume efek')}${tg('music', 'Musik latar')}${sl('musicVol', 'Volume musik')}
           <h4>🖥️ Tampilan</h4>${tg('dmgNum', 'Angka damage')}${tg('shake', 'Getaran layar')}${tg('range', 'Jangkauan tower terpilih')}${tg('grid', 'Garis grid')}${tg('fps', 'Tampilkan FPS')}
           <div class="tog"><span>Kualitas partikel</span><button class="btn sm blue" data-act="quality">${SET.quality === 'high' ? 'Tinggi' : 'Rendah'}</button></div>
-          <h4>🎮 Permainan</h4>${tg('autoPause', 'Pause otomatis saat pindah tab')}${tg('autoFs', 'Layar penuh otomatis saat bermain (desktop)')}
+          <h4>🎮 Permainan</h4>${tg('autoPause', 'Pause otomatis saat pindah tab')}${tg('autoFs', 'Layar penuh otomatis saat bermain (desktop)')}${tg('breakRemind', 'Pengingat istirahat tiap 1 jam bermain')}
           <h4>💾 Data</h4>
           <div class="tog"><span>Hapus semua progres (koin, tower, rekor, pencapaian)</span><button class="btn sm red" data-act="reset">${this.resetArm ? 'Yakin? Klik lagi' : 'Reset'}</button></div>
         </div>`;
@@ -902,7 +966,7 @@ const Menu = {
       const d = this.endData;
       return `<h1 class="${d.won ? 'win' : 'lose'}">${d.won ? '🏆 MENANG!' : '💀 GAME OVER'}</h1>
         <div class="score">${d.score.toLocaleString('id-ID')} <small>poin • peringkat #${d.rank}</small></div>
-        ${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
+        ${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.chest ? `<span class="badge">${pxImg(CHEST_IC[d.chest])} ${d.firstWin ? 'Menang pertama hari ini: ' : 'Dapat '}${SHARED.CHESTS[d.chest].name}!</span>` : d.chestFull ? '<span class="badge gray">Slot peti penuh — buka peti di Markas</span>' : ''}${d.lgPts ? `<span class="badge">🏆 +${d.lgPts} poin liga</span>` : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
         ${d.unlockedSkill ? `<span class="badge purple">⚡ Skill baru: ${d.unlockedSkill.icon} ${d.unlockedSkill.name}</span>` : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}
         <div class="box endbox"><table>
           <tr><td>Map</td><td><b>${MAP.name}</b> (${DIFFS[S.diff].name})</td></tr>
@@ -941,6 +1005,7 @@ const Menu = {
     main() { Online.refreshBadge && Online.refreshBadge(); this.drawIcons(); this.tickCd(); },
     pass() { this.drawIcons(); const sc = $('prScroll'), nx = sc && (sc.querySelector('.pcol2.next') || sc.querySelector('.pcol2.on:last-child')); if (sc && nx && !this._passKeep) sc.scrollLeft = Math.max(0, nx.offsetLeft - sc.clientWidth / 2 + nx.offsetWidth / 2); },
     levels() { this.drawIcons(); },
+    base() { this.drawIcons(); this.tickCd(); clearInterval(this._baseT); this._baseT = setInterval(() => { if (this.screen === 'base' && !document.querySelector('.evomodal')) this.show('base', true); else if (this.screen !== 'base') clearInterval(this._baseT); }, 20000); },
     event() { this.drawIcons(); this.tickCd(); },
     account() {
       document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); this.drawIcons();
@@ -1037,6 +1102,12 @@ const Menu = {
       case 'pclaim': { const [, track, t] = a.split(':'); this.eco('passClaim', { track, tier: +t }, r => '🎫 ' + this.rw(r.claimed[0].got)).then(() => this.show('pass', true)); break; }
       case 'ptab': this.passTab = arg; this.show('pass', true); break;
       case 'lvclaim': this.eco('levelClaim', { lv: arg === 'all' ? 'all' : +arg }, r => r.claimed.length > 1 ? `⭐ ${r.claimed.length} hadiah level diambil!` : '⭐ ' + this.rw(r.claimed[0].got)); break;
+      case 'chst': this.eco('chestStart', { i: +arg }, '⏳ Peti mulai dibuka'); break;
+      case 'chop': case 'chsk': Eco.act('chestOpen', { i: +arg, skip: a.startsWith('chsk') }).then(r => { sfx('achieve'); this.show('base', true); this.chestReveal(r); }).catch(e => { sfx('error'); UI.toast('❌ ' + e.message); }); break;
+      case 'mine': this.eco('mineClaim', {}, r => '⛏️ ' + this.rw(r)); break;
+      case 'mineup': this.eco('mineUp', {}, r => `⬆ Tambang naik ke Lv ${r.lv}!`); break;
+      case 'lgc': this.eco('leagueClaim', {}, r => `🏆 Liga ${SHARED.LEAGUE[r.tier].name}: ${this.rw(r.got)}`); break;
+      case 'colc': this.eco('collectionClaim', { i: +arg }, r => '📖 ' + this.rw(r)); break;
       case 'evtab': this.evTab = arg; this.show('event', true); break;
       case 'evm': this.eco('evMission', { id: arg }, r => this.rw(r)); break;
       case 'evms': this.eco('evMilestone', { i: arg === 'all' ? 'all' : +arg }, r => r.claimed.map(g => this.rw(g)).join(' • ')); break;

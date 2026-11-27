@@ -913,7 +913,7 @@ async function finishGame(won) {
 
   sfx(won ? 'win' : 'lose');
   Menu.endData = { won, record, coins: rw.coins || 0, xp, diamonds: rw.diamonds || 0, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank,
-    dailyReward: rw.dailyReward || 0, lan: rw.lan || 0, crystals: rw.crystals || 0, stones: rw.stones || 0, mastery, used: rw.used || {} };
+    dailyReward: rw.dailyReward || 0, lan: rw.lan || 0, chest: rw.chest || null, firstWin: !!rw.firstWin, lgPts: rw.lgPts || 0, chestFull: !rw.chest && (won || cleared >= 10) && (PROFILE.vault.chests || []).length >= SHARED.CHEST_SLOTS, crystals: rw.crystals || 0, stones: rw.stones || 0, mastery, used: rw.used || {} };
   setTimeout(() => Menu.show('end'), 600);
 }
 

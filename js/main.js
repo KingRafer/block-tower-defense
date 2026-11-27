@@ -128,3 +128,13 @@ Menu.show('main');
 setTimeout(() => Menu.whatsNew(), 1500);   // popup "Yang baru" setelah update
 Online.init();
 requestAnimationFrame(loop);
+
+/* Pengingat istirahat: setiap 60 menit waktu aktif (tab terlihat), tampilkan saran istirahat */
+(() => {
+  let active = 0;
+  setInterval(() => {
+    if (document.hidden) return;
+    active += 60;
+    if (SET.breakRemind !== false && active >= 3600) { active = 0; UI.toast('☕ Sudah main 1 jam. Istirahat sebentar, minum air & regangkan badan ya!', '', 8000); }
+  }, 60000);
+})();

@@ -139,5 +139,20 @@ function call(r, { method = 'POST', body = {}, query = {}, token } = {}) {
   assert.throws(() => SHARED.actions.summon(wv, { banner: 'winter', count: 1 }, { ...ctx, now: Date.parse(SHARED.LIMITED.end + 'T12:00:00+07:00') + 3 * 864e5 }), /berakhir/);
   SHARED.actions.claim(ev, { result: { cleared: 20, won: false, diff: 'normal', map: 'frost', mode: 'normal', bossKills: 2, kills: 300, duration: 2000 } }, { ...ctx, now: now0 + 60000 });
   assert(ev.ev.s.frost === 1, 'main di map event tercatat');
+  // Markas: peti, tambang, liga, koleksi
+  const mv = SHARED.newVault(now0, Math.random), mc = { rng: Math.random, now: now0, server: false };
+  const cr = SHARED.actions.claim(mv, { result: { cleared: 30, won: true, diff: 'normal', map: 'grass', mode: 'classic', bossKills: 3, kills: 500, duration: 3000 } }, mc);
+  assert(cr.firstWin && cr.chest === 'gold' && mv.chests.length === 1 && cr.lgPts > 0, 'menang pertama = Peti Emas + poin liga');
+  assert.throws(() => SHARED.actions.chestOpen(mv, { i: 0 }, mc), /belum siap/);
+  SHARED.actions.chestStart(mv, { i: 0 }, mc);
+  const co = SHARED.actions.chestOpen(mv, { i: 0 }, { ...mc, now: now0 + 181 * 60000 }); assert(co.got.coins > 0 && mv.chests.length === 0, 'peti dibuka');
+  for (let i = 0; i < 6; i++) SHARED.actions.claim(mv, { result: { cleared: 15, won: false, diff: 'normal', map: 'grass', mode: 'classic', bossKills: 1, kills: 100, duration: 3000 } }, mc);
+  assert(mv.chests.length === SHARED.CHEST_SLOTS, 'slot peti maksimal 4');
+  mv.mine.at = now0 - 100 * 3600e3; const c0 = mv.coins; const mr = SHARED.actions.mineClaim(mv, {}, mc);
+  assert(mr.coins === Math.floor(SHARED.MINE.capH(1) * SHARED.MINE.coinsPerH(1)) && mv.coins === c0 + mr.coins, 'tambang dibatasi kapasitas');
+  const nextWeek = { ...mc, now: now0 + 8 * 864e5 }; SHARED.rollLeague(mv, nextWeek);
+  const lr = SHARED.actions.leagueClaim(mv, {}, nextWeek); assert(lr.got.diamonds > 0, 'hadiah liga minggu lalu');
+  assert.throws(() => SHARED.actions.leagueClaim(mv, {}, nextWeek));
+  assert.throws(() => SHARED.actions.collectionClaim(mv, { i: 1 }, mc), /belum cukup/);
   console.log('✅ Semua uji misi, season pass & kode redeem lulus');
 })().catch(e => { console.error('❌', e); process.exit(1); });
