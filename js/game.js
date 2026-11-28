@@ -172,8 +172,9 @@ function buildWave(n) {
   if (n >= 15 && n % 10 === 5) add('golem', Math.max(1, Math.floor((n - 5) / 10)), 4);
   if (n >= 18) add('fast', Math.min(n, 60), 0.25);
   if (n > 40) add('armored', Math.floor((n - 40) * 0.8), 0.6);
-  if (n % 10 === 0) add('boss', Math.max(1, Math.floor(n / 10)), 4);
-  if (S && !S.daily && isFinite(S.maxWave) && n === S.maxWave) add('overlord', 1, 5);     // boss terakhir
+  const finalW = S && !S.daily && isFinite(S.maxWave) && n === S.maxWave;
+  if (n % 10 === 0) add('boss', Math.max(1, Math.floor(n / 10)) - (finalW ? 1 : 0), 4);   // wave final: 1 boss diganti Raja Kegelapan
+  if (finalW) add('overlord', 1, 5);     // boss terakhir
   // padatkan: musuh biasa dikurangi ke target jumlah, boss & golem tetap utuh
   const special = g => g.type === 'boss' || g.type === 'golem' || g.type === 'overlord';
   const total = groups.reduce((a, g) => a + (special(g) ? 0 : g.count), 0);
@@ -377,6 +378,8 @@ function spawn(type, from) {
   if (d.boss) hp = d.hp * Math.pow(w / 10, 2.1) * (1 + w * 0.05);
   if (d.miniboss) hp = d.hp * Math.pow(w / 10, 1.9) * (1 + w * 0.06);
   hp *= DIFFS[S.diff].hpMul * S.M.hpMul;
+  if (d.final) hp *= DIFFS[S.diff].finalMul || 1;
+  const ea = DIFFS[S.diff].early || 1; if (w < 10 && !d.boss) hp *= ea + (1 - ea) * (w - 1) / 9;   // awal permainan lebih ramah
   const e = {
     id: S.nextId++, type, ...d, spd: d.spd * S.M.spdMul, reward: Math.max(1, Math.round(d.reward * DIFFS[S.diff].reward * S.M.rewardMul)),
     maxHp: hp, hp, x: pathPx[0].x, y: pathPx[0].y, wp: 1, dist: 0,
@@ -774,7 +777,9 @@ function update(dt) {
     }
     if (e.wp >= pathPx.length) {
       e.dead = true; S.leaked = true;
-      let dmg = S.shieldT > 0 ? 0 : e.boss ? 9999 : Math.ceil(e.hp);
+      const DD = DIFFS[S.diff], lk = DD.leak || [Infinity, 0];
+      let dmg = S.shieldT > 0 ? 0 : e.boss ? (e.final ? 9999 : Math.min(9999, DD.bossLeak == null ? 9999 : DD.bossLeak))
+        : Math.ceil(Math.min(e.hp, (e.miniboss ? 4 : 1) * (lk[0] + lk[1] * S.wave)));
       if (e.thief) {
         const steal = 60 + Math.min(S.wave, 80) * 15;
         addCash(S.me, -Math.min(S.cash, steal)); for (const id in S.players) if (id !== S.me) addCash(id, -Math.min(S.players[id].cash, steal));

@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.1.0] — 2026-11-28
+### Keseimbangan — lebih adil untuk pemain baru
+- **Damage musuh yang lolos kini dibatasi per musuh** sesuai kesulitan & wave (Mudah 3 + 0,4/wave, Normal 5 + 0,7/wave, Sulit 8 + 1,2/wave; mini-boss ×4). Satu tank yang lolos tidak lagi langsung menghabiskan nyawa base.
+- **Boss yang lolos**: −60 nyawa di Mudah, −70 di Normal, tetap langsung kalah di Sulit. Raja Kegelapan yang lolos tetap mengakhiri permainan.
+- **Wave 1–9 lebih ramah**: HP musuh dimulai 60% (Mudah) / 75% (Normal) / 90% (Sulit) lalu naik bertahap sampai normal di wave 10.
+- **Wave final**: Raja Kegelapan menggantikan satu boss biasa; HP-nya disesuaikan kesulitan (Mudah 30%, Normal 80%, Sulit 100%).
+- Hasil uji bot dengan unit awal (Scout, Sniper, Demoman, Farm) + skill: Mudah kini bisa dimenangkan di semua map yang diuji; Normal bertahan sampai sekitar wave 20 (butuh unit lebih kuat); Sulit tetap untuk pemain berpengalaman.
+
 ## [8.0.0] — 2026-11-28
 ### Baru
 - **Mode Kampanye**: 5 bab (satu per map) × 3 tahap (Mudah → Normal → Sulit) = 15 tahap yang terbuka berurutan. Setiap tahap memberi 1–3 bintang (⭐ menang, ⭐⭐ nyawa base ≥ 50%, ⭐⭐⭐ tanpa kehilangan nyawa). Tombol "Tahap Berikutnya" di layar hasil. Akses dari Pilih Map atau Lainnya.

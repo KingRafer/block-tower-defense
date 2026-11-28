@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '8.0.0';
+const VERSION = '8.1.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
@@ -37,9 +37,11 @@ const mapOpen = m => !m.event || SHARED.limitedActive(Date.now());
 
 /* ---------------- KESULITAN ---------------- */
 const DIFFS = {
-  easy:   { name:'Mudah',  cash:800, hp:150, hpMul:0.7, waves:20, reward:1.2,  coinMul:0.6, color:'#43a047' },
-  normal: { name:'Normal', cash:600, hp:100, hpMul:1.0, waves:30, reward:1.0,  coinMul:1.0, color:'#fb8c00' },
-  hard:   { name:'Sulit',  cash:500, hp:75,  hpMul:1.4, waves:40, reward:0.85, coinMul:1.8, color:'#e53935' },
+  // leak: batas damage ke base per musuh biasa yang lolos (dasar + per wave); bossLeak: damage boss yang lolos (Infinity = langsung kalah)
+  // early: HP musuh wave 1–10 diperingan (pengali di wave 1, naik linear ke 1 di wave 10)
+  easy:   { name:'Mudah',  cash:800, hp:150, hpMul:0.7, waves:20, reward:1.2,  coinMul:0.6, color:'#43a047', leak:[3, 0.4], bossLeak:60, early:0.6, finalMul:0.3 },
+  normal: { name:'Normal', cash:600, hp:100, hpMul:1.0, waves:30, reward:1.0,  coinMul:1.0, color:'#fb8c00', leak:[5, 0.7], bossLeak:70, early:0.75, finalMul:0.8 },
+  hard:   { name:'Sulit',  cash:500, hp:75,  hpMul:1.4, waves:40, reward:0.85, coinMul:1.8, color:'#e53935', leak:[8, 1.2], bossLeak:Infinity, early:0.9, finalMul:1 },
 };
 
 /* ---------------- TOWER ----------------
@@ -388,7 +390,7 @@ const ENEMIES = {
   necro:    {name:'Nekromancer',  hp:60,  spd:0.8, reward:30, color:'#311b92', size:0.66, necro:true, desc:'Terus memanggil kerangka'},
   skeleton: {name:'Kerangka',     hp:9,   spd:1.6, reward:2,  color:'#eceff1', size:0.44, desc:'Panggilan Nekromancer', hide:true},
   golem:    {name:'Golem Batu',   hp:260, spd:0.45,reward:150,color:'#78909c', size:1.0, armor:0.4, noSlow:true, miniboss:true, desc:'Mini-boss tiap wave 15, 25, 35…: armor 40%, kebal efek lambat'},
-  overlord: {name:'Raja Kegelapan', hp:2600,spd:0.42,reward:1500,color:'#1a0033', size:1.4, armor:0.3, boss:true, final:true, desc:'Boss terakhir di wave final mode Klasik: perisai kegelapan, mengamuk di bawah 50% HP & memanggil pasukan elite'},
+  overlord: {name:'Raja Kegelapan', hp:1200,spd:0.42,reward:1500,color:'#1a0033', size:1.4, armor:0.3, boss:true, final:true, desc:'Boss terakhir di wave final mode Klasik: perisai kegelapan, mengamuk di bawah 50% HP & memanggil pasukan elite'},
   boss:     {name:'Raja Zombie',  hp:700, spd:0.55,reward:300,color:'#6a1b9a', size:1.1, armor:0.2, boss:true, desc:'Muncul tiap 10 wave: membuat tower pingsan & memanggil pasukan'},
 };
 const ENEMY_INTRO = { fast:3, flyer:4, tank:5, thief:6, hidden:7, shielded:8, regen:9, berserk:10, healer:11, armored:12, stealth:13, splitter:14, bomber:15, giant:17, necro:19, golem:15 };

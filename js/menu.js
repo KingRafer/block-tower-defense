@@ -903,7 +903,7 @@ const Menu = {
     howto() {
       return `${this.header('Cara Main')}
         <div class="box howto">
-          <h4>🎯 Tujuan</h4><p>Zombie berjalan dari portal ungu menuju <b>BASE</b>. Pasang tower di rumput dekat jalur untuk menghentikannya. Musuh yang lolos mengurangi nyawa sebesar sisa HP-nya, sedangkan boss yang lolos langsung mengakhiri permainan. Bertahan sampai wave terakhir untuk menang.</p>
+          <h4>🎯 Tujuan</h4><p>Zombie berjalan dari portal ungu menuju <b>BASE</b>. Pasang tower di rumput dekat jalur untuk menghentikannya. Musuh yang lolos mengurangi nyawa sebesar sisa HP-nya (dibatasi per musuh sesuai kesulitan). Boss yang lolos mengurangi 60 nyawa di Mudah, 70 di Normal, dan langsung mengakhiri permainan di Sulit. Di wave terakhir muncul <b>Raja Kegelapan</b> — jika ia lolos, permainan berakhir. Bertahan sampai wave terakhir untuk menang.</p>
           <h4>💰 Ekonomi</h4><p>Dapatkan uang dari mengalahkan musuh, bonus akhir wave, dan tower <b>Farm</b>. Jual tower untuk mendapat kembali ${SELL_RATE * 100}% total biaya.</p>
           <h4>🧟 Musuh</h4>
           <table>${Object.entries(ENEMIES).filter(([, e]) => !e.hide).map(([k, e]) => `<tr><td><i class="dot" style="background:${e.color}"></i> ${e.name}</td><td>${e.desc}${ENEMY_INTRO[k] ? ` <small class="dim">(mulai wave ${ENEMY_INTRO[k]})</small>` : ''}</td></tr>`).join('')}</table>
