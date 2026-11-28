@@ -32,6 +32,7 @@ const Sound = (() => {
     click:[700,0.05,'triangle',0.12,0.8], error:[180,0.15,'square',0.12,0.8], freeze:[1200,0.06,'sine',0.08,0.6],
     win:[523,0.8,'triangle',0.25,2], lose:[110,0.9,'sawtooth',0.25,0.4], coin:[988,0.12,'square',0.1,1.4],
     stun:[300,0.4,'sawtooth',0.15,0.3], achieve:[784,0.5,'triangle',0.22,2],
+    boss:[65,1.1,'sawtooth',0.3,0.45], hit:[260,0.03,'square',0.035,0.6],
   };
 
   function sfx(type) {

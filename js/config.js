@@ -4,7 +4,7 @@
  * ========================================================= */
 'use strict';
 
-const VERSION = '7.3.0';
+const VERSION = '8.0.0';
 const { RARITY, RARITY_ORDER, UNIT_RARITY, UNIT_TYPES, STARTER_UNITS, UNIT_MAX_LV, unitXpFor, unitLevel, MASTERY_BONUS,
   TRAITS, EVO_REQ, MATERIALS, SKINS, SKILL_SHOP, TOPUP, GACHA, LUCKY, CURRENCY, ACH_REWARDS, ACH_DIAMONDS } = SHARED;
 const T = 48, COLS = 20, ROWS = 12, W = COLS * T, H = ROWS * T;
@@ -25,6 +25,9 @@ const MAPS = [
   { id:'lava', name:'Gunung Lava', stars:4, desc:'Jalur pendek! Hanya untuk pemain berpengalaman.',
     path:[[-1,6],[5,6],[5,2],[10,2],[10,9],[15,9],[15,4],[21,4]],
     th:{g1:'#4e342e',g2:'#463029',p1:'#212121',p2:'#262626',tree:'#ff5722',rock:'#616161',bg:'#3e2723',lava:true} },
+  { id:'forest', name:'Hutan Gelap', stars:4, desc:'Hutan berkabut penuh jamur bercahaya & kunang-kunang. Jalur panjang dengan banyak tikungan.',
+    path:[[-1,9],[2,9],[2,3],[5,3],[5,10],[8,10],[8,1],[12,1],[12,7],[10,7],[10,10],[16,10],[16,3],[18,3],[18,8],[21,8]],
+    th:{g1:'#2f4a3a',g2:'#2b4436',p1:'#5b4a3c',p2:'#544536',tree:'#1e3b2c',rock:'#5c6b73',bg:'#1f3329',dark:true} },
   { id:'frost', name:'Lembah Beku', stars:3, event:true, desc:'❄️ Map event Winter! Danau beku berliku. Kepingan Salju ×1,5.',
     path:[[-1,1],[3,1],[3,6],[1,6],[1,10],[7,10],[7,3],[11,3],[11,9],[15,9],[15,2],[18,2],[18,7],[21,7]],
     th:{g1:'#e8f4fa',g2:'#dbeef7',p1:'#8fb8cf',p2:'#84aec6',tree:'#2e6b4a',rock:'#a7c0cf',bg:'#bcdcea',snow:true,ice:true} },
@@ -385,6 +388,7 @@ const ENEMIES = {
   necro:    {name:'Nekromancer',  hp:60,  spd:0.8, reward:30, color:'#311b92', size:0.66, necro:true, desc:'Terus memanggil kerangka'},
   skeleton: {name:'Kerangka',     hp:9,   spd:1.6, reward:2,  color:'#eceff1', size:0.44, desc:'Panggilan Nekromancer', hide:true},
   golem:    {name:'Golem Batu',   hp:260, spd:0.45,reward:150,color:'#78909c', size:1.0, armor:0.4, noSlow:true, miniboss:true, desc:'Mini-boss tiap wave 15, 25, 35…: armor 40%, kebal efek lambat'},
+  overlord: {name:'Raja Kegelapan', hp:2600,spd:0.42,reward:1500,color:'#1a0033', size:1.4, armor:0.3, boss:true, final:true, desc:'Boss terakhir di wave final mode Klasik: perisai kegelapan, mengamuk di bawah 50% HP & memanggil pasukan elite'},
   boss:     {name:'Raja Zombie',  hp:700, spd:0.55,reward:300,color:'#6a1b9a', size:1.1, armor:0.2, boss:true, desc:'Muncul tiap 10 wave: membuat tower pingsan & memanggil pasukan'},
 };
 const ENEMY_INTRO = { fast:3, flyer:4, tank:5, thief:6, hidden:7, shielded:8, regen:9, berserk:10, healer:11, armored:12, stealth:13, splitter:14, bomber:15, giant:17, necro:19, golem:15 };
@@ -532,3 +536,13 @@ ACHIEVEMENTS.push(
 
 /* Hadiah pencapaian diambil dari modul bersama agar sama dengan server */
 ACHIEVEMENTS.forEach(a => { a.coins = ACH_REWARDS[a.id] || a.coins; a.diamonds = ACH_DIAMONDS; });
+
+/* ---------------- KAMPANYE ----------------
+ * Tiap map biasa = 1 bab berisi 3 tahap (Mudah → Normal → Sulit). Tahap terbuka berurutan.
+ * Bintang: 1 = menang, 2 = nyawa base ≥ 50%, 3 = tanpa kehilangan nyawa. */
+const CAMP_DIFFS = ['easy', 'normal', 'hard'];
+const campStages = () => MAPS.filter(m => !m.event).flatMap(m => CAMP_DIFFS.map(d => ({ key: m.id + '_' + d, map: MAPS.indexOf(m), diff: d })));
+const campStars = k => ((PROFILE.campaign || {})[k] || 0);
+const campOpen = k => { const st = campStages(), i = st.findIndex(x => x.key === k); return i <= 0 || campStars(st[i - 1].key) > 0; };
+const campTotal = () => campStages().reduce((a, x) => a + campStars(x.key), 0);
+const starsFor = (won, hp, maxHp) => !won ? 0 : hp >= maxHp - 0.001 ? 3 : hp >= maxHp * 0.5 ? 2 : 1;

@@ -320,6 +320,15 @@ const Menu = {
     if (g.maintenance) h += `<div class="announce" style="--ac:#ff5252">🚧 ${esc(g.maintenanceMsg || 'Server sedang maintenance')}</div>`;
     return h;
   },
+  /** Statistik damage per jenis tower (gabungan semua tower sejenis) */
+  dmgStats(limit = 6) {
+    if (!S || !S.towers.length) return '';
+    const by = {}; for (const t of S.towers) { const b = by[t.type] = by[t.type] || { type: t.type, dmg: 0, kills: 0, n: 0 }; b.dmg += t.dmg || 0; b.kills += t.kills || 0; b.n++; }
+    const rows = Object.values(by).filter(b => b.dmg > 0).sort((a, b) => b.dmg - a.dmg).slice(0, limit), tot = rows.reduce((a, b) => a + b.dmg, 0) || 1, top = rows[0] ? rows[0].dmg : 1;
+    if (!rows.length) return '';
+    return `<div class="dmgst"><b class="dmg-h">⚔️ Statistik damage</b>${rows.map((b, i) => `<div class="dmg-r"><span class="dmg-n">${i === 0 ? '👑 ' : ''}${TOWERS[b.type].name}${b.n > 1 ? ' ×' + b.n : ''}</span>
+      <i class="dmg-b"><i style="width:${(b.dmg / top * 100).toFixed(1)}%;--c:${TOWERS[b.type].color}"></i></i><span class="dmg-v">${fmtNum(b.dmg)} <small>${Math.round(b.dmg / tot * 100)}% • ${b.kills} kill</small></span></div>`).join('')}</div>`;
+  },
   header(title) { return `<div class="mhead"><button class="btn gray" data-act="back">← Kembali</button><h2>${title}</h2>${this.profileBar()}</div>`; },
   fmtTime(s) { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}j ${m}m` : m ? `${m}m ${s % 60}d` : `${s}d`; },
 
@@ -412,9 +421,35 @@ const Menu = {
       return `${this.header('📜 Update Log')}<div class="upd-list">${list.map((v, i) => this.updCard(v, i === 0)).join('')}</div>
         ${!this.updAll && L.length > 6 ? `<div class="row2"><button class="btn gray" data-act="updall">Tampilkan semua (${L.length} versi)</button></div>` : ''}`;
     },
+    campaign() {
+      const chapters = MAPS.filter(m => !m.event), tot = campTotal(), max = campStages().length * 3, dn = { easy: 'Mudah', normal: 'Normal', hard: 'Sulit' };
+      return `${this.header('Kampanye')}
+        <div class="box camp-top"><div><b>📜 Kampanye Block Tower Defense</b><small>Taklukkan setiap map dari Mudah sampai Sulit. Tahap terbuka berurutan. ⭐ 1 = menang • ⭐⭐ = nyawa base ≥ 50% • ⭐⭐⭐ = tanpa kehilangan nyawa.</small></div>
+          <div class="camp-tot"><span>⭐</span><b>${tot}</b><small>/ ${max}</small></div></div>
+        <div class="camp-list">${chapters.map((m, ci) => `<div class="box camp-ch"><canvas width="240" height="144" data-map="${MAPS.indexOf(m)}"></canvas>
+          <div class="camp-info"><small>BAB ${ci + 1}</small><b>${m.name}</b><span class="dim">${'★'.repeat(m.stars)}${'☆'.repeat(Math.max(0, 5 - m.stars))}</span></div>
+          <div class="camp-stages">${CAMP_DIFFS.map(d => { const k = m.id + '_' + d, st = campStars(k), open = campOpen(k);
+            return `<button class="camp-st ${open ? '' : 'locked'} ${st ? 'done' : ''} d-${d}" ${open ? `data-act="camp:${k}"` : 'disabled'}><b>${dn[d]}</b><span class="cst">${open ? [1, 2, 3].map(x => `<i class="${x <= st ? 'on' : ''}">★</i>`).join('') : '🔒'}</span><small>${DIFFS[d].waves} wave</small></button>`; }).join('')}</div></div>`).join('')}</div>`;
+    },
+
+    about() {
+      return `${this.header('Tentang Game')}
+        <div class="box about"><div class="about-logo">BLOCK<br><span>TOWER DEFENSE</span></div>
+          <p>Game tower defense bergaya blok: susun tim unit, bangun pertahanan di jalur musuh, dan kalahkan gelombang zombie sampai boss terakhir.</p>
+          <div class="about-grid">
+            <div><b>${VERSION}</b><small>Versi</small></div><div><b>${TOWER_ORDER.length}</b><small>Unit</small></div><div><b>${MAPS.length}</b><small>Map</small></div>
+            <div><b>${Object.values(ENEMIES).filter(e => !e.hide).length}</b><small>Jenis musuh</small></div><div><b>${campStages().length}</b><small>Tahap kampanye</small></div><div><b>${ACHIEVEMENTS.length}</b><small>Pencapaian</small></div></div>
+          <h4>Mode permainan</h4><p class="dim">Kampanye • Klasik • Endless • Tantangan Harian • Mabar Co-op 2–4 pemain • Event terbatas</p>
+          <h4>Kredit</h4><p class="dim">Desain, pemrograman & seni pixel: tim Block Tower Defense. Musik & efek suara dibuat secara prosedural di browser (WebAudio). Font: Pixelify Sans & Inter (Google Fonts, lisensi OFL).</p>
+          <h4>Prinsip monetisasi</h4><p class="dim">Tidak ada pay-to-win: semua unit bisa didapat dari bermain. Pembelian hanya mempercepat & kosmetik.</p>
+          <div class="row2"><a class="btn gray" href="privacy.html" target="_blank" rel="noopener">🔒 Kebijakan Privasi</a><a class="btn gray" href="terms.html" target="_blank" rel="noopener">📄 Syarat & Ketentuan</a><button class="btn blue" data-act="go:updates">📜 Update Log</button></div>
+        </div>`;
+    },
+
     more() {
       const u = Online.user, row = (act, ic, t, d) => `<button class="mrow" data-act="${act}"><span>${ic}</span><div><b>${t}</b><small>${d}</small></div><i>›</i></button>`;
       return `${this.header('Lainnya')}<div class="mlist">
+        ${row('mgo:campaign', '📜', 'Kampanye', `⭐ ${campTotal()}/${campStages().length * 3} bintang`)}
         ${row('mgo:trade', '🔁', 'Trading', u ? 'Tukar unit dengan teman' : 'Perlu login')}
         ${row('mgo:base', '🏰', 'Markas', 'Peti, Tambang, Liga & Koleksi')}
         ${row('mgo:levels', '⭐', 'Hadiah Level', levelReady() ? `${levelReady()} hadiah siap diambil` : 'Hadiah tiap naik level')}
@@ -426,6 +461,7 @@ const Menu = {
         ${row('mgo:download', '📲', 'Download Aplikasi', PWA.installed() ? 'Sudah terpasang' : 'Android • iPhone • PC')}
         ${row('mgo:updates', '📜', 'Update Log', 'Versi ' + VERSION + ' • yang baru')}
         ${row('mgo:howto', '📖', 'Cara Main', 'Panduan')}
+        ${row('mgo:about', 'ℹ️', 'Tentang Game', 'Kredit, privasi & info')}
         ${row('mgo:account', '👤', 'Akun', u ? esc(u.name) : 'Masuk dengan Google')}
         ${u && u.isAdmin ? row('mgo:dev', '🛠️', 'Panel Developer', 'Atur semua') : ''}
       </div><div class="foot center"><a href="privacy.html" target="_blank">Privasi</a> • <a href="terms.html" target="_blank">Syarat & Ketentuan</a> • ${TOWER_ORDER.length} unit</div>`;
@@ -702,6 +738,7 @@ const Menu = {
 
     play() {
       return `${this.header('Pilih Map')}
+        <button class="box camp-cta" data-act="go:campaign"><span>📜</span><div><b>Mode Kampanye</b><small>${campStages().length} tahap berurutan • kumpulkan bintang • ⭐ ${campTotal()}/${campStages().length * 3}</small></div><i>Main ›</i></button>
         <div class="cards">${MAPS.map((m, i) => {
           if (!mapOpen(m)) return '';
           const b = PROFILE.best[bestKey(m.id, DIFF, MODE)] || 0, won = MODE === 'classic' && b >= DIFFS[DIFF].waves;
@@ -889,7 +926,7 @@ const Menu = {
       return `${this.header('Pengaturan')}
         <div class="box">
           <h4>🔊 Audio</h4>${tg('sound', 'Efek suara')}${sl('sfxVol', 'Volume efek')}${tg('music', 'Musik latar')}${sl('musicVol', 'Volume musik')}
-          <h4>🖥️ Tampilan</h4>${tg('dmgNum', 'Angka damage')}${tg('shake', 'Getaran layar')}${tg('range', 'Jangkauan tower terpilih')}${tg('grid', 'Garis grid')}${tg('fps', 'Tampilkan FPS')}
+          <h4>🖥️ Tampilan</h4>${tg('dmgNum', 'Angka damage')}${tg('shake', 'Getaran layar')}${tg('range', 'Jangkauan tower terpilih')}${tg('grid', 'Garis grid')}${tg('fps', 'Tampilkan FPS')}${tg('reduceMotion', 'Kurangi gerakan (tanpa getaran, partikel & animasi)')}
           <div class="tog"><span>Kualitas partikel</span><button class="btn sm blue" data-act="quality">${SET.quality === 'high' ? 'Tinggi' : 'Rendah'}</button></div>
           <h4>🎮 Permainan</h4>${tg('autoPause', 'Pause otomatis saat pindah tab')}${tg('autoFs', 'Layar penuh otomatis saat bermain (desktop)')}${tg('breakRemind', 'Pengingat istirahat tiap 1 jam bermain')}
           <h4>💾 Data</h4>
@@ -958,13 +995,13 @@ const Menu = {
           <button class="btn gray big" data-act="settings:pause">⚙️ Pengaturan</button>
           <button class="btn red big" data-act="mp-quit">🚪 Keluar dari Mabar</button>
         </div><small class="dim">${isHost() ? 'Kamu host: jika keluar, permainan berakhir untuk semua pemain.' : 'Tower kamu tetap di map setelah keluar.'}</small>`;
-      return `<h1>⏸ PAUSE</h1><div class="sub">${MAP.name} • ${DIFFS[S.diff].name} • ${S.daily ? 'Harian' : MODES[S.mode].name} • Wave ${S.wave}${S.maxWave === Infinity ? '' : '/' + S.maxWave}</div>
+      return `<h1>⏸ PAUSE</h1><div class="sub">${S.campaign ? '📜 Kampanye • ' : ''}${MAP.name} • ${DIFFS[S.diff].name} • ${S.daily ? 'Harian' : MODES[S.mode].name} • Wave ${S.wave}${S.maxWave === Infinity ? '' : '/' + S.maxWave}</div>
         <div class="mcol">
           <button class="btn big" data-act="resume">▶ Lanjutkan</button>
-          <button class="btn blue big" data-act="${S.daily ? 'daily' : 'start'}">🔄 Ulangi</button>
+          <button class="btn blue big" data-act="restart">🔄 Ulangi</button>
           <button class="btn gray big" data-act="settings:pause">⚙️ Pengaturan</button>
           <button class="btn red big" data-act="quit">🏠 ${S.wave > 0 ? 'Simpan & Keluar' : 'Keluar ke Menu'}</button>
-        </div>${DevPanel.pauseTools()}<small class="dim">${S.wave > 0 ? `Progres tersimpan di awal wave ${S.state === 'ready' ? S.wave + 1 : S.wave}. Lanjutkan dari menu utama.` : ''}</small>`;
+        </div>${S.towers.some(t => t.dmg > 0) ? `<div class="box pzst">${this.dmgStats(5)}</div>` : ''}${DevPanel.pauseTools()}<small class="dim">${S.wave > 0 ? `Progres tersimpan di awal wave ${S.state === 'ready' ? S.wave + 1 : S.wave}. Lanjutkan dari menu utama.` : ''}</small>`;
     },
 
     end() {
@@ -978,14 +1015,16 @@ const Menu = {
           <div class="score">${d.score.toLocaleString('id-ID')} <small>poin • peringkat #${d.rank}</small></div></div>
         <div class="end-badges">${d.record ? '<span class="badge">⭐ REKOR BARU!</span>' : ''}${d.chest ? `<span class="badge">${pxImg(CHEST_IC[d.chest])} ${d.firstWin ? 'Menang pertama hari ini: ' : 'Dapat '}${SHARED.CHESTS[d.chest].name}!</span>` : d.chestFull ? '<span class="badge gray">Slot peti penuh — buka peti di Markas</span>' : ''}${d.lgPts ? `<span class="badge">🏆 +${d.lgPts} poin liga</span>` : ''}${d.dailyReward ? `<span class="badge">📅 Tantangan harian selesai! +${d.dailyReward} 🪙</span>` : ''}
         ${d.unlockedSkill ? `<span class="badge purple">⚡ Skill baru: ${d.unlockedSkill.icon} ${d.unlockedSkill.name}</span>` : ''}${d.levelUp ? `<span class="badge purple">⬆ NAIK KE LEVEL ${d.levelUp}!</span>` : ''}</div>
+        ${d.camp ? `<div class="camp-res"><span>📜 Kampanye</span><b>${[1, 2, 3].map(x => `<i class="${x <= d.camp.stars ? 'on' : ''}">★</i>`).join('')}</b><small>${d.camp.first ? 'Tahap selesai! ' : ''}${d.camp.next ? 'Tahap berikutnya terbuka • ' : ''}Total ⭐ ${d.camp.total}/${d.camp.max}</small></div>` : ''}
         <div class="erws">${rw}</div>
         <div class="box endbox">
           <div class="ests">${st('🗺️', isMP() ? 'Mabar • ' + MODES[S.mode].name : S.daily ? 'Tantangan Harian' : MAP.name + ' • ' + DIFFS[S.diff].name, MODES[S.mode].name)}${st('🌊', 'Wave', S.wave + (S.maxWave === Infinity ? '' : '/' + S.maxWave))}
             ${st('🧟', 'Musuh dikalahkan', S.kills.toLocaleString('id-ID'))}${st('👑', 'Boss dikalahkan', S.bossKills)}${st('💰', 'Uang didapat', '$' + S.earned.toLocaleString('id-ID'))}${st('⏱️', 'Durasi', this.fmtTime(S.time))}</div>
           ${d.mastery.length ? `<div class="mlist"><b>Mastery tower</b>${d.mastery.slice(0, 6).map(m => `<div><span>${TOWERS[m.type].name}</span><span>+${m.gain} XP • M${m.lv} ${m.up ? '<b class="up">⬆ NAIK!</b>' : ''}</span></div>`).join('')}</div>` : ''}
+          ${this.dmgStats()}
           ${d.ach.length ? `<div class="newach">${d.ach.map(a => `<span>🏅 ${a.name}</span>`).join('')}</div>` : ''}</div>
         ${isMP() ? `<div class="row2"><button class="btn big" data-act="go:mabar">🤝 Mabar Lagi</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`
-        : `<div class="row2"><button class="btn big gold" data-act="${S.daily ? 'daily' : 'start'}">🔄 Main Lagi</button>
+        : `<div class="row2">${d.camp && d.camp.next ? `<button class="btn big green" data-act="camp:${d.camp.next.key}">▶ Tahap Berikutnya</button>` : ''}<button class="btn big gold" data-act="${S.daily ? 'daily' : S.campaign ? 'camp:' + S.campaign : 'start'}">🔄 ${S.campaign && !d.won ? 'Coba Lagi' : 'Main Lagi'}</button>
           <button class="btn blue" data-act="go:play">🗺️ Pilih Map</button><button class="btn gray" data-act="quit">🏠 Menu</button></div>`}`;
     },
   },
@@ -1001,6 +1040,7 @@ const Menu = {
     },
     play() { document.querySelectorAll('canvas[data-map]').forEach(c => drawPreview(c, MAPS[+c.dataset.map])); },
     daily() { this.after.play(); },
+    campaign() { this.after.play(); },
     units() { this.drawIcons(); },
     shop() { this.drawIcons(); document.querySelectorAll('.gbtn').forEach(el => Online.renderGoogleButton(el)); },
     gacha() { this.drawIcons(); this.tickCd(); },
@@ -1099,6 +1139,11 @@ const Menu = {
       case 'continue': sfx('click'); if (loadSavedGame()) { this.close(); autoFullscreen(); UI.banner(`Lanjut: Wave ${S.wave + 1}`, '#fff', 1400); } break;
       case 'discard': SaveGame.clear(); this.go('main'); break;
       case 'start': startGame(); break;
+      case 'camp': {
+        const st = campStages().find(x => x.key === arg); if (!st || !campOpen(arg)) { UI.toast('🔒 Selesaikan tahap sebelumnya dulu'); break; }
+        MAP = MAPS[st.map]; DIFF = st.diff; MODE = 'classic'; loadMap(MAP); startGame({ campaign: arg }); break;
+      }
+      case 'restart': UI.ask('Ulangi dari awal? Progres permainan ini akan hilang.', 'Ulangi', true).then(y => { if (!y) return; if (S.daily) this.act('daily'); else if (S.campaign) this.act('camp:' + S.campaign); else startGame(); }); break;
       case 'resume': sfx('click'); this.close(); break;
       case 'quit': if (isMP()) MP.cleanup(); else abandonGame(); newGame(); this.go('main'); break;
       case 'noop': break;
@@ -1127,9 +1172,9 @@ const Menu = {
       case 'evms': this.eco('evMilestone', { i: arg === 'all' ? 'all' : +arg }, r => r.claimed.map(g => this.rw(g)).join(' • ')); break;
       case 'evbuy': this.eco('evShopBuy', { id: arg }, r => '🎁 ' + this.rw(r.got)); break;
       case 'evgo': if (arg === 'gacha') { this.banner = 'winter'; this.go('gacha'); } else { const i = MAPS.findIndex(m => m.id === arg); if (i >= 0) { MAP = MAPS[i]; loadMap(MAP); } this.go('play'); } break;
-      case 'pshop': { const it = SHARED.PASS_SHOP.find(x => x.id === arg); if (it && (it.cost < 300 || confirm(`Tukar 🎟️ ${it.cost} Token untuk ${it.name}?`))) this.eco('passShopBuy', { id: arg }, r => '🛍️ Didapat: ' + this.rw(r.got)).then(r => { if (r && r.got.unit) this.showPull([r.got.unit]); }); break; }
+      case 'pshop': { const it = SHARED.PASS_SHOP.find(x => x.id === arg); if (it) (it.cost < 300 ? Promise.resolve(true) : UI.ask(`Tukar 🎟️ ${it.cost} Token untuk ${it.name}?`, 'Tukar')).then(y => y && this.eco('passShopBuy', { id: arg }, r => '🛍️ Didapat: ' + this.rw(r.got)).then(r => { if (r && r.got.unit) this.showPull([r.got.unit]); })); break; }
       case 'pclaimall': this.eco('passClaim', { tier: 'all' }, r => `🎁 ${r.claimed.length} hadiah diambil!`).then(() => this.show('pass', true)); break;
-      case 'pbuy': if (confirm(`Aktifkan Season Pass Premium seharga 💠 ${SHARED.PASS.premiumCost} Permata?`)) this.eco('passBuy', {}, () => '⭐ Pass Premium aktif!').then(() => this.show('pass', true)); break;
+      case 'pbuy': UI.ask(`Aktifkan Season Pass Premium seharga 💠 ${SHARED.PASS.premiumCost} Permata?`, 'Aktifkan').then(y => y && this.eco('passBuy', {}, () => '⭐ Pass Premium aktif!').then(() => this.show('pass', true))); break;
       case 'install': PWA.install().then(() => this.show('download', true)); break;
       case 'refcopy': { const c = Online.user && Online.user.friendCode; if (c) { try { navigator.clipboard.writeText(c); UI.toast('📋 Kode disalin: ' + c); } catch (e) { UI.toast(c); } } break; }
       case 'refshare': {
@@ -1247,7 +1292,7 @@ const Menu = {
         break;
       case 'tdecline': Online.api('trade.respond', { id: arg, accept: false }).then(() => { this.tradeData = null; this.loadTrades(); }); break;
       case 'tcancel': Online.api('trade.cancel', { id: arg }).then(() => { this.tradeData = null; this.loadTrades(); }); break;
-      case 'tog': SET[arg] = !SET[arg]; saveSettings(); Sound.applyVolume(); if (arg === 'music' && SET.music) Sound.startMusic(); this.go('settings'); break;
+      case 'tog': SET[arg] = !SET[arg]; saveSettings(); document.body.classList.toggle('rm', !!SET.reduceMotion); Sound.applyVolume(); if (arg === 'music' && SET.music) Sound.startMusic(); this.go('settings'); break;
       case 'quality': SET.quality = SET.quality === 'high' ? 'low' : 'high'; saveSettings(); this.go('settings'); break;
       case 'reset':
         if (!this.resetArm) { this.resetArm = true; this.go('settings'); break; }
@@ -1361,7 +1406,7 @@ const Menu = {
     const sp = this.sellPanel; if (!sp) return;
     const list = this.sellCandidates(sp.rars, sp.keep).map(u => u.id);
     if (!list.length) return;
-    if (!confirm(`Jual ${list.length} unit? Tindakan ini tidak bisa dibatalkan.`)) return;
+    if (!await UI.ask(`Jual ${list.length} unit? Tindakan ini tidak bisa dibatalkan.`, 'Jual', true)) return;
     const tot = {};
     for (let i = 0; i < list.length; i += 50) {
       try { const r = await Eco.act('scrap', { unitIds: list.slice(i, i + 50) }); for (const k in r) tot[k] = (tot[k] || 0) + r[k]; }
@@ -1431,7 +1476,7 @@ function startGame(opts = {}) {
   PROFILE.stats.games++; saveProfile(); checkAchievements(null);
   Menu.close();
   autoFullscreen();
-  UI.banner(opts.daily ? `📅 Tantangan Harian` : `${MAP.name} • ${DIFFS[DIFF].name}`, '#fff', 1400);
+  UI.banner(opts.daily ? `📅 Tantangan Harian` : `${opts.campaign ? '📜 Kampanye • ' : ''}${MAP.name} • ${DIFFS[DIFF].name}`, '#fff', 1400);
   tip('start');
 }
 

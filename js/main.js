@@ -1,3 +1,4 @@
+document.body.classList.toggle('rm', !!SET.reduceMotion);
 /* =========================================================
  * Entry point: input, game loop, inisialisasi
  * ========================================================= */

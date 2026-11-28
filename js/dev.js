@@ -226,12 +226,12 @@ const DevPanel = {
       case 'grant': this.call('admin.grant', { id: p[2], currency: this.v('dvCur'), amount: (+this.v('dvAmt') || 0) * +p[3] }, 'Saldo diperbarui'); break;
       case 'give': this.call('admin.unitGive', { id: p[2], type: this.v('dvType'), trait: this.v('dvTrait') || null, skin: this.v('dvSkin'), evo: this.v('dvEvo'), xp: +this.v('dvXp') || 0, count: +this.v('dvCnt') || 1 }, 'Unit diberikan'); break;
       case 'unlock': this.call('admin.unlockAll', { id: p[2], what: p[3] }, 'Terbuka'); break;
-      case 'udel': if (confirm('Hapus unit ini?')) this.call('admin.unitDelete', { id: p[2], unitId: p[3] }, 'Unit dihapus'); break;
+      case 'udel': UI.ask('Hapus unit ini?', 'Hapus', true).then(y => y && this.call('admin.unitDelete', { id: p[2], unitId: p[3] }, 'Unit dihapus')); break;
       case 'ban': this.call('admin.ban', { id: p[2], banned: p[3] === '1', reason: this.v('dvReason') }, p[3] === '1' ? 'Pemain diblokir' : 'Blokir dibuka').then(() => this.openUser(p[2])); break;
-      case 'reset': if (confirm('Reset seluruh inventori pemain ini ke awal? Tidak bisa dibatalkan.')) this.call('admin.resetVault', { id: p[2] }, 'Inventori direset'); break;
+      case 'reset': UI.ask('Reset seluruh inventori pemain ini ke awal? Tidak bisa dibatalkan.', 'Reset', true).then(y => y && this.call('admin.resetVault', { id: p[2] }, 'Inventori direset')); break;
       case 'credit': this.call('admin.credit', { orderId: p[2] }, 'Permata dikreditkan').then(() => { delete this.data.pay; Menu.show('dev', true); }); break;
       case 'lbmode': this.lbMode = p[2]; delete this.data.lb; Menu.show('dev', true); break;
-      case 'lbdel': if (confirm('Hapus skor ini?')) this.call('admin.lbDelete', { id: p[2] }, 'Skor dihapus').then(() => { delete this.data.lb; Menu.show('dev', true); }); break;
+      case 'lbdel': UI.ask('Hapus skor ini?', 'Hapus', true).then(y => y && this.call('admin.lbDelete', { id: p[2] }, 'Skor dihapus').then(() => { delete this.data.lb; Menu.show('dev', true); })); break;
       case 'codeNew': {
         const rewards = {}; ['coins', 'diamonds', 'gems', 'crystals', 'stones'].forEach(k => { const n = +this.v('dc_' + k); if (n > 0) rewards[k] = n; });
         if (this.v('dcUnit')) rewards.unit = this.v('dcUnit'); if (this.v('dcSkin')) rewards.skin = this.v('dcSkin');
@@ -239,15 +239,15 @@ const DevPanel = {
           .then(r => { if (r) { delete this.data.codes; Menu.show('dev', true); } });
         break;
       }
-      case 'codeDel': if (confirm('Hapus kode ' + p[2] + '?')) this.call('admin.codeDelete', { code: p[2] }, 'Kode dihapus').then(() => { delete this.data.codes; Menu.show('dev', true); }); break;
+      case 'codeDel': UI.ask('Hapus kode ' + p[2] + '?', 'Hapus', true).then(y => y && this.call('admin.codeDelete', { code: p[2] }, 'Kode dihapus').then(() => { delete this.data.codes; Menu.show('dev', true); })); break;
       case 'refresh': {
         const mode = p[2], label = mode === 'clear' ? 'MEMBERSIHKAN CACHE & me-refresh' : 'me-refresh';
-        if (!confirm(`Yakin ${label} game untuk SEMUA pemain?`)) break;
-        this.call('admin.forceRefresh', { mode, msg: this.v('dvRfMsg') }).then(r => { if (r) { UI.toast(`✅ Perintah terkirim — ${r.online} pemain online akan dimuat ulang`, 'gold', 5000); delete this.data.global; Menu.show('dev', true); } });
+        const msg = this.v('dvRfMsg');
+        UI.ask(`Yakin ${label} game untuk SEMUA pemain?`, 'Kirim', true).then(y => y && this.call('admin.forceRefresh', { mode, msg }).then(r => { if (r) { UI.toast(`✅ Perintah terkirim — ${r.online} pemain online akan dimuat ulang`, 'gold', 5000); delete this.data.global; Menu.show('dev', true); } }));
         break;
       }
       case 'saveGlobal': this.saveGlobal(); break;
-      case 'resetGlobal': if (confirm('Kembalikan semua pengaturan game ke default?')) this.applyGlobal({}); break;
+      case 'resetGlobal': UI.ask('Kembalikan semua pengaturan game ke default?', 'Reset', true).then(y => y && this.applyGlobal({})); break;
       case 'resync': Online.refreshVault().then(() => UI.toast('✅ Inventori disinkron')); break;
       // alat dalam permainan
       case 'cash': cheat(); addCash(S.me, 10000); UI.toast('💵 +$10.000'); break;

@@ -56,7 +56,7 @@ function newGame(opts = {}) {
   loadMap(MAP);
   const hp = Math.round(D.hp * M.hpBaseMul);
   S = {
-    diff: DIFF, mode, daily, mods, M,
+    diff: DIFF, mode, daily, mods, M, campaign: !daily && !mp && mode === 'classic' ? (opts.campaign || null) : null,
     cash: Math.round(D.cash * M.cashMul), hp, maxHp: hp, wave: 0,
     maxWave: daily ? DAILY_WAVES : mode === 'endless' ? Infinity : D.waves,
     state: 'ready', speed: 1, autoSkip: S ? S.autoSkip : false,
@@ -101,14 +101,14 @@ function saveGameState() {
   SaveGame.set({
     v: 2, map: MAP.id, diff: S.diff, mode: S.mode, daily: S.daily, cash: S.cash, hp: S.hp, wave: S.wave,
     kills: S.kills, earned: S.earned, bossKills: S.bossKills, time: S.time, leaked: S.leaked,
-    abilityCd: S.abilityCd, autoSkip: S.autoSkip, saved: Date.now(),
+    abilityCd: S.abilityCd, autoSkip: S.autoSkip, saved: Date.now(), campaign: S.campaign,
     towers: S.towers.map(t => ({ type: t.type, c: t.c, r: t.r, level: t.level, spent: t.spent, target: t.target, dmg: t.dmg, kills: t.kills })),
   });
 }
 function loadSavedGame() {
   const g = SaveGame.get(); if (!g) return false;
   MAP = MAPS.find(m => m.id === g.map) || MAPS[0]; DIFF = g.diff; MODE = g.mode;
-  newGame({ daily: g.daily });
+  newGame({ daily: g.daily, campaign: g.campaign });
   Object.assign(S, { cash: g.cash, hp: g.hp, wave: g.wave, kills: g.kills, earned: g.earned, bossKills: g.bossKills,
                      time: g.time, leaked: g.leaked, abilityCd: g.abilityCd || {}, autoSkip: !!g.autoSkip });
   S.towers = g.towers.map(o => { const t = Object.assign(makeTower(o.type, o.c, o.r), o); t.L = computeL(t.type, t.level); return t; });
@@ -173,8 +173,9 @@ function buildWave(n) {
   if (n >= 18) add('fast', Math.min(n, 60), 0.25);
   if (n > 40) add('armored', Math.floor((n - 40) * 0.8), 0.6);
   if (n % 10 === 0) add('boss', Math.max(1, Math.floor(n / 10)), 4);
+  if (S && !S.daily && isFinite(S.maxWave) && n === S.maxWave) add('overlord', 1, 5);     // boss terakhir
   // padatkan: musuh biasa dikurangi ke target jumlah, boss & golem tetap utuh
-  const special = g => g.type === 'boss' || g.type === 'golem';
+  const special = g => g.type === 'boss' || g.type === 'golem' || g.type === 'overlord';
   const total = groups.reduce((a, g) => a + (special(g) ? 0 : g.count), 0);
   const target = WAVE_TUNE.count(n), f = total > target ? target / total : 1;
   const q = []; let t = 0, natural = 0;
@@ -370,6 +371,7 @@ function updateStrikes(dt) {
 
 /* ---------------- MUSUH ---------------- */
 function spawn(type, from) {
+  if (type === 'overlord' && typeof vfxWave === 'function') { vfxWave(S.wave, true, true); sfx('boss'); }
   const d = ENEMIES[type], w = Math.max(1, S.wave);
   let hp = d.hp * (1 + w * 0.13 + Math.pow(w, 1.6) * 0.01);
   if (d.boss) hp = d.hp * Math.pow(w / 10, 2.1) * (1 + w * 0.05);
@@ -405,6 +407,7 @@ function damage(e, amt, L, src, quiet) {
   a = Math.min(a, e.hp);
   e.hp -= a; e.hitT = 0.1;
   if (src) { src.dmg += a; addUxp(src.owner, src.type, a / 60); }
+  if (!quiet && Math.random() < 0.25) sfx('hit');
   if (SET.dmgNum && a >= 0.5 && !quiet) addText(e.x + (Math.random() * 16 - 8), e.y - 22, fmtNum(a), '#fff', 0.5);
   if (e.hp <= 0.001) kill(e, src);
   else if (src && !quiet) Skills.afterHit(src, e);
@@ -716,6 +719,11 @@ function enemyAbilities(e, dt) {
 /* ---------------- BOSS ---------------- */
 function bossAbilities(e, dt) {
   e.stunT -= dt; e.summonT -= dt;
+  if (e.final && !e.enraged && e.hp < e.maxHp * 0.5) {          // fase 2: mengamuk + perisai kegelapan
+    e.enraged = true; e.spd *= 1.45; e.shieldHp = (e.shieldHp || 0) + e.maxHp * 0.2;
+    S.shake = SET.shake ? 12 : 0; sfx('boom'); addText(e.x, e.y - 70, 'MENGAMUK!', '#e040fb', 1.6);
+    S.effects.push({ kind: 'ring2', x: e.x, y: e.y, r: 170, col: '#e040fb', life: 0.9, max: 0.9 }); UI.toast('🌑 Raja Kegelapan mengamuk! Perisai kegelapan aktif');
+  }
   if (e.stunT <= 0) {
     e.stunT = 8;
     const R = 2.6 * T; let hit = 0;
@@ -725,7 +733,8 @@ function bossAbilities(e, dt) {
   }
   if (e.summonT <= 0) {
     e.summonT = 12;
-    for (let i = 0; i < 3; i++) spawn(S.wave >= 20 ? 'tank' : 'normal', e);
+    const elite = e.final ? (e.enraged ? ['giant', 'armored', 'shielded'] : ['armored', 'shielded', 'berserk']) : null;
+    for (let i = 0; i < 3; i++) spawn(elite ? elite[i] : S.wave >= 20 ? 'tank' : 'normal', e);
     S.effects.push({ kind: 'shock', x: e.x, y: e.y, r: T, life: 0.4, max: 0.4, col: '#76ff03' });
   }
 }
@@ -905,6 +914,14 @@ async function finishGame(won) {
   PROFILE.runs = PROFILE.runs.slice(0, 15);
   const rank = PROFILE.runs.findIndex(r => r.id === run.id) + 1;
 
+  let camp = null;
+  if (S.campaign) {
+    PROFILE.campaign = PROFILE.campaign || {};
+    const stars = starsFor(won, S.hp, S.maxHp), prev = PROFILE.campaign[S.campaign] || 0;
+    if (stars > prev) PROFILE.campaign[S.campaign] = stars;
+    const all = campStages(), i = all.findIndex(x => x.key === S.campaign), next = all[i + 1];
+    camp = { stars, best: Math.max(stars, prev), first: won && !prev, next: won && next ? next : null, total: campTotal(), max: all.length * 3 };
+  }
   const st = PROFILE.stats;
   if (won) st.wins++;
   st.kills += S.kills; st.cashEarned += S.earned; st.playTime += Math.round(S.time);
@@ -913,7 +930,7 @@ async function finishGame(won) {
   const ach = checkAchievements(summary());
 
   sfx(won ? 'win' : 'lose');
-  Menu.endData = { won, record, coins: rw.coins || 0, xp, diamonds: rw.diamonds || 0, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank,
+  Menu.endData = { camp, won, record, coins: rw.coins || 0, xp, diamonds: rw.diamonds || 0, levelUp: lvAfter > lvBefore ? lvAfter : 0, ach, score, rank,
     dailyReward: rw.dailyReward || 0, lan: rw.lan || 0, chest: rw.chest || null, firstWin: !!rw.firstWin, lgPts: rw.lgPts || 0, chestFull: !rw.chest && (won || cleared >= 10) && (PROFILE.vault.chests || []).length >= SHARED.CHEST_SLOTS, crystals: rw.crystals || 0, stones: rw.stones || 0, mastery, used: rw.used || {} };
   setTimeout(() => Menu.show('end'), 600);
 }

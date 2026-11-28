@@ -1,5 +1,16 @@
 # Changelog
 
+## [8.0.0] — 2026-11-28
+### Baru
+- **Mode Kampanye**: 5 bab (satu per map) × 3 tahap (Mudah → Normal → Sulit) = 15 tahap yang terbuka berurutan. Setiap tahap memberi 1–3 bintang (⭐ menang, ⭐⭐ nyawa base ≥ 50%, ⭐⭐⭐ tanpa kehilangan nyawa). Tombol "Tahap Berikutnya" di layar hasil. Akses dari Pilih Map atau Lainnya.
+- **Map baru: Hutan Gelap** — hutan berkabut dengan jamur bercahaya, kunang-kunang, pohon bermata menyala & jalur panjang berliku.
+- **Boss terakhir: Raja Kegelapan** muncul di wave final mode Klasik & Kampanye. Di bawah 50% HP ia mengamuk (lebih cepat + perisai kegelapan) dan memanggil pasukan elite. Banner & suara khusus.
+- **Statistik damage** per jenis tower (bar, persentase & kill) di menu Pause dan layar hasil.
+- **Dialog konfirmasi bergaya game** menggantikan pop-up browser (Ulangi permainan, Jual massal, Season Pass, Toko Pass, panel developer). Ulangi dari menu Pause kini meminta konfirmasi.
+- **Pengaturan "Kurangi gerakan"**: mematikan getaran layar, partikel cuaca, efek kematian & semua animasi antarmuka.
+- **Layar Tentang Game**: logo, versi, jumlah konten, mode, kredit, prinsip tanpa pay-to-win, tautan Kebijakan Privasi & Syarat.
+- Suara baru: peringatan boss & suara pukulan musuh.
+
 ## [7.3.0] — 2026-11-27
 ### Diubah — layar hasil & kerapian
 - **Layar hasil sinematik**: pita emas dengan 1–3 bintang (3 bintang = menang tanpa kehilangan nyawa), judul emas berkilau, konfeti saat menang.

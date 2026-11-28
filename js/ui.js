@@ -7,6 +7,21 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const UI = {
+  /** Dialog konfirmasi bergaya game (pengganti confirm() bawaan browser) */
+  ask(msg, ok = 'Ya', danger = false) {
+    return new Promise(res => {
+      const m = document.createElement('div'); m.className = 'askm';
+      m.innerHTML = `<div class="askb" role="dialog" aria-modal="true"><div class="ask-ic">${danger ? '⚠️' : '❔'}</div><p></p>
+        <div class="ask-row"><button class="btn gray" data-r="0">Batal</button><button class="btn ${danger ? 'red' : 'gold'}" data-r="1">${ok}</button></div></div>`;
+      m.querySelector('p').textContent = msg;
+      const done = v => { document.removeEventListener('keydown', key, true); m.remove(); res(v); };
+      const key = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); ev.preventDefault(); done(false); } else if (ev.key === 'Enter') { ev.preventDefault(); done(true); } };
+      m.addEventListener('click', ev => { const b = ev.target.closest('[data-r]'); if (b) { sfx('click'); done(b.dataset.r === '1'); } else if (ev.target === m) done(false); });
+      document.addEventListener('keydown', key, true);
+      document.body.appendChild(m); m.querySelector('[data-r="1"]').focus();
+    });
+  },
+
   /** Bangun ulang semua elemen HUD (dipanggil saat ada perubahan besar) */
   refreshAll() {
     if (!S) return;
