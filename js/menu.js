@@ -927,6 +927,7 @@ const Menu = {
         <div class="box">
           <h4>🔊 Audio</h4>${tg('sound', 'Efek suara')}${sl('sfxVol', 'Volume efek')}${tg('music', 'Musik latar')}${sl('musicVol', 'Volume musik')}
           <h4>🖥️ Tampilan</h4>${tg('dmgNum', 'Angka damage')}${tg('shake', 'Getaran layar')}${tg('range', 'Jangkauan tower terpilih')}${tg('grid', 'Garis grid')}${tg('fps', 'Tampilkan FPS')}${tg('reduceMotion', 'Kurangi gerakan (tanpa getaran, partikel & animasi)')}
+          <div class="tog"><span>Tampilan arena</span><button class="btn sm gold" data-act="view">${SET.view === 'iso' ? '🧊 3D Isometrik' : '🗺️ Klasik (atas)'}</button></div>
           <div class="tog"><span>Kualitas partikel</span><button class="btn sm blue" data-act="quality">${SET.quality === 'high' ? 'Tinggi' : 'Rendah'}</button></div>
           <h4>🎮 Permainan</h4>${tg('autoPause', 'Pause otomatis saat pindah tab')}${tg('autoFs', 'Layar penuh otomatis saat bermain (desktop)')}${tg('breakRemind', 'Pengingat istirahat tiap 1 jam bermain')}
           <h4>💾 Data</h4>
@@ -1293,6 +1294,7 @@ const Menu = {
       case 'tdecline': Online.api('trade.respond', { id: arg, accept: false }).then(() => { this.tradeData = null; this.loadTrades(); }); break;
       case 'tcancel': Online.api('trade.cancel', { id: arg }).then(() => { this.tradeData = null; this.loadTrades(); }); break;
       case 'tog': SET[arg] = !SET[arg]; saveSettings(); document.body.classList.toggle('rm', !!SET.reduceMotion); Sound.applyVolume(); if (arg === 'music' && SET.music) Sound.startMusic(); this.go('settings'); break;
+      case 'view': SET.view = SET.view === 'iso' ? 'flat' : 'iso'; saveSettings(); UI.toast(SET.view === 'iso' ? '🧊 Tampilan 3D Isometrik' : '🗺️ Tampilan Klasik'); this.go('settings'); break;
       case 'quality': SET.quality = SET.quality === 'high' ? 'low' : 'high'; saveSettings(); this.go('settings'); break;
       case 'reset':
         if (!this.resetArm) { this.resetArm = true; this.go('settings'); break; }

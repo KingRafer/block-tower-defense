@@ -20,7 +20,7 @@ function deepMerge(a, b) {
   return a;
 }
 
-const defaultSettings = () => ({
+const defaultSettings = () => ({ view: 'iso',
   sound:true, music:true, sfxVol:0.5, musicVol:0.3,
   dmgNum:true, shake:true, range:true, grid:false, fps:false, autoPause:true, quality:'high', chatMin:false, autoFs:true, breakRemind:true,
 });

@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.2.0] — 2026-11-28
+### Baru — Tampilan 3D Isometrik
+- **Arena kini tampil sebagai diorama 3D**: medan miring dengan langit & bukit di belakang, petak rumput timbul di atas jalur, dan papan dunia berbentuk pulau melayang bersisi tanah & batu.
+- Tower, zombie, pohon, batu, portal & kastil berdiri tegak dan saling menutupi sesuai kedalaman; peluru, efek & angka damage mengikuti perspektif.
+- Langit & bukit menyesuaikan map (siang hijau, gurun senja, salju, lava merah, hutan gelap berbintang).
+- Bisa diganti kapan saja di **Pengaturan → Tampilan arena** (🧊 3D Isometrik / 🗺️ Klasik). Isometrik menjadi tampilan bawaan.
+
 ## [8.1.0] — 2026-11-28
 ### Keseimbangan — lebih adil untuk pemain baru
 - **Damage musuh yang lolos kini dibatasi per musuh** sesuai kesulitan & wave (Mudah 3 + 0,4/wave, Normal 5 + 0,7/wave, Sulit 8 + 1,2/wave; mini-boss ×4). Satu tank yang lolos tidak lagi langsung menghabiskan nyawa base.

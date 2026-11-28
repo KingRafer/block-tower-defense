@@ -7,7 +7,7 @@ document.body.classList.toggle('rm', !!SET.reduceMotion);
 /* ---------------- INPUT CANVAS ---------------- */
 function canvasPos(ev) {
   const r = cv.getBoundingClientRect();
-  return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height };
+  return screenToWorld((ev.clientX - r.left) * W / r.width, (ev.clientY - r.top) * H / r.height);
 }
 function cancelAction() {
   if (S.placing || S.selected || S.targeting) { S.placing = null; S.selected = null; S.targeting = null; UI.hidePanel(); UI.renderBar(); UI.renderAbilities(); return true; }

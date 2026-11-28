@@ -103,7 +103,7 @@ function drawMapStatic(g) {
     g.save(); g.translate(mx, my); g.rotate(ang); g.beginPath(); g.moveTo(8, 0); g.lineTo(-6, -7); g.lineTo(-3, 0); g.lineTo(-6, 7); g.fill(); g.restore();
   }
   if (SET.grid) { g.strokeStyle = 'rgba(0,0,0,.08)'; g.lineWidth = 1; for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) g.strokeRect(c * T, r * T, T, T); }
-  const prev = ctx; ctx = g; try { for (const d of deco) drawDeco(d); } finally { ctx = prev; }
+  if (!ISO.noDeco) { const prev = ctx; ctx = g; try { for (const d of deco) drawDeco(d); } finally { ctx = prev; } }
   const vg = g.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.65);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, th.lava ? 'rgba(40,0,0,.38)' : th.dark ? 'rgba(10,0,30,.55)' : 'rgba(0,10,20,.3)');
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
@@ -524,28 +524,142 @@ function drawWaveBanner(dt) {
   ctx.restore();
 }
 
-/* ---------------- FRAME ---------------- */
-function draw(dt) {
-  if (--resCheck <= 0) { resCheck = 30; fitRes(); }
-  ctx.setTransform(RES, 0, 0, RES, 0, 0);
-  ctx.save();
-  if (S.shake > 0 && SET.reduceMotion) S.shake = 0;
-  if (S.shake > 0) { ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake); S.shake *= 0.85; if (S.shake < 0.5) S.shake = 0; }
-  drawMap();
-  drawDecals(dt);
 
+/* =========================================================
+ * MODE ISOMETRIK 3D (diorama blok) — dipilih di Pengaturan (SET.view = 'iso')
+ * Medan digambar miring (skala-Y), petak rumput timbul dengan sisi depan,
+ * papan dunia bersisi tanah, langit & bukit di belakang. Tower, musuh,
+ * pohon, portal & kastil berdiri tegak dan diurutkan menurut kedalaman.
+ * Logika game tetap memakai koordinat datar; hanya proyeksi layar yang berubah.
+ * ========================================================= */
+const ISO = { K: 0.64, OY: 122, D: 12, FACE: 34, noDeco: false, key: '', cache: null };
+const isoOn = () => SET.view === 'iso';
+const isoY = y => ISO.OY + y * ISO.K;
+/** koordinat layar → koordinat dunia (untuk input) */
+function screenToWorld(x, y) { return isoOn() ? { x, y: (y - ISO.OY) / ISO.K } : { x, y }; }
+
+function isoSkyColors(th) {
+  return th.dark ? ['#0b0f2a', '#1d2147', '#2e3a4f'] : th.lava ? ['#1a0705', '#4a140b', '#7a2e14'] : th.snow ? ['#9fc6e6', '#cfe4f3', '#eef6fb']
+    : th.cactus ? ['#f2a65a', '#f7cf8a', '#fbe6b5'] : ['#5aa9e6', '#9dd3f5', '#d6f0ff'];
+}
+function buildIsoCache() {
+  const th = MAP.th, c = document.createElement('canvas'); c.width = W * RES; c.height = H * RES;
+  const g = c.getContext('2d'); g.scale(RES, RES);
+  // langit
+  const sk = isoSkyColors(th), sg = g.createLinearGradient(0, 0, 0, ISO.OY + 40);
+  sg.addColorStop(0, sk[0]); sg.addColorStop(0.6, sk[1]); sg.addColorStop(1, sk[2]); g.fillStyle = sg; g.fillRect(0, 0, W, H);
+  if (th.dark || th.lava) { g.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 40; i++) g.fillRect(hash2(i, 3) * W, hash2(i, 9) * ISO.OY * 0.8, 1.5, 1.5); }
+  else { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 5; i++) { const cx = 80 + i * 200 + hash2(i, 4) * 60, cy = 26 + hash2(i, 5) * 40;
+    for (let k = 0; k < 4; k++) g.fillRect(cx + k * 14 - 10, cy - (k % 2) * 8, 36, 14); } }
+  // bukit jauh (2 lapis)
+  const hill = (base, amp, col, seed) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, ISO.OY + 6);
+    for (let x = 0; x <= W; x += 24) g.lineTo(x, base - Math.abs(Math.sin(x * 0.011 + seed)) * amp - hash2(x, seed) * 8); g.lineTo(W, ISO.OY + 6); g.closePath(); g.fill(); };
+  const hc = th.dark ? ['#1b2a2a', '#132020'] : th.lava ? ['#3a1a12', '#24100b'] : th.snow ? ['#b9cfdc', '#9db6c6'] : th.cactus ? ['#d8a868', '#c08e50'] : ['#6fae6a', '#4f8f4d'];
+  hill(ISO.OY - 10, 46, hc[0], 1.3); hill(ISO.OY + 4, 30, hc[1], 4.1);
+  // medan datar (tanpa dekorasi), diproyeksikan
+  const top = document.createElement('canvas'); top.width = W; top.height = H;
+  const tg = top.getContext('2d'); ISO.noDeco = true; try { drawMapStatic(tg); } finally { ISO.noDeco = false; }
+  g.save(); g.translate(0, ISO.OY); g.scale(1, ISO.K); g.drawImage(top, 0, 0, W, H); g.restore();
+  // sisi depan petak rumput yang lebih tinggi dari jalur
+  const side = shade(mixC(th.g1, th.g2, 0.5), -38), dirt = th.lava ? '#2b1a14' : th.snow ? '#8fa6b3' : th.cactus ? '#a87d4c' : '#6d4c41';
+  for (let r = 0; r < ROWS - 1; r++) for (let cc = 0; cc < COLS; cc++) {
+    if (pathTiles.has(cc + ',' + r) || !pathTiles.has(cc + ',' + (r + 1))) continue;
+    const y = isoY((r + 1) * T);
+    g.fillStyle = side; g.fillRect(cc * T, y, T, 3); g.fillStyle = dirt; g.fillRect(cc * T, y + 3, T, ISO.D - 3);
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(cc * T, y + ISO.D, T, 3);
+  }
+  // papan dunia: sisi depan berlapis tanah & batu
+  const fy = isoY(H);
+  g.fillStyle = side; g.fillRect(0, fy, W, 5);
+  g.fillStyle = dirt; g.fillRect(0, fy + 5, W, ISO.FACE - 5);
+  g.fillStyle = shade(dirt, -25); g.fillRect(0, fy + ISO.FACE - 8, W, 8);
+  for (let i = 0; i < 70; i++) { g.fillStyle = hash2(i, 7) > 0.5 ? shade(dirt, 18) : shade(dirt, -18); g.fillRect(hash2(i, 1) * W, fy + 8 + hash2(i, 2) * (ISO.FACE - 16), 6 + hash2(i, 3) * 8, 4); }
+  // langit di bawah pulau + sisi bawah pulau yang berbatu menggantung
+  const by = fy + ISO.FACE, lg = g.createLinearGradient(0, by, 0, H); lg.addColorStop(0, sk[1]); lg.addColorStop(1, sk[2]);
+  g.fillStyle = lg; g.fillRect(0, by, W, H - by);
+  const rock = shade(dirt, -45);
+  g.fillStyle = rock; g.beginPath(); g.moveTo(0, by);
+  for (let x = 0; x <= W; x += 32) g.lineTo(x, by + 6 + hash2(x, 11) * 26 + (x % 96 === 0 ? 10 : 0));
+  g.lineTo(W, by); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, by, W, 4);
+  return c;
+}
+/** gambar f() dengan objek tegak ditempatkan pada proyeksi isometrik titik (x, y) dunia */
+function isoAt(y, f) { const dy = isoY(y) - y; ctx.save(); ctx.translate(0, dy); try { f(); } finally { ctx.restore(); } }
+/** proyeksikan sementara koordinat Y di daftar objek (proyektil, efek, teks, serangan) */
+function isoSwap(lists, on) {
+  for (const L of lists) for (const o of L) {
+    if (on) {
+      o.__y = [o.y, o.y1, o.y2, o.a];
+      if (o.y != null) o.y = isoY(o.y); if (o.y1 != null) o.y1 = isoY(o.y1); if (o.y2 != null) o.y2 = isoY(o.y2);
+      if (o.a != null) o.a = o.y1 != null && o.x1 != null ? Math.atan2(o.y2 - o.y1, o.x2 - o.x1) : Math.atan2(Math.sin(o.a) * ISO.K, Math.cos(o.a));
+    } else if (o.__y) { [o.y, o.y1, o.y2, o.a] = o.__y; delete o.__y; }
+  }
+}
+function drawIsoScene(dt) {
+  const key = MAP.id + RES + SET.grid;
+  if (ISO.key !== key) { ISO.cache = buildIsoCache(); ISO.key = key; }
+  ctx.drawImage(ISO.cache, 0, 0, W, H);
   const sel = S.selected;
+  // --- lapisan tanah (dimiringkan) ---
+  ctx.save(); ctx.translate(0, ISO.OY); ctx.scale(1, ISO.K);
+  if (MAP.th.lava) { ctx.fillStyle = `rgba(255,109,0,${0.06 + Math.sin(S.time * 2) * 0.04})`; ctx.fillRect(0, 0, W, H); }
+  if (MAP.th.dark) { ctx.fillStyle = `rgba(40,20,90,${0.08 + Math.sin(S.time * 0.8) * 0.03})`; ctx.fillRect(0, 0, W, H); }
+  drawDecals(dt);
   if (SET.range && sel && sel.type !== 'farm') {
     const isCmd = sel.type === 'commander';
     ring(sel.x, sel.y, lvl(sel).range * T, isCmd ? 'rgba(124,77,255,.15)' : 'rgba(255,255,255,.15)', isCmd ? 'rgba(124,77,255,.8)' : 'rgba(255,255,255,.7)');
   }
+  if (sel) { ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 4; ctx.strokeRect(sel.c * T + 2, sel.r * T + 2, T - 4, T - 4); }
+  let ghost = null;
+  if (S.placing && S.mouse.in) {
+    const c = Math.floor(S.mouse.x / T), r = Math.floor(S.mouse.y / T), why = placeReason(S.placing, c, r), ok = !why, def = TOWERS[S.placing];
+    ctx.fillStyle = ok ? 'rgba(255,255,255,.35)' : 'rgba(244,67,54,.45)'; ctx.fillRect(c * T, r * T, T, T);
+    if (def.levels[0].range) ring((c + 0.5) * T, (r + 0.5) * T, def.levels[0].range * T, ok ? 'rgba(255,255,255,.12)' : 'rgba(244,67,54,.12)', ok ? 'rgba(255,255,255,.6)' : 'rgba(244,67,54,.7)');
+    ghost = { c, r, why };
+  }
+  for (const st of S.strikes) { const k = 1 - st.t / st.max; ctx.strokeStyle = 'rgba(255,82,82,.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(st.x, st.y, (st.r || 1.4) * T * (1 - k * 0.6), 0, 7); ctx.stroke(); ctx.fillStyle = `rgba(255,82,82,${0.15 + k * 0.25})`; ctx.fill(); }
+  if (S.targeting && S.mouse.in) ring(S.mouse.x, S.mouse.y, S.targeting === 'meteor' ? 2.3 * T : 1.4 * T + 34, 'rgba(255,82,82,.18)', 'rgba(255,82,82,.9)');
+  if (S.shieldT > 0) { ctx.strokeStyle = `rgba(100,181,246,${0.5 + Math.sin(S.time * 8) * 0.3})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(19.5 * T, exitRow() * T, 60, 0, 7); ctx.stroke(); }
+  ctx.restore();
 
+  // --- objek tegak, urut kedalaman ---
   const objs = [];
-  for (const t of S.towers) objs.push({ y: t.y, f: () => drawTower(t) });
-  for (const e of S.enemies) objs.push({ y: e.y, f: () => drawEnemy(e) });
+  for (const d of deco) objs.push({ y: d.r * T + T * 0.8, f: () => isoAt(d.r * T + T * 0.8, () => drawDeco(d)) });
+  const er = exitRow(), sr = MAP.path[0][1];
+  objs.push({ y: (sr + 0.5) * T, f: () => isoAt((sr + 0.5) * T, drawPortal) });
+  objs.push({ y: (er + 0.5) * T + 10, f: () => isoAt((er + 0.5) * T, drawBase) });
+  for (const t of S.towers) objs.push({ y: t.y, f: () => isoAt(t.y, () => drawTower(t)) });
+  for (const e of S.enemies) objs.push({ y: e.y, f: () => isoAt(e.y, () => drawEnemy(e)) });
+  if (ghost) objs.push({ y: (ghost.r + 0.5) * T, f: () => isoAt((ghost.r + 0.5) * T, () => { ctx.globalAlpha = 0.65; drawTower({ type: S.placing, x: (ghost.c + 0.5) * T, y: (ghost.r + 0.5) * T, level: 0, angle: -Math.PI / 2, recoil: 0 }, true); ctx.globalAlpha = 1; }) });
   objs.sort((a, b) => a.y - b.y).forEach(o => o.f());
-  if (sel) { ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 3; ctx.strokeRect(sel.c * T + 2, sel.r * T + 2, T - 4, T - 4); }
 
+  // --- proyektil, efek, teks (posisi diproyeksikan) ---
+  const lists = [S.projectiles, S.effects, S.texts, S.strikes];
+  isoSwap(lists, true);
+  try { drawFlying(); } finally { isoSwap(lists, false); }
+  if (ghost && ghost.why) outlinedText(ghost.why, (ghost.c + 0.5) * T, isoY(ghost.r * T) - 34, 13, '#ff8a80');
+  if (S.targeting && S.mouse.in) outlinedText(S.targeting === 'meteor' ? '☄️ Klik untuk menjatuhkan meteor' : '✈️ Klik untuk menjatuhkan bom', S.mouse.x, isoY(S.mouse.y) - 70, 13, '#ff8a80');
+}
+
+/* ---------------- FRAME ---------------- */
+function drawOverlays(dt) {
+  if (S.radarT > 0) { ctx.strokeStyle = 'rgba(179,136,255,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W / 2, H / 2, (S.time * 300) % 600, 0, 7); ctx.stroke(); }
+  if (S.freezeT > 0) { ctx.fillStyle = `rgba(129,212,250,${Math.min(0.18, S.freezeT * 0.06)})`; ctx.fillRect(0, 0, W, H); }
+
+  drawAmbient(dt);
+  drawVignette(); if (VFX.flash > 0) VFX.flash = Math.max(0, VFX.flash - dt);
+  drawBossBar();
+  drawWaveBanner(dt);
+  if (S.autoSkip && S.state === 'ready' && S.wave < S.maxWave) outlinedText(`Wave berikutnya dalam ${Math.max(1, Math.ceil(S.autoTimer))}...`, W / 2, H - 16, 18, '#fff');
+  else if (S.autoSkip && S.autoSkipT != null && canSkip()) outlinedText(`Auto skip dalam ${Math.max(1, Math.ceil(S.autoSkipT))}... (+$${skipBonusAmt()})`, W / 2, H - 16, 18, '#ffd54f');
+
+  fpsAcc += dt; fpsFrames++;
+  if (fpsAcc >= 0.5) { fps = Math.round(fpsFrames / fpsAcc); fpsAcc = 0; fpsFrames = 0; }
+  if (SET.fps) outlinedText(fps + ' FPS', 8, H - 10, 12, '#fff', 'left');
+}
+
+function drawFlying() {
   for (const p of S.projectiles) {
     ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); drawProjGlow(p);
     if (p.kind === 'fire') { ctx.fillStyle = '#ff6d00'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 7); ctx.fill(); ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(2, 0, 3.5, 0, 7); ctx.fill(); }
@@ -575,6 +689,34 @@ function draw(dt) {
     else drawVfx(f, k);
   }
   ctx.globalAlpha = 1;
+  for (const st of S.strikes) if (st.big && isoOn()) { const k = 1 - st.t / st.max, my = st.y - 300 * (1 - k); ctx.fillStyle = '#ff7043'; ctx.beginPath(); ctx.arc(st.x + 80 * (1 - k), my, 14, 0, 7); ctx.fill(); ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(st.x + 80 * (1 - k), my, 7, 0, 7); ctx.fill(); }
+  for (const x of S.texts) { const ag = x.max - x.life, pop = ag < 0.14 ? 1 + (0.14 - ag) / 0.14 * 0.7 : 1; ctx.globalAlpha = Math.min(1, x.life / x.max * 2); outlinedText(x.txt, x.x, x.y, Math.round(15 * pop * (x.col !== '#fff' ? 1.1 : 1)), x.col); }
+  ctx.globalAlpha = 1;
+}
+
+function draw(dt) {
+  if (--resCheck <= 0) { resCheck = 30; fitRes(); }
+  ctx.setTransform(RES, 0, 0, RES, 0, 0);
+  ctx.save();
+  if (S.shake > 0 && SET.reduceMotion) S.shake = 0;
+  if (S.shake > 0) { ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake); S.shake *= 0.85; if (S.shake < 0.5) S.shake = 0; }
+  if (isoOn()) { drawIsoScene(dt); drawOverlays(dt); ctx.restore(); return; }
+  drawMap();
+  drawDecals(dt);
+
+  const sel = S.selected;
+  if (SET.range && sel && sel.type !== 'farm') {
+    const isCmd = sel.type === 'commander';
+    ring(sel.x, sel.y, lvl(sel).range * T, isCmd ? 'rgba(124,77,255,.15)' : 'rgba(255,255,255,.15)', isCmd ? 'rgba(124,77,255,.8)' : 'rgba(255,255,255,.7)');
+  }
+
+  const objs = [];
+  for (const t of S.towers) objs.push({ y: t.y, f: () => drawTower(t) });
+  for (const e of S.enemies) objs.push({ y: e.y, f: () => drawEnemy(e) });
+  objs.sort((a, b) => a.y - b.y).forEach(o => o.f());
+  if (sel) { ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 3; ctx.strokeRect(sel.c * T + 2, sel.r * T + 2, T - 4, T - 4); }
+
+  drawFlying();
 
   // Pratinjau penempatan
   if (S.placing && S.mouse.in) {
@@ -602,21 +744,7 @@ function draw(dt) {
     outlinedText(S.targeting === 'meteor' ? '☄️ Klik untuk menjatuhkan meteor' : '✈️ Klik untuk menjatuhkan bom', S.mouse.x, S.mouse.y - 1.4 * T - 44, 13, '#ff8a80');
   }
   if (S.shieldT > 0) { ctx.strokeStyle = `rgba(100,181,246,${0.5 + Math.sin(S.time * 8) * 0.3})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(19.5 * T, exitRow() * T, 60, 0, 7); ctx.stroke(); }
-  if (S.radarT > 0) { ctx.strokeStyle = 'rgba(179,136,255,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W / 2, H / 2, (S.time * 300) % 600, 0, 7); ctx.stroke(); }
-  if (S.freezeT > 0) { ctx.fillStyle = `rgba(129,212,250,${Math.min(0.18, S.freezeT * 0.06)})`; ctx.fillRect(0, 0, W, H); }
-
-  for (const x of S.texts) { const ag = x.max - x.life, pop = ag < 0.14 ? 1 + (0.14 - ag) / 0.14 * 0.7 : 1; ctx.globalAlpha = Math.min(1, x.life / x.max * 2); outlinedText(x.txt, x.x, x.y, Math.round(15 * pop * (x.col !== '#fff' ? 1.1 : 1)), x.col); }
-  ctx.globalAlpha = 1;
-  drawAmbient(dt);
-  drawVignette(); if (VFX.flash > 0) VFX.flash = Math.max(0, VFX.flash - dt);
-  drawBossBar();
-  drawWaveBanner(dt);
-  if (S.autoSkip && S.state === 'ready' && S.wave < S.maxWave) outlinedText(`Wave berikutnya dalam ${Math.max(1, Math.ceil(S.autoTimer))}...`, W / 2, H - 16, 18, '#fff');
-  else if (S.autoSkip && S.autoSkipT != null && canSkip()) outlinedText(`Auto skip dalam ${Math.max(1, Math.ceil(S.autoSkipT))}... (+$${skipBonusAmt()})`, W / 2, H - 16, 18, '#ffd54f');
-
-  fpsAcc += dt; fpsFrames++;
-  if (fpsAcc >= 0.5) { fps = Math.round(fpsFrames / fpsAcc); fpsAcc = 0; fpsFrames = 0; }
-  if (SET.fps) outlinedText(fps + ' FPS', 8, H - 10, 12, '#fff', 'left');
+  drawOverlays(dt);
   ctx.restore();
 }
 
